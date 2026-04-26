@@ -1,0 +1,67 @@
+# AtGlance — Docker compose
+# Brings up: MongoDB + FastAPI backend + React (nginx) frontend on a single port.
+#
+# Usage:
+#   cp .env.docker.example .env
+#   docker compose up -d --build
+#   open http://localhost:8080
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: atglance-mongo
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - atglance
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: atglance-backend
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URL: "mongodb://mongo:27017"
+      DB_NAME: "${DB_NAME:-atglance_db}"
+      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@atglance.io}"
+      ADMIN_PASSWORD: "${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}"
+      GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID:-}"
+      GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
+      GITHUB_REDIRECT_URI: "${GITHUB_REDIRECT_URI:-}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-}"
+    networks:
+      - atglance
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Empty = same-origin "/api" via nginx proxy. Override only if you
+        # serve the API on a different host (e.g. https://api.atglance.live).
+        REACT_APP_BACKEND_URL: "${REACT_APP_BACKEND_URL:-}"
+    container_name: atglance-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    networks:
+      - atglance
+
+networks:
+  atglance:
+    driver: bridge
+
+volumes:
+  mongo_data:
