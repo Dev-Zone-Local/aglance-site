@@ -1,0 +1,147 @@
+{
+  "theme": "dark",
+  "archetype": "4",
+  "archetype_name": "Swiss & High-Contrast",
+  "design_philosophy": "Refined, technical, dark with gold/amber accent, a touch of grain and terminal soul. Built for SREs by SREs.",
+  "colors": {
+    "background": {
+      "default": "#0A0A0A",
+      "paper": "#121212",
+      "elevated": "#1A1A1A"
+    },
+    "primary": {
+      "DEFAULT": "#F59E0B",
+      "hover": "#D97706",
+      "light": "#FBBF24",
+      "glow": "rgba(245, 158, 11, 0.4)"
+    },
+    "secondary": {
+      "DEFAULT": "#27272A",
+      "hover": "#3F3F46",
+      "text": "#A1A1AA"
+    },
+    "accent": {
+      "DEFAULT": "#F59E0B",
+      "subtle": "rgba(245, 158, 11, 0.1)"
+    },
+    "text": {
+      "primary": "#F4F4F5",
+      "secondary": "#A1A1AA",
+      "muted": "#71717A"
+    },
+    "border": {
+      "default": "#27272A",
+      "hover": "#3F3F46",
+      "primary": "rgba(245, 158, 11, 0.3)"
+    },
+    "semantic": {
+      "success": "#10B981",
+      "warn": "#F59E0B",
+      "error": "#EF4444"
+    }
+  },
+  "typography": {
+    "font_family": {
+      "heading": "Geist, sans-serif",
+      "body": "Geist, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "font_sizes": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl tracking-tighter font-semibold text-zinc-100",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl tracking-tight font-medium text-zinc-100",
+      "h3": "text-xl sm:text-2xl tracking-tight font-medium text-zinc-200",
+      "body": "text-base leading-relaxed text-zinc-400",
+      "mono_small": "text-sm font-mono text-zinc-400"
+    }
+  },
+  "layout_patterns": {
+    "marketing": {
+      "hero": "Hero with terminal-style CLI typewriter animation, dark backdrop with subtle amber glow. Asymmetric elements.",
+      "features": "Asymmetric feature rows with bento-style grids. Use wide gaps (gap-8 to gap-12).",
+      "code_blocks": "Terminal code blocks with copy button + window chrome. Blinking cursor accent.",
+      "visuals": "Visual story flows (e.g., DB outage -> writes queued -> recover -> replay, system register -> deregister -> reactivate). Glass/grain depth on dark backgrounds."
+    },
+    "documentation": {
+      "layout": "Sidebar navigation for /docs/* routes, main content area with rich markdown.",
+      "content": "Rich markdown parsing, comparison tables (superadmin/admin/user).",
+      "code_callouts": "Callout blocks for code/YAML, badge pills for tags ('Self-hosted', 'Ubuntu', 'RBAC') with gold accent borders."
+    },
+    "admin_cms": {
+      "layout": "Left sidebar + content editor area.",
+      "style": "Dark UI consistent with the rest of the site, dense layout."
+    },
+    "user_dashboard": {
+      "layout": "Grid of download cards for AtGlance CLI and Console.",
+      "style": "Cards with CLI/Console artwork."
+    }
+  },
+  "components": {
+    "cards": {
+      "style": "Flat background (#121212), 1px subtle border (#27272A), no shadow. On hover: slight lift, gold accent border (#F59E0B).",
+      "usage": "Feature cards, use cases, pricing."
+    },
+    "badges": {
+      "style": "Rounded-full, bg-zinc-900 border-zinc-800 text-zinc-300.",
+      "usage": "Tags ('Self-hosted', 'Ubuntu', 'RBAC')."
+    },
+    "buttons": {
+      "primary": "bg-amber-500 text-zinc-950 font-medium hover:bg-amber-600 transition-colors px-4 py-2 rounded-md",
+      "secondary": "border border-zinc-700 bg-transparent text-zinc-300 hover:text-white hover:bg-zinc-800 px-4 py-2 rounded-md"
+    },
+    "terminal": {
+      "style": "bg-[#09090b] border border-zinc-800 rounded-lg overflow-hidden.",
+      "header": "Window chrome with 3 dots (macOS style but muted grey) or terminal tab style.",
+      "text": "JetBrains Mono, text-sm, blinking cursor accent (bg-amber-500)."
+    }
+  },
+  "image_urls": {
+    "cli_architecture": {
+      "url": "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/f4o5vv9n_AtGlance%20CLI%20Tool%20Architecture.png",
+      "category": "architecture_diagram",
+      "description": "AtGlance CLI Tool Architecture diagram."
+    },
+    "system_architecture": {
+      "url": "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/4r5l0e0a_AtGlance%20Management%20Tool%20System%20Architecture.png",
+      "category": "architecture_diagram",
+      "description": "AtGlance Management Tool System Architecture diagram."
+    },
+    "end_to_end_architecture": {
+      "url": "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/7ejgk1sv_AtGlance%20Full%20Architecture%20cli%20with%20management%20console.png",
+      "category": "architecture_diagram",
+      "description": "AtGlance Full Architecture CLI with management console diagram."
+    },
+    "dark_texture_background": {
+      "url": "https://images.unsplash.com/photo-1761078739436-ccee01f3d89c?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NTYxNzV8MHwxfHNlYXJjaHwyfHxhYnN0cmFjdCUyMGRhcmslMjB0ZXh0dXJlfGVufDB8fHx8MTc3NzE0MzIyNXww&ixlib=rb-4.1.0&q=85",
+      "category": "background",
+      "description": "Dark, moody abstract background with subtle light streaks, used for hero/sections."
+    }
+  },
+  "image_usage_instructions": {
+    "home_page": "Embed a simplified version of the architecture diagram or the End-to-End diagram.",
+    "architecture_page": "Showcase all 3 diagrams (CLI, System, End-to-End) with detailed explanations.",
+    "product_page": "Embed the End-to-End architecture diagram."
+  },
+  "animations": {
+    "hero": "Animated CLI typewriter effect. Terminal blinking cursor accent.",
+    "transitions": "Smooth opacity and transform transitions for cards and buttons.",
+    "diagrams": "Reveal animations for step-flow story diagrams."
+  },
+  "accessibility": {
+    "contrast": "Ensure WCAG AA compliance on dark + gold combinations.",
+    "focus": "Focus rings must use the primary gold/amber color (ring-amber-500).",
+    "keyboard": "Fully navigable via keyboard, especially docs sidebar and admin CMS."
+  },
+  "instructions_to_main_agent": [
+    "Use raw HTML/Tailwind for marketing pages, Shadcn for interactive components.",
+    "Use Geist for sans-serif and JetBrains Mono for monospace.",
+    "All interactive elements must have data-testid attributes.",
+    "Implement the animated CLI typewriter hero on the home page.",
+    "Ensure dark mode is the default and only mode, no light mode toggle needed as per instructions.",
+    "Implement a user dashboard with download cards for AtGlance CLI and Console.",
+    "Use the provided architecture diagram URLs exactly as specified.",
+    "Include GitHub SSO button in Auth flow.",
+    "Implement RBAC roles comparison table (superadmin/admin/user).",
+    "Implement visual story flows: 'DB outage -> writes queued -> recover -> replay' and 'system register -> deregister -> reactivate'.",
+    "Ensure Header/nav includes docs sub-navigation."
+  ]
+}
