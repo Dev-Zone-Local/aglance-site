@@ -26,7 +26,7 @@ export default function Home() {
             </div>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6">
               Operations,{" "}
-              <span className="text-amber-500">at a glance</span>
+              <span className="text-amber-500">AtGlance</span>
               <br />
               inside your boundary.
             </h1>
