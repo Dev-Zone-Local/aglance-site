@@ -1,0 +1,29 @@
+{
+  "summary": "Comprehensive backend + frontend testing for AtGlance marketing/docs site. All 37 pytest backend tests pass: health, auth (register/login/logout/me), GitHub OAuth start (verified auth_url + client_id + state), CMS public reads (pricing, faqs, docs+slug, contact, pages: about/terms/privacy — all _id excluded), gated /api/downloads (401 anon, 200 authed), admin RBAC (anon=401, user=403 across all 6 admin endpoints), and admin CMS writes with persistence verification (pricing, faqs, docs DocsBulk, contact, pages, downloads). Frontend: all 12 marketing pages load with seeded content, pricing plans render from API, FAQ shows seeded Q&A, /docs landing -> /docs/quickstart navigates and markdown+code blocks render, sidebar switches docs (CLI reference loads with --system-register), register flow redirects new user to /dashboard, admin login redirects to /admin/pricing, ProtectedRoute redirects unauth users from /dashboard and /admin to /login, GitHub button calls /api/auth/github/start, dashboard shows CLI+Console, admin CMS edit pricing -> save -> reload -> persisted, all 6 admin sub-routes render with Save button. data-testid attributes present on register/login forms.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "All pages", "issues": ["HTML <title> is the default 'Emergent | Fullstack App' — should be 'AtGlance — Operations, at a glance' or similar in /app/frontend/public/index.html"]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/backend_test.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "(Cosmetic) Update <title> in /app/frontend/public/index.html from default 'Emergent | Fullstack App' to AtGlance branding."
+  ],
+  "critical_code_review_comments": [
+    "server.py is ~730 lines. Acceptable for single-service MVP, but consider splitting into routers/auth.py, routers/cms.py, seeds.py if it grows further.",
+    "github_callback warns when state is missing but proceeds — leniency reduces CSRF protection. Consider strict state enforcement in production once frontend reliably passes state cookies.",
+    "JWT_SECRET is committed in /app/backend/.env — this is fine for preview env but ensure it is rotated in production.",
+    "set_auth_cookies uses secure=False (correct for HTTP preview) — must flip to secure=True + samesite='none' for cross-site production.",
+    "Admin upsert endpoints use delete_many + insert_many (full replace). Functional but not transactional — concurrent admin edits could race. Acceptable for single-admin CMS."
+  ],
+  "updated_files": ["/app/backend/tests/backend_test.py", "/app/backend/tests/__init__.py"],
+  "success_rate": {"backend": "100% (37/37)", "frontend": "100% of tested flows"},
+  "test_credentials": "Admin: admin@atglance.io / Admin@12345 (verified). Test users registered with timestamped emails were created during the run.",
+  "seed_data_creation": "Used backend's existing startup seed (pricing, faqs, docs, contact, pages, downloads). Test created several throwaway users via /api/auth/register; admin pricing was temporarily edited then restored to 'Free'.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend tests in /app/backend/tests/backend_test.py (pytest). Run: pytest /app/backend/tests/backend_test.py -v. Frontend uses REACT_APP_BACKEND_URL. Admin auto-promotion happens at register-time when email==ADMIN_EMAIL. Docs PUT requires {items: [...]}; pricing/faqs PUT take a bare list. All CMS responses exclude _id (verified). /api/downloads requires auth. GitHub OAuth full flow cannot be tested (real redirect needed) — only /auth/github/start was verified to return https://github.com/login/oauth/authorize?client_id=Ov23lijGSKYOBKxygfKj&...&state=<token>."
+}
