@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 const SECTIONS = [
   { title: "Getting Started", items: [{ slug: "quickstart", label: "Quickstart" }] },
   { title: "CLI", items: [{ slug: "cli", label: "CLI reference" }] },
-  { title: "API", items: [{ slug: "api", label: "API reference" }] },
+  // { title: "API", items: [{ slug: "api", label: "API reference" }] },
   { title: "Self-hosting", items: [{ slug: "self-hosting", label: "Self-hosting the Console" }] },
   { title: "Architecture", items: [{ slug: "architecture", label: "Architecture deep dive" }] },
 ];

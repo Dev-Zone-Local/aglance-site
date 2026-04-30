@@ -61,31 +61,102 @@ export default function Console() {
           <CodeBlock
             title="docker-compose.yml"
             code={`services:
-  console:
-    image: atglance/console:1.0.0
-    environment:
-      - APP_KEY=base64:...
-      - DB_HOST=mysql
-      - REDIS_HOST=redis
-    depends_on: [mysql, redis, kong]
-
-  kong:
-    image: kong:3
-    environment:
-      - KONG_DATABASE=off
-      - KONG_DECLARATIVE_CONFIG=/kong/kong.yml
-    volumes:
-      - ./kong.yml:/kong/kong.yml:ro
-    ports: ["8002:8000"]
-
   mysql:
-    image: mysql:8
+    image: mysql:5.7
+    container_name: atglance-mysql
+    restart: unless-stopped
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
     environment:
-      - MYSQL_DATABASE=atglance
-      - MYSQL_ROOT_PASSWORD=...
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: atglance
+      MYSQL_ROOT_HOST: '%'
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
   redis:
-    image: redis:7`}
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    image: atglance/ee-console-app:0.1.0
+    container_name: atglance-mangement-console
+    restart: unless-stopped
+    environment:
+      APP_URL: https:/<domain_Name-or-subdomain_ Name>
+    command:
+      - sh
+      - -lc
+      - |
+        if [ ! -f /app/vendor/autoload.php ]; then
+          composer install --no-interaction --prefer-dist --optimize-autoloader;
+        fi
+        php artisan serve --host=0.0.0.0 --port=8000 --no-reload
+    ports:
+      - "8000:8000"
+    volumes:
+      - composer_vendor:/app/vendor
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  queue-worker:
+    image: atglance/ee-queue-worker:0.1.0
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: atglance
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    command:
+      - sh
+      - -lc
+      - |
+        php artisan queue:work redis --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - composer_vendor:/app/vendor
+  kong:
+    image: atglance/ee-kong-app:0.1.0
+    restart: unless-stopped
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8002
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8002:8002"
+      - "8001:8001"
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
+  composer_vendor:`}
           />
         </div>
       </div>
