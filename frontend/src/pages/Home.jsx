@@ -31,7 +31,7 @@ export default function Home() {
               inside your boundary.
             </h1>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mb-8">
-              An Ubuntu-focused operations platform with a calm, auditable CLI and a self-hosted Management Console — built on Kong, Laravel, MySQL and Redis. No telemetry. No vendor lock-in.
+              An Ubuntu-focused operations platform with a calm, auditable CLI and a self-hosted Management Console — built on Rest API, Application, Database and Cache. No telemetry. No vendor lock-in.
             </p>
             <div className="flex flex-wrap items-center gap-3 mb-8">
               <Link
@@ -51,7 +51,7 @@ export default function Home() {
             </div>
             <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs font-mono text-zinc-500">
               <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500" /> Ubuntu / systemd</span>
-              <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500" /> Kong API Gateway</span>
+              <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500" /> Rest API API Gateway</span>
               <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500" /> RBAC + PAT tokens</span>
               <span className="flex items-center gap-1.5"><span className="w-1 h-1 rounded-full bg-amber-500" /> DB circuit breaker</span>
             </div>
@@ -86,7 +86,7 @@ export default function Home() {
             <Server size={20} className="text-amber-500 mb-5" />
             <h3 className="text-2xl font-semibold text-zinc-100 mb-2">Management Console</h3>
             <p className="text-zinc-400 mb-5 leading-relaxed">
-              Self-hosted Laravel app with Kong, MySQL and Redis. Dashboards, RBAC, configuration history, queue resilience and a database circuit breaker.
+              Self-hosted Application app with Rest API, Database and Cache. Dashboards, RBAC, configuration history, queue resilience and a database circuit breaker.
             </p>
             <div className="text-sm text-amber-500 inline-flex items-center gap-1.5 group-hover:gap-2.5 transition-all">
               Explore the Console <ArrowRight size={14} />
@@ -102,12 +102,12 @@ export default function Home() {
           title="Calm operations. Strict boundaries."
         />
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-12">
-          <FeatureCard testId="feat-self-hosted" icon={ShieldCheck} title="Self-hosted by design" desc="Deploy the entire Console — Kong, Laravel, MySQL, Redis — inside your VPC, on-prem or hybrid. No data leaves your perimeter." />
+          <FeatureCard testId="feat-self-hosted" icon={ShieldCheck} title="Self-hosted by design" desc="Deploy the entire Console — Rest API, Application, Database, Cache — inside your VPC, on-prem or hybrid. No data leaves your perimeter." />
           <FeatureCard testId="feat-systemd" icon={Activity} title="Native systemd discovery" desc="The CLI reads journalctl + ss/netstat on Ubuntu hosts to discover services and their ports. No agents, no daemons you didn't ask for." />
           <FeatureCard testId="feat-config" icon={GitBranch} title="Configuration safety" desc="Every config change writes a versioned backup to ~/config-backups. Import and validate before applying. Rollback is a single flag." />
           <FeatureCard testId="feat-rbac" icon={Lock} title="RBAC + PAT tokens" desc="Three roles — superadmin, admin, user — and short-lived Personal Access Tokens for the CLI. Every action is auditable." />
-          <FeatureCard testId="feat-resilience" icon={Database} title="DB circuit breaker" desc="When MySQL is unhealthy, writes are buffered to Redis as queued jobs and replayed idempotently when the database recovers." />
-          <FeatureCard testId="feat-kong" icon={Network} title="Kong-native API" desc="A single REST surface — /system-register, /config-files, /validate-token — fronted by Kong in DB-less mode. Rate-limited, declarative." />
+          <FeatureCard testId="feat-resilience" icon={Database} title="DB circuit breaker" desc="When Database is unhealthy, writes are buffered to Cache as queued jobs and replayed idempotently when the database recovers." />
+          <FeatureCard testId="feat-Rest API" icon={Network} title="Rest API-native API" desc="A single REST surface — /system-register, /config-files, /validate-token — fronted by Rest API in DB-less mode. Rate-limited, declarative." />
         </div>
       </section>
 
@@ -116,13 +116,13 @@ export default function Home() {
         <SectionHeading
           eyebrow="Resilience story"
           title="DB outage? Your writes don't disappear."
-          sub="A short flow that explains what happens behind the curtain when MySQL goes down."
+          sub="A short flow that explains what happens behind the curtain when Database goes down."
         />
         <div className="mt-10">
           <StoryFlow
             steps={[
               { title: "DB outage detected", desc: "DatabaseCircuitBreaker middleware trips. Reads fall back to cache where safe." },
-              { title: "Writes are queued", desc: "Mutations are encoded as jobs and buffered in Redis. Clients get fast acks." },
+              { title: "Writes are queued", desc: "Mutations are encoded as jobs and buffered in Cache. Clients get fast acks." },
               { title: "DB recovers", desc: "Health checks pass; the circuit closes. Workers pick up where they left off." },
               { title: "Jobs replay", desc: "Queue workers apply buffered writes idempotently. State converges. Audit logs restored." },
             ]}
@@ -135,14 +135,14 @@ export default function Home() {
         <SectionHeading
           eyebrow="Architecture"
           title="A boring, predictable stack."
-          sub="Kong fronts a Laravel app backed by MySQL 8 and Redis. The CLI talks to Kong via HTTPS. That's it."
+          sub="Rest API fronts a Application app backed by Database 8 and Cache. The CLI talks to Rest API via HTTPS. That's it."
         />
         <div className="mt-10 rise">
           <ArchDiagram
             testId="home-arch-diagram"
             src={ARCH_E2E}
             alt="AtGlance End-to-End Architecture"
-            caption="End-to-end · CLI → Kong → Laravel → MySQL/Redis"
+            caption="End-to-end · CLI → Rest API → Application → Database/Cache"
           />
         </div>
         <div className="mt-6 text-center">

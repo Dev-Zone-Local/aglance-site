@@ -32,7 +32,7 @@ export function Footer() {
             <li><Link to="/docs" className="text-zinc-400 hover:text-amber-500">Docs</Link></li>
             <li><Link to="/docs/quickstart" className="text-zinc-400 hover:text-amber-500">Quickstart</Link></li>
             <li><Link to="/docs/cli" className="text-zinc-400 hover:text-amber-500">CLI reference</Link></li>
-            <li><Link to="/docs/api" className="text-zinc-400 hover:text-amber-500">API reference</Link></li>
+            {/* <li><Link to="/docs/api" className="text-zinc-400 hover:text-amber-500">API reference</Link></li> */}
             <li><Link to="/security" className="text-zinc-400 hover:text-amber-500">Security</Link></li>
             <li><Link to="/faq" className="text-zinc-400 hover:text-amber-500">FAQ</Link></li>
           </ul>
@@ -50,7 +50,7 @@ export function Footer() {
       <div className="border-t border-zinc-900">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 py-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
           <div className="text-xs text-zinc-600 font-mono">© 2026 AtGlance. Self-hosted, by design.</div>
-          <div className="text-xs text-zinc-600 font-mono">CLI + Kong + Laravel + MySQL + Redis</div>
+          <div className="text-xs text-zinc-600 font-mono">CLI + Rest API + Application + Database + Cache</div>
         </div>
       </div>
     </footer>

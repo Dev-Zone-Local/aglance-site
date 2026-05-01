@@ -51,7 +51,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] font-mono text-amber-500 mb-4">
               <Server size={14} /> Self-hosted Console
             </div>
-            <h3 className="text-2xl font-semibold text-zinc-100 mb-1">Laravel + Kong + MySQL + Redis</h3>
+            <h3 className="text-2xl font-semibold text-zinc-100 mb-1">Application + Rest API + Database + Cache</h3>
             <p className="text-sm text-zinc-400 mb-5">v{dl?.console_version || "1.0.0"} · Docker compose included</p>
             <a
               href={dl?.console_url || "#"}

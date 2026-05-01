@@ -19,23 +19,23 @@ export default function Architecture() {
       </p>
 
       <section className="mt-16">
-        <SectionHeading eyebrow="View 1 · CLI" title="AtGlance CLI" sub="Ubuntu/systemd host. Reads runtime, writes backups, talks to Kong." />
+        <SectionHeading eyebrow="View 1 · CLI" title="AtGlance CLI" sub="Ubuntu/systemd host. Reads runtime, writes backups, talks to Rest API." />
         <div className="mt-8">
           <ArchDiagram testId="arch-cli" src={ARCH.cli} alt="CLI architecture" caption="CLI · Local runtime · Backend gateway" />
         </div>
       </section>
 
       <section className="mt-20">
-        <SectionHeading eyebrow="View 2 · Console" title="AtGlance Management System" sub="Laravel app, Kong gateway, MySQL 8, Redis (queue + cache + buffer), File storage, SSO providers." />
+        <SectionHeading eyebrow="View 2 · Console" title="AtGlance Management System" sub="Application app, Rest API gateway, Database 8, Cache (queue + cache + buffer), File storage, SSO providers." />
         <div className="mt-8">
-          <ArchDiagram testId="arch-system" src={ARCH.system} alt="System architecture" caption="Console · Application · Redis · MySQL · Storage · SSO" />
+          <ArchDiagram testId="arch-system" src={ARCH.system} alt="System architecture" caption="Console · Application · Cache · Database · Storage · SSO" />
         </div>
       </section>
 
       <section className="mt-20">
         <SectionHeading eyebrow="View 3 · End-to-end" title="Full picture" sub="The CLI commands, the gateway, the application layer, the data plane, and future capabilities." />
         <div className="mt-8">
-          <ArchDiagram testId="arch-e2e" src={ARCH.e2e} alt="End-to-end architecture" caption="Operators → CLI → Kong → Laravel → Redis/MySQL → Future" />
+          <ArchDiagram testId="arch-e2e" src={ARCH.e2e} alt="End-to-end architecture" caption="Operators → CLI → Rest API → Application → Cache/Database → Future" />
         </div>
       </section>
 
@@ -43,10 +43,10 @@ export default function Architecture() {
         {[
           ["Operators", "SREs, admins, developers — all interact through the CLI or the Console UI."],
           ["AtGlance CLI", "main() routes through configure/validate/register/runtime/export."],
-          ["Kong API Gateway", "DB-less, declarative kong.yml. HTTPS on :8002. Rate-limited."],
-          ["Laravel application", "Web UI, REST APIs, RBAC middleware, DatabaseCircuitBreaker, Job dispatch."],
-          ["Redis", "Queue (jobs), Cache (reads), Buffer (writes during DB outage)."],
-          ["MySQL 8", "Users, orgs, workspaces, systems, services, configuration, files, raw_data, tokens, activity_logs."],
+          ["Rest API API Gateway", "DB-less, declarative Rest API.yml. HTTPS on :8002. Rate-limited."],
+          ["Application application", "Web UI, REST APIs, RBAC middleware, DatabaseCircuitBreaker, Job dispatch."],
+          ["Cache", "Queue (jobs), Cache (reads), Buffer (writes during DB outage)."],
+          ["Database 8", "Users, orgs, workspaces, systems, services, configuration, files, raw_data, tokens, activity_logs."],
         ].map(([t, d]) => (
           <div key={t} className="rounded-xl border border-zinc-800 bg-[#101012] p-5">
             <div className="text-[11px] uppercase tracking-[0.18em] text-amber-500 font-mono mb-2">{t}</div>

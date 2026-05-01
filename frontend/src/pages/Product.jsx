@@ -24,7 +24,7 @@ export default function Product() {
           <Cpu size={20} className="text-amber-500 mb-5" />
           <h3 className="text-2xl font-semibold text-zinc-100 mb-2">CLI agent</h3>
           <p className="text-zinc-400 leading-relaxed mb-5">
-            Runs on every host. Reads systemd, journalctl, ss/netstat. Writes config backups. Talks to Kong over HTTPS using a PAT token.
+            Runs on every host. Reads systemd, journalctl, ss/netstat. Writes config backups. Talks to Rest API over HTTPS using a PAT token.
           </p>
           <ul className="text-sm text-zinc-400 space-y-2">
             <li>· <code className="text-amber-500 font-mono">--system-register / --restore -f/--file</code></li>
@@ -41,11 +41,11 @@ export default function Product() {
           <Server size={20} className="text-amber-500 mb-5" />
           <h3 className="text-2xl font-semibold text-zinc-100 mb-2">Management Console</h3>
           <p className="text-zinc-400 leading-relaxed mb-5">
-            Laravel + Kong + MySQL 8 + Redis. Deploy on-prem, in your VPC, or hybrid. RBAC, dashboards, configuration history.
+            Application + Rest API + Database 8 + Cache. Deploy on-prem, in your VPC, or hybrid. RBAC, dashboards, configuration history.
           </p>
           <ul className="text-sm text-zinc-400 space-y-2">
             <li>· Web UI for admin/user/superadmin</li>
-            <li>· REST APIs behind Kong (DB-less, declarative)</li>
+            <li>· REST APIs behind Rest API (DB-less, declarative)</li>
             <li>· Queue workers with retry/backoff</li>
             <li>· DatabaseCircuitBreaker middleware</li>
             <li>· File storage: local or S3</li>
@@ -63,7 +63,7 @@ export default function Product() {
             testId="product-arch-diagram"
             src={ARCH_E2E}
             alt="End-to-end architecture"
-            caption="CLI → Kong API Gateway → Laravel + Redis + MySQL"
+            caption="CLI → Rest API API Gateway → Application + Cache + Database"
           />
         </div>
       </div>

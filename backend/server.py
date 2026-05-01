@@ -573,8 +573,8 @@ async def seed_content():
         faqs = [
             {"id": str(uuid.uuid4()), "question": "Is AtGlance really self-hosted?", "answer": "Yes. Both the CLI and the Management Console run inside your own boundary — on-prem, private cloud, or hybrid. No data leaves your environment.", "category": "General", "order": 0},
             {"id": str(uuid.uuid4()), "question": "Which Linux distributions are supported?", "answer": "AtGlance CLI is currently optimized for Ubuntu LTS with systemd. Other systemd distributions are typically compatible.", "category": "CLI", "order": 1},
-            {"id": str(uuid.uuid4()), "question": "How does the database circuit breaker work?", "answer": "When the database is unhealthy, the Laravel app trips the DatabaseCircuitBreaker — writes are buffered as queued jobs in Redis. When the DB recovers, queue workers replay buffered writes idempotently.", "category": "Resilience", "order": 2},
-            {"id": str(uuid.uuid4()), "question": "What is a PAT token?", "answer": "A Personal Access Token is issued per user/system. The CLI uses it to authenticate against the Kong API Gateway for system register/deregister/reactivate and configuration sync.", "category": "Security", "order": 3},
+            {"id": str(uuid.uuid4()), "question": "How does the database circuit breaker work?", "answer": "When the database is unhealthy, the Application app trips the DatabaseCircuitBreaker — writes are buffered as queued jobs in Cache. When the DB recovers, queue workers replay buffered writes idempotently.", "category": "Resilience", "order": 2},
+            {"id": str(uuid.uuid4()), "question": "What is a PAT token?", "answer": "A Personal Access Token is issued per user/system. The CLI uses it to authenticate against the Rest API API Gateway for system register/deregister/reactivate and configuration sync.", "category": "Security", "order": 3},
             {"id": str(uuid.uuid4()), "question": "Can I deregister and re-register a system?", "answer": "Yes. The CLI supports --system-deregister, --system-deregister-force, and --system-reactivate so you can decommission and bring systems back without losing identity.", "category": "CLI", "order": 4},
             {"id": str(uuid.uuid4()), "question": "Is AtGlance free?", "answer": "Yes — the Free tier includes the full self-hosted platform with no system limits. Enterprise plans add SLA-backed support.", "category": "Pricing", "order": 5},
         ]
@@ -622,7 +622,7 @@ async def seed_content():
             #     "id": str(uuid.uuid4()), "slug": "api", "section": "API",
             #     "title": "API reference", "order": 2,
             #     "content": (
-            #         "# API reference\n\nAll requests go through the Kong API Gateway on `:8002`.\n\n"
+            #         "# API reference\n\nAll requests go through the Rest API API Gateway on `:8002`.\n\n"
             #         "## Authentication\n\nAll endpoints require either a session cookie or a PAT token via `Authorization: Bearer <token>`.\n\n"
             #         "## Endpoints\n\n"
             #         "### `POST /system-register`\nRegister a new host.\n\n"
@@ -638,19 +638,19 @@ async def seed_content():
                 "id": str(uuid.uuid4()), "slug": "self-hosting", "section": "Self-hosting",
                 "title": "Self-hosting the Console", "order": 3,
                 "content": (
-                    "# Self-hosting the Management Console\n\nAtGlance Console is a Laravel application fronted by Kong API Gateway, with MySQL 8 + Redis.\n\n"
-                    "## Stack\n\n- Laravel (PHP 8.2+)\n- Kong API Gateway (DB-less mode, `kong.yml`)\n- MySQL 8\n- Redis (cache + queue + buffer)\n- Queue workers (retry/backoff)\n\n"
+                    "# Self-hosting the Management Console\n\nAtGlance Console is a Application application fronted by Rest API API Gateway, with Database 8 + Cache.\n\n"
+                    "## Stack\n\n- Application (PHP 8.2+)\n- Rest API API Gateway (DB-less mode, `Rest API.yml`)\n- Database 8\n- Cache (cache + queue + buffer)\n- Queue workers (retry/backoff)\n\n"
                     "## Deployment options\n\n- On-premises\n- Private cloud (AWS/Azure/GCP VPC)\n- Hybrid / multi-cloud\n\n"
                     "## Recommended docker-compose snippet\n\n"
-                    "```yaml\nservices:\n  mysql:\n    image: mysql:5.7\n    container_name: atglance-mysql\n    restart: unless-stopped\n    ports:\n      - \"3306:3306\"\n    volumes:\n      - mysql_data:/var/lib/mysql\n    environment:\n      MYSQL_ROOT_PASSWORD: root\n      MYSQL_DATABASE: atglance\n      MYSQL_ROOT_HOST: '%'\n    healthcheck:\n      test: [\"CMD-SHELL\", \"mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1\"]\n      interval: 10s\n      timeout: 5s\n      retries: 10\n      start_period: 30s\n\n  redis:\n    image: redis:7-alpine\n    restart: unless-stopped\n    ports:\n      - \"6379:6379\"\n    healthcheck:\n      test: [\"CMD\", \"redis-cli\", \"ping\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n\n  api:\n    image: atglance/ee-console-app:0.1.0\n    container_name: atglance-mangement-console\n    restart: unless-stopped\n    environment:\n      APP_URL: https:/<domain_Name-or-subdomain_ Name>\n    command:\n      - sh\n      - -lc\n      - |\n        if [ ! -f /app/vendor/autoload.php ]; then\n          composer install --no-interaction --prefer-dist --optimize-autoloader;\n        fi\n        php artisan serve --host=0.0.0.0 --port=8000 --no-reload\n    ports:\n      - \"8000:8000\"\n    volumes:\n      - composer_vendor:/app/vendor\n    depends_on:\n      mysql:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n\n  queue-worker:\n    image: atglance/ee-queue-worker:0.1.0\n    restart: unless-stopped\n    working_dir: /app\n    environment:\n      DB_CONNECTION: mysql\n      DB_HOST: mysql\n      DB_PORT: 3306\n      DB_DATABASE: atglance\n      DB_USERNAME: root\n      DB_PASSWORD: root\n      REDIS_HOST: redis\n      REDIS_PORT: 6379\n    command:\n      - sh\n      - -lc\n      - |\n        php artisan queue:work redis --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose\n    depends_on:\n      mysql:\n        condition: service_healthy\n      redis:\n        condition: service_healthy\n    volumes:\n      - composer_vendor:/app/vendor\n  kong:\n    image: atglance/ee-kong-app:0.1.0\n    restart: unless-stopped\n    environment:\n      KONG_DATABASE: \"off\"\n      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml\n      KONG_PROXY_LISTEN: 0.0.0.0:8002\n      KONG_ADMIN_LISTEN: 0.0.0.0:8001\n    ports:\n      - \"8002:8002\"\n      - \"8001:8001\"\n    depends_on:\n      - api\n\nvolumes:\n  mysql_data:\n  composer_vendor\n```\n"
+                    "```yaml\nservices:\n  Database:\n    image: Database:5.7\n    container_name: atglance-Database\n    restart: unless-stopped\n    ports:\n      - \"3306:3306\"\n    volumes:\n      - Database_data:/var/lib/Database\n    environment:\n      Database_ROOT_PASSWORD: root\n      Database_DATABASE: atglance\n      Database_ROOT_HOST: '%'\n    healthcheck:\n      test: [\"CMD-SHELL\", \"Databaseadmin ping -h 127.0.0.1 -uroot -proot || exit 1\"]\n      interval: 10s\n      timeout: 5s\n      retries: 10\n      start_period: 30s\n\n  Cache:\n    image: Cache:7-alpine\n    restart: unless-stopped\n    ports:\n      - \"6379:6379\"\n    healthcheck:\n      test: [\"CMD\", \"Cache-cli\", \"ping\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n\n  api:\n    image: atglance/ee-console-app:0.1.0\n    container_name: atglance-mangement-console\n    restart: unless-stopped\n    environment:\n      APP_URL: https:/<domain_Name-or-subdomain_ Name>\n    command:\n      - sh\n      - -lc\n      - |\n        if [ ! -f /app/vendor/autoload.php ]; then\n          composer install --no-interaction --prefer-dist --optimize-autoloader;\n        fi\n        php artisan serve --host=0.0.0.0 --port=8000 --no-reload\n    ports:\n      - \"8000:8000\"\n    volumes:\n      - composer_vendor:/app/vendor\n    depends_on:\n      Database:\n        condition: service_healthy\n      Cache:\n        condition: service_healthy\n\n  queue-worker:\n    image: atglance/ee-queue-worker:0.1.0\n    restart: unless-stopped\n    working_dir: /app\n    environment:\n      DB_CONNECTION: Database\n      DB_HOST: Database\n      DB_PORT: 3306\n      DB_DATABASE: atglance\n      DB_USERNAME: root\n      DB_PASSWORD: root\n      Cache_HOST: Cache\n      Cache_PORT: 6379\n    command:\n      - sh\n      - -lc\n      - |\n        php artisan queue:work Cache --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose\n    depends_on:\n      Database:\n        condition: service_healthy\n      Cache:\n        condition: service_healthy\n    volumes:\n      - composer_vendor:/app/vendor\n  Rest API:\n    image: atglance/ee-Rest API-app:0.1.0\n    restart: unless-stopped\n    environment:\n      Rest API_DATABASE: \"off\"\n      Rest API_DECLARATIVE_CONFIG: /Rest API/declarative/Rest API.yml\n      Rest API_PROXY_LISTEN: 0.0.0.0:8002\n      Rest API_ADMIN_LISTEN: 0.0.0.0:8001\n    ports:\n      - \"8002:8002\"\n      - \"8001:8001\"\n    depends_on:\n      - api\n\nvolumes:\n  Database_data:\n  composer_vendor\n```\n"
                 ),
             },
             {
                 "id": str(uuid.uuid4()), "slug": "architecture", "section": "Architecture",
                 "title": "Deep dive: Architecture", "order": 4,
                 "content": (
-                    "# Architecture deep dive\n\nAtGlance has three layers: **CLI**, **Kong API Gateway**, and **Management Console** (Laravel + Redis + MySQL).\n\n"
-                    "## Resilience: DB outage flow\n\n1. Web/API request arrives at Laravel.\n2. `DatabaseCircuitBreaker` middleware detects DB unhealthy.\n3. Writes are encoded as queued jobs and pushed to Redis Buffer.\n4. Reads fall back to cache where safe.\n5. Database recovers → queue workers replay jobs idempotently → state converges.\n\n"
+                    "# Architecture deep dive\n\nAtGlance has three layers: **CLI**, **Rest API API Gateway**, and **Management Console** (Application + Cache + Database).\n\n"
+                    "## Resilience: DB outage flow\n\n1. Web/API request arrives at Application.\n2. `DatabaseCircuitBreaker` middleware detects DB unhealthy.\n3. Writes are encoded as queued jobs and pushed to Cache Buffer.\n4. Reads fall back to cache where safe.\n5. Database recovers → queue workers replay jobs idempotently → state converges.\n\n"
                     "## RBAC roles\n\n- **superadmin**: tenancy, billing, integrations\n- **admin**: organization-level systems, users, configs\n- **user**: assigned workspaces only\n"
                 ),
             },
@@ -660,24 +660,24 @@ async def seed_content():
     if await db.settings.count_documents({"key": "contact"}) == 0:
         await db.settings.insert_one({
             "key": "contact",
-            "email": "hello@atglance.io",
-            "sales_email": "sales@atglance.io",
-            "support_email": "support@atglance.io",
-            "address": "Inside your boundary.",
-            "github": "https://github.com/atglance",
-            "twitter": "",
+            "email": "info@atglance.live",
+            "sales_email": "sales@atglance.live",
+            "support_email": "support@atglance.live",
+            "address": "Everything inside your boundaries.",
+            "github": "https://github.com/atglance-app",
+            "twitter": "#",
         })
 
     if await db.settings.count_documents({"key": "downloads"}) == 0:
         await db.settings.insert_one({
             "key": "downloads",
-            "cli_url": "http://app.atglance.live/atglance_cli/",
+            "cli_url": "http://app.atglance.live/cli/",
             "cli_version": "1.0.0",
             "cli_checksum": "",
-            "console_url": "http://app.atglance.live/mangement_console/",
+            "console_url": "http://app.atglance.live/console/",
             "console_version": "1.0.0",
             "console_checksum": "",
-            "cli_install_command": "curl -sSL https://atglance.live/install.sh | sudo bash",
+            "cli_install_command": "curl -sSL https://app.atglance.live/cli/install.sh | sudo bash",
         })
 
     pages_seed = {
@@ -686,7 +686,7 @@ async def seed_content():
             "content": (
                 "# About AtGlance\n\nAtGlance was built by SREs frustrated with the choice between heavy enterprise monitoring suites and a swarm of brittle scripts.\n\n"
                 "We believe operations teams deserve a calm, auditable, **self-hosted** platform that respects organisational boundaries.\n\n"
-                "## What we ship\n\n- A focused CLI that knows systemd.\n- A Laravel console you can deploy inside your VPC.\n- A resilient backend (Redis queues, DB circuit breaker) that doesn't lose your writes during an outage.\n"
+                "## What we ship\n\n- A focused CLI that knows systemd.\n- A Application console you can deploy inside your VPC.\n- A resilient backend (Cache queues, DB circuit breaker) that doesn't lose your writes during an outage.\n"
             ),
         },
         "terms": {

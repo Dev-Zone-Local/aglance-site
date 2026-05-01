@@ -7,8 +7,8 @@ const ITEMS = [
   { icon: KeyRound, title: "PAT tokens with scopes", desc: "Each CLI host carries a Personal Access Token. Tokens are short-lived, revocable, scoped per system." },
   { icon: ShieldCheck, title: "RBAC at the route layer", desc: "auth.session + auth.pat + admin.role middleware composed declaratively. Policy enforcement is impossible to forget." },
   { icon: FileLock, title: "Configuration backups, immutable", desc: "Every imported configuration is hashed and versioned. File storage can be local or S3 with object-level locks." },
-  { icon: Database, title: "Database circuit breaker", desc: "When the DB is unhealthy, mutations buffer to Redis. Replays are idempotent. No silent data loss." },
-  { icon: Activity, title: "Auditable everything", desc: "register / deregister / reactivate / config-import all write to activity_logs in MySQL with operator + timestamp." },
+  { icon: Database, title: "Database circuit breaker", desc: "When the DB is unhealthy, mutations buffer to Cache. Replays are idempotent. No silent data loss." },
+  { icon: Activity, title: "Auditable everything", desc: "register / deregister / reactivate / config-import all write to activity_logs in Database with operator + timestamp." },
 ];
 
 export default function Security() {

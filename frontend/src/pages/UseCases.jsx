@@ -5,8 +5,8 @@ const CASES = [
   { icon: Server, title: "Multi-host service inventory", desc: "Discover every systemd service, port and config across hundreds of Ubuntu hosts in minutes — without installing yet another agent." },
   { icon: GitBranch, title: "Safe configuration rollouts", desc: "Backup before you import. Validate before you apply. Roll back with one flag. Auditable in the Console." },
   { icon: ShieldCheck, title: "Compliance-grade auditability", desc: "Every register/deregister/config-import action is logged. RBAC enforced server-side. PAT tokens scoped per host." },
-  { icon: Network, title: "Air-gapped operations", desc: "Self-host the Console behind your VPN. Kong fronts it. The CLI talks only to your Kong. No egress to atglance.live." },
-  { icon: Activity, title: "Resilient under DB outages", desc: "Buffer writes via Redis when MySQL is down. Replay idempotently when it recovers. Operations don't stop." },
+  { icon: Network, title: "Air-gapped operations", desc: "Self-host the Console behind your VPN. Rest API fronts it. The CLI talks only to your Rest API. No egress to atglance.live." },
+  { icon: Activity, title: "Resilient under DB outages", desc: "Buffer writes via Cache when Database is down. Replay idempotently when it recovers. Operations don't stop." },
   { icon: Layers, title: "Hybrid + multi-cloud control", desc: "Run the same Console from one private cloud, manage hosts across on-prem and AWS/Azure/GCP. One source of truth." },
 ];
 

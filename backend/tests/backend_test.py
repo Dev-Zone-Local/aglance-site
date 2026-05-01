@@ -250,15 +250,15 @@ class TestAdminWrites:
 
     def test_contact_update(self, admin_session):
         info = {
-            "email": "hello@atglance.io", "sales_email": "sales@atglance.io",
-            "support_email": "support@atglance.io",
-            "address": "Inside your boundary.",
-            "github": "https://github.com/atglance", "twitter": "",
+            "email": "info@atglance.live", "sales_email": "sales@atglance.live",
+            "support_email": "support@atglance.live",
+            "address": "Everything inside your boundaries.",
+            "github": "https://github.com/atglance-app", "twitter": "#",
         }
         r = admin_session.put(f"{API}/admin/contact", json=info, timeout=15)
         assert r.status_code == 200
         v = requests.get(f"{API}/cms/contact", timeout=15).json()
-        assert v["email"] == "hello@atglance.io"
+        assert v["email"] == "Info@atglance.live"
 
     def test_pages_update(self, admin_session):
         body = {"slug": "about", "title": "About AtGlance", "content": "# About\n\nUpdated."}

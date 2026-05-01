@@ -15,13 +15,13 @@ export default function Console() {
         Self-hosted control plane.<br />Inside your boundary.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">
-        A Laravel application fronted by Kong, backed by MySQL 8 and Redis. Deploy it where your compliance team is comfortable — on-prem, private cloud, hybrid.
+        A Application application fronted by Rest API, backed by Database 8 and Cache. Deploy it where your compliance team is comfortable — on-prem, private cloud, hybrid.
       </p>
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
         <FeatureCard testId="console-feat-rbac" icon={ShieldCheck} title="RBAC + Middleware" desc="auth.session, auth.pat, admin.role, super.admin.role — composable middleware enforced at the route layer." />
-        <FeatureCard testId="console-feat-cb" icon={Database} title="DatabaseCircuitBreaker" desc="When MySQL is unhealthy, mutations are buffered as queued jobs. Workers replay on recovery, idempotent by design." />
-        <FeatureCard testId="console-feat-kong" icon={Network} title="Kong DB-less" desc="kong.yml is declarative, version-controlled. Rate limits, ACLs, request transformations live next to your code." />
+        <FeatureCard testId="console-feat-cb" icon={Database} title="DatabaseCircuitBreaker" desc="When Database is unhealthy, mutations are buffered as queued jobs. Workers replay on recovery, idempotent by design." />
+        <FeatureCard testId="console-feat-Rest API" icon={Network} title="Rest API DB-less" desc="Rest API.yml is declarative, version-controlled. Rate limits, ACLs, request transformations live next to your code." />
         <FeatureCard testId="console-feat-files" icon={GitBranch} title="Configuration history" desc="Every config upload becomes an immutable file in local FS or S3 with a row in the database." />
         <FeatureCard testId="console-feat-queue" icon={Workflow} title="Queue workers" desc="Retry/backoff, dead-letter inspection, replay buttons in the admin UI for buffered jobs." />
         <FeatureCard testId="console-feat-sso" icon={Server} title="SSO-ready" desc="Bring your own provider — GitHub, Azure AD, Okta, Auth0, Google — or stick to email/password + PAT." />
@@ -30,7 +30,7 @@ export default function Console() {
       <div className="mt-20">
         <SectionHeading eyebrow="Architecture" title="The Console under the hood" />
         <div className="mt-8">
-          <ArchDiagram testId="console-arch-diagram" src={ARCH_SYSTEM} alt="AtGlance system architecture" caption="Laravel · Kong · MySQL · Redis · File storage" />
+          <ArchDiagram testId="console-arch-diagram" src={ARCH_SYSTEM} alt="AtGlance system architecture" caption="Application · Rest API · Database · Cache · File storage" />
         </div>
       </div>
 
@@ -39,8 +39,8 @@ export default function Console() {
         <div className="mt-8">
           <StoryFlow
             steps={[
-              { title: "Detect", desc: "DatabaseCircuitBreaker probes MySQL. Threshold tripped → circuit open." },
-              { title: "Buffer", desc: "Writes encoded as Job classes pushed to Redis queue 'buffer'." },
+              { title: "Detect", desc: "DatabaseCircuitBreaker probes Database. Threshold tripped → circuit open." },
+              { title: "Buffer", desc: "Writes encoded as Job classes pushed to Cache queue 'buffer'." },
               { title: "Recover", desc: "Probes succeed again. Circuit half-open → full close." },
               { title: "Replay", desc: "Workers drain the buffer queue. Jobs are idempotent by design." },
             ]}
@@ -61,32 +61,32 @@ export default function Console() {
           <CodeBlock
             title="docker-compose.yml"
             code={`services:
-  mysql:
-    image: mysql:5.7
-    container_name: atglance-mysql
+  Database:
+    image: Database:5.7
+    container_name: atglance-Database
     restart: unless-stopped
     ports:
       - "3306:3306"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - Database_data:/var/lib/Database
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: atglance
-      MYSQL_ROOT_HOST: '%'
+      Database_ROOT_PASSWORD: root
+      Database_DATABASE: atglance
+      Database_ROOT_HOST: '%'
     healthcheck:
-      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
+      test: ["CMD-SHELL", "Databaseadmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
 
-  redis:
-    image: redis:7-alpine
+  Cache:
+    image: Cache:7-alpine
     restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "Cache-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -110,9 +110,9 @@ export default function Console() {
     volumes:
       - composer_vendor:/app/vendor
     depends_on:
-      mysql:
+      Database:
         condition: service_healthy
-      redis:
+      Cache:
         condition: service_healthy
 
   queue-worker:
@@ -120,34 +120,34 @@ export default function Console() {
     restart: unless-stopped
     working_dir: /app
     environment:
-      DB_CONNECTION: mysql
-      DB_HOST: mysql
+      DB_CONNECTION: Database
+      DB_HOST: Database
       DB_PORT: 3306
       DB_DATABASE: atglance
       DB_USERNAME: root
       DB_PASSWORD: root
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      Cache_HOST: Cache
+      Cache_PORT: 6379
     command:
       - sh
       - -lc
       - |
-        php artisan queue:work redis --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose
+        php artisan queue:work Cache --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose
     depends_on:
-      mysql:
+      Database:
         condition: service_healthy
-      redis:
+      Cache:
         condition: service_healthy
     volumes:
       - composer_vendor:/app/vendor
-  kong:
-    image: atglance/ee-kong-app:0.1.0
+  Rest API:
+    image: atglance/ee-Rest API-app:0.1.0
     restart: unless-stopped
     environment:
-      KONG_DATABASE: "off"
-      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
-      KONG_PROXY_LISTEN: 0.0.0.0:8002
-      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+      Rest API_DATABASE: "off"
+      Rest API_DECLARATIVE_CONFIG: /Rest API/declarative/Rest API.yml
+      Rest API_PROXY_LISTEN: 0.0.0.0:8002
+      Rest API_ADMIN_LISTEN: 0.0.0.0:8001
     ports:
       - "8002:8002"
       - "8001:8001"
@@ -155,7 +155,7 @@ export default function Console() {
       - api
 
 volumes:
-  mysql_data:
+  Database_data:
   composer_vendor:`}
           />
         </div>

@@ -32,7 +32,7 @@ export default function Cli() {
         A focused, idempotent agent for systemd hosts.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">
-        Runs on Ubuntu LTS. Reads journalctl, ss/netstat, /etc/environment. Writes config backups. Talks to the Console only via Kong.
+        Runs on Ubuntu LTS. Reads journalctl, ss/netstat, /etc/environment. Writes config backups. Talks to the Console only via Rest API.
       </p>
 
       <div className="grid lg:grid-cols-2 gap-10 items-center mt-14">
@@ -45,7 +45,7 @@ export default function Cli() {
             "✓ config.json valid",
             "✓ /etc/environment readable",
             "✓ journalctl + ss available",
-            "✓ Console reachable (kong :8002)",
+            "✓ Console reachable (Rest API :8002)",
           ]}
         />
         <div>
@@ -84,7 +84,7 @@ export default function Cli() {
       <div className="mt-20">
         <SectionHeading eyebrow="Architecture" title="Inside the CLI" />
         <div className="mt-8">
-          <ArchDiagram testId="cli-arch-diagram" src={ARCH_CLI} alt="AtGlance CLI architecture" caption="CLI → Kong → Backend · Local runtime & persistent paths" />
+          <ArchDiagram testId="cli-arch-diagram" src={ARCH_CLI} alt="AtGlance CLI architecture" caption="CLI → Rest API → Backend · Local runtime & persistent paths" />
         </div>
       </div>
 
