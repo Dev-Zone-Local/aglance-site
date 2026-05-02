@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600">
+  <rect fill="#0a0a0a" width="800" height="600"/>
+  <rect fill="#1a1a1a" x="0" y="0" width="800" height="60"/>
+  <text x="20" y="40" font-family="monospace" font-size="18" fill="#fbbf24">Job Replay</text>
+  <circle cx="400" cy="300" r="50" fill="#27272a"/>
+  <text x="400" y="310" font-family="monospace" font-size="14" fill="#71717a" text-anchor="middle">Console 8</text>
+</svg>

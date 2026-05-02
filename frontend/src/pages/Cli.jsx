@@ -2,10 +2,11 @@ import { ArchDiagram } from "../components/ArchDiagram";
 import { Terminal, CodeBlock } from "../components/Terminal";
 import { SectionHeading } from "../components/FeatureCard";
 import { StoryFlow } from "../components/StoryFlow";
+import { ScreenshotCarousel } from "../components/ScreenshotCarousel";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
 
-const ARCH_CLI = "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/f4o5vv9n_AtGlance%20CLI%20Tool%20Architecture.png";
+const ARCH_CLI = "/images/AtGlance_CLI Tool Architecture.png";
 
 const FLAGS = [
   ["--version", "Print CLI version"],
@@ -112,6 +113,13 @@ config-imports/                  # staged imports awaiting --validate
 /etc/environment                 # validation hash, system_id, org_id`}
         />
       </div>
+
+      {/* <div className="mt-20">
+        <SectionHeading eyebrow="Gallery" title="CLI in action" />
+        <div className="mt-8">
+          <ScreenshotCarousel type="cli" />
+        </div>
+      </div> */}
     </div>
   );
 }

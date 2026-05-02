@@ -3,9 +3,10 @@ import { SectionHeading, FeatureCard } from "../components/FeatureCard";
 import { RBACTable } from "../components/RBACTable";
 import { CodeBlock } from "../components/Terminal";
 import { StoryFlow } from "../components/StoryFlow";
+import { ScreenshotCarousel } from "../components/ScreenshotCarousel";
 import { Database, Workflow, ShieldCheck, GitBranch, Server, Network } from "lucide-react";
 
-const ARCH_SYSTEM = "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/4r5l0e0a_AtGlance%20Management%20Tool%20System%20Architecture.png";
+const ARCH_SYSTEM = "/images/Atglance System Architecture.png";
 
 export default function Console() {
   return (
@@ -160,6 +161,13 @@ volumes:
           />
         </div>
       </div>
+
+      {/* <div className="mt-20">
+        <SectionHeading eyebrow="Gallery" title="Console in action" />
+        <div className="mt-8">
+          <ScreenshotCarousel type="console" />
+        </div>
+      </div> */}
     </div>
   );
 }

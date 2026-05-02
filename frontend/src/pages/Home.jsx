@@ -8,7 +8,7 @@ import {
   ShieldCheck, Server, Workflow, Cpu, GitBranch, Network, Activity, Database, ArrowRight, Lock,
 } from "lucide-react";
 
-const ARCH_E2E = "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/7ejgk1sv_AtGlance%20Full%20Architecture%20cli%20with%20management%20console.png";
+const ARCH_E2E = "/images/End-to-End Architecture.png";
 
 export default function Home() {
   return (
@@ -142,7 +142,7 @@ export default function Home() {
             testId="home-arch-diagram"
             src={ARCH_E2E}
             alt="AtGlance End-to-End Architecture"
-            caption="End-to-end · CLI → Rest API → Application → Database/Cache"
+            caption="End-to-end · CLI → Gateway → Application → Database/Cache"
           />
         </div>
         <div className="mt-6 text-center">
@@ -177,7 +177,7 @@ export default function Home() {
           <Terminal
             title="install.sh"
             lines={[
-              "$ curl -sSL https://atglance.live/install.sh | sudo bash",
+              "$ curl -sSL https://app.atglance.live/cli/install.sh | sudo bash",
               "→ Detected: Ubuntu 22.04 · systemd 249",
               "→ Installed atglance v1.0.0 → /usr/local/bin/atglance",
               "$ atglance --configure",
