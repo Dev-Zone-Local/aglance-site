@@ -31,7 +31,7 @@ export default function Dashboard() {
             <h3 className="text-2xl font-semibold text-zinc-100 mb-1">Linux / systemd agent</h3>
             <p className="text-sm text-zinc-400 mb-5">v{dl?.cli_version || "1.0.0"} · Ubuntu LTS recommended</p>
             <a
-              href={dl?.cli_url || "#"}
+              href="https://github.com/atglance-app/Ubuntu-CLI"
               target="_blank"
               rel="noreferrer"
               data-testid="dashboard-cli-download"
@@ -54,7 +54,7 @@ export default function Dashboard() {
             <h3 className="text-2xl font-semibold text-zinc-100 mb-1">Application + Rest API + Database + Cache</h3>
             <p className="text-sm text-zinc-400 mb-5">v{dl?.console_version || "1.0.0"} · Docker compose included</p>
             <a
-              href={dl?.console_url || "#"}
+              href="https://github.com/atglance-app/ee-console"
               target="_blank"
               rel="noreferrer"
               data-testid="dashboard-console-download"
@@ -73,7 +73,7 @@ export default function Dashboard() {
         <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-3">Quick install</div>
         <CodeBlock
           title="bash"
-          code={dl?.cli_install_command || "curl -sSL https://atglance.live/install.sh | sudo bash"}
+          code={dl?.cli_install_command || "curl -sSL https://app.atglance.live/cli/install.sh | sudo bash"}
         />
       </div>
 

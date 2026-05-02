@@ -92,9 +92,9 @@ export default function Product() {
         />
         <CodeBlock
           title="bash"
-          code={`curl -sSL https://atglance.live/install.sh | sudo bash
-atglance --configure
-atglance --system-register`}
+          code={`curl -sSL https://app.atglance.live/cli/install.sh | sudo bash
+sudo atglance --configure
+sudo atglance --system-register`}
         />
       </div>
     </div>
