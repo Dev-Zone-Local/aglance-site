@@ -54,7 +54,7 @@ export default function Dashboard() {
             <h3 className="text-2xl font-semibold text-zinc-100 mb-1">Application + Rest API + Database + Cache</h3>
             <p className="text-sm text-zinc-400 mb-5">v{dl?.console_version || "1.0.0"} · Docker compose included</p>
             <a
-              href="https://github.com/atglance-app/ee-console"
+              href="https://github.com/atglance-app/ce-console"
               target="_blank"
               rel="noreferrer"
               data-testid="dashboard-console-download"

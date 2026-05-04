@@ -5,7 +5,7 @@ import { StoryFlow } from "../components/StoryFlow";
 import { Terminal, CodeBlock } from "../components/Terminal";
 import { Cpu, Server, ArrowRight, Workflow } from "lucide-react";
 
-const ARCH_E2E = "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/7ejgk1sv_AtGlance%20Full%20Architecture%20cli%20with%20management%20console.png";
+const ARCH_E2E = "/images/End-to-End Architecture.png";
 
 export default function Product() {
   return (
@@ -94,7 +94,9 @@ export default function Product() {
           title="bash"
           code={`curl -sSL https://app.atglance.live/cli/install.sh | sudo bash
 sudo atglance --configure
-sudo atglance --system-register`}
+sudo atglance --system-register
+sudo atglance --validate
+sudo atglance --show-my-services`}
         />
       </div>
     </div>

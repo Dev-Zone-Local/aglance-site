@@ -31,7 +31,7 @@ export default function Home() {
               inside your boundary.
             </h1>
             <p className="text-lg text-zinc-400 leading-relaxed max-w-xl mb-8">
-              An Ubuntu-focused operations platform with a calm, auditable CLI and a self-hosted Management Console — built on Rest API, Application, Database and Cache. No telemetry. No vendor lock-in.
+              An CLI-focused operations platform with a calm, auditable CLI and a self-hosted Management Console — built on Rest API, Application, Database and Cache. No telemetry. No vendor lock-in.
             </p>
             <div className="flex flex-wrap items-center gap-3 mb-8">
               <Link

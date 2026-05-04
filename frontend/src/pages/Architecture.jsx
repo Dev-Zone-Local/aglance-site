@@ -2,9 +2,9 @@ import { ArchDiagram } from "../components/ArchDiagram";
 import { SectionHeading } from "../components/FeatureCard";
 
 const ARCH = {
-  cli: "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/f4o5vv9n_AtGlance%20CLI%20Tool%20Architecture.png",
-  system: "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/4r5l0e0a_AtGlance%20Management%20Tool%20System%20Architecture.png",
-  e2e: "https://customer-assets.emergentagent.com/job_a89336b5-1df0-4e9a-bcfc-111dd4dd1c6a/artifacts/7ejgk1sv_AtGlance%20Full%20Architecture%20cli%20with%20management%20console.png",
+  cli: "/images/AtGlance_CLI Tool Architecture.png",
+  system: "/images/Atglance System Architecture.png",
+  e2e: "/images/End-to-End Architecture.png",
 };
 
 export default function Architecture() {

@@ -62,42 +62,44 @@ export default function Console() {
           <CodeBlock
             title="docker-compose.yml"
             code={`services:
-  Database:
-    image: Database:5.7
-    container_name: atglance-Database
+  mysql:
+    image: mysql:5.7
+    container_name: atglance-db-layer
     restart: unless-stopped
     ports:
       - "3306:3306"
     volumes:
-      - Database_data:/var/lib/Database
+      - mysql_data:/var/lib/mysql
     environment:
-      Database_ROOT_PASSWORD: root
-      Database_DATABASE: atglance
-      Database_ROOT_HOST: '%'
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: atglance
+      MYSQL_ROOT_HOST: '%'
     healthcheck:
-      test: ["CMD-SHELL", "Databaseadmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -proot || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 10
       start_period: 30s
 
-  Cache:
-    image: Cache:7-alpine
+  redis:
+    image: redis:7-alpine
+    container_name: atglance-cache-layer
     restart: unless-stopped
     ports:
       - "6379:6379"
     healthcheck:
-      test: ["CMD", "Cache-cli", "ping"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   api:
-    image: atglance/ee-console-app:0.1.0
-    container_name: atglance-mangement-console
+    image: atglance/ce-console-app:0.1.0
+    container_name: atglance-management-console
     restart: unless-stopped
     environment:
-      APP_URL: https:/<domain_Name-or-subdomain_ Name>
+      APP_URL: <Applicaiton Domain or subdoamin name includeing http or https>
+      APP_FORCE_HTTPS: "true"
     command:
       - sh
       - -lc
@@ -111,44 +113,46 @@ export default function Console() {
     volumes:
       - composer_vendor:/app/vendor
     depends_on:
-      Database:
+      mysql:
         condition: service_healthy
-      Cache:
+      redis:
         condition: service_healthy
 
   queue-worker:
-    image: atglance/ee-queue-worker:0.1.0
+    image: atglance/ce-queue-worker:0.1.0
+    container_name: atglance-queue-layer
     restart: unless-stopped
     working_dir: /app
     environment:
-      DB_CONNECTION: Database
-      DB_HOST: Database
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
       DB_PORT: 3306
       DB_DATABASE: atglance
       DB_USERNAME: root
       DB_PASSWORD: root
-      Cache_HOST: Cache
-      Cache_PORT: 6379
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     command:
       - sh
       - -lc
       - |
-        php artisan queue:work Cache --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose
+        php artisan queue:work redis --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose
     depends_on:
-      Database:
+      mysql:
         condition: service_healthy
-      Cache:
+      redis:
         condition: service_healthy
     volumes:
       - composer_vendor:/app/vendor
-  Rest API:
-    image: atglance/ee-Rest API-app:0.1.0
+  kong:
+    image: atglance/ce-gateway-app:0.1.0
+    container_name: atglance-Gateway-layer
     restart: unless-stopped
     environment:
-      Rest API_DATABASE: "off"
-      Rest API_DECLARATIVE_CONFIG: /Rest API/declarative/Rest API.yml
-      Rest API_PROXY_LISTEN: 0.0.0.0:8002
-      Rest API_ADMIN_LISTEN: 0.0.0.0:8001
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: /kong/declarative/kong.yml
+      KONG_PROXY_LISTEN: 0.0.0.0:8002
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
     ports:
       - "8002:8002"
       - "8001:8001"
@@ -156,7 +160,7 @@ export default function Console() {
       - api
 
 volumes:
-  Database_data:
+  mysql_data:
   composer_vendor:`}
           />
         </div>
