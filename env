@@ -1,0 +1,20 @@
+# Database Configuration
+DB_NAME=atglance_db
+
+# Required: JWT Secret for authentication
+JWT_SECRET=Niket@786123
+
+# Admin Account
+ADMIN_EMAIL=admin@atglance.live
+ADMIN_PASSWORD=Atglance@123
+
+# GitHub OAuth (optional - leave empty if not using GitHub auth)
+GITHUB_CLIENT_ID=Ov23lijGSKYOBKxygfKj
+GITHUB_CLIENT_SECRET=80c4b8d5757aa485faba7a68419e4a582df59b25
+GITHUB_REDIRECT_URI=https://atglance.live/auth/sso/github/callback
+
+# Frontend & CORS Configuration
+FRONTEND_URL=http://localhost:8080
+FRONTEND_PORT=8080
+CORS_ORIGINS=http://localhost:8080
+REACT_APP_BACKEND_URL=
