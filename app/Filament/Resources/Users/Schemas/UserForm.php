@@ -29,6 +29,11 @@ class UserForm
                     ->default(User::ROLE_USER)
                     // Admins cannot demote themselves and lock everyone out.
                     ->disabled(fn (?User $record) => $record?->is(auth()->user())),
+                Select::make('plan')
+                    ->options(collect(config('atglance.plans'))->map(fn (array $p) => $p['label'])->all())
+                    ->required()
+                    ->default(config('atglance.default_plan'))
+                    ->helperText('Controls how many Management Console licences the user can create.'),
                 TextInput::make('password')
                     ->password()
                     ->revealable()

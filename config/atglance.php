@@ -14,4 +14,15 @@ return [
     */
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
 
+    /*
+    | Subscription plans. `licenses` is the max number of Management Console
+    | licences a user on the plan may hold (null = unlimited). New users get `free`.
+    */
+    'default_plan' => 'free',
+
+    'plans' => [
+        'free' => ['label' => 'Free', 'licenses' => 1],
+        'enterprise' => ['label' => 'Enterprise', 'licenses' => null],
+    ],
+
 ];

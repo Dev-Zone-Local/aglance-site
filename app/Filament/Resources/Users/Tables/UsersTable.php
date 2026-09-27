@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Http\Controllers\Api\LicenseController;
 use App\Models\User;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\ImageColumn;
@@ -27,6 +28,13 @@ class UsersTable
                 TextColumn::make('role')
                     ->badge()
                     ->color(fn (string $state) => $state === User::ROLE_ADMIN ? 'warning' : 'gray'),
+                TextColumn::make('plan')
+                    ->badge()
+                    ->formatStateUsing(fn (User $record) => $record->planLabel())
+                    ->color(fn (string $state) => $state === 'free' ? 'gray' : 'success'),
+                TextColumn::make('tokens_count')
+                    ->label('Licences')
+                    ->counts(['tokens' => fn ($q) => $q->whereJsonContains('abilities', LicenseController::ABILITY)]),
                 TextColumn::make('auth_method')
                     ->badge(),
                 TextColumn::make('github_login')
@@ -41,6 +49,9 @@ class UsersTable
                     User::ROLE_USER => 'User',
                     User::ROLE_ADMIN => 'Admin',
                 ]),
+                SelectFilter::make('plan')->options(
+                    collect(config('atglance.plans'))->map(fn (array $p) => $p['label'])->all()
+                ),
             ])
             ->recordActions([
                 EditAction::make(),

@@ -38,32 +38,27 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 | POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
 | GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
 | GET | `/api/downloads` | logged in |
-| GET / POST | `/api/install-tokens` | logged in; list / create Console install tokens (plain token returned once) |
-| DELETE | `/api/install-tokens/{id}` | logged in; revoke |
-| POST | `/api/install-tokens/verify` | `Authorization: Bearer <install token>`; used by the Management Console installer |
+| GET / POST | `/api/licenses` | logged in; list (with plan + limit) / create a Console licence (key returned once) |
+| DELETE | `/api/licenses/{id}` | logged in; revoke |
+| POST | `/api/licenses/verify` | `Authorization: Bearer <licence key>`; used by the Management Console installer |
 | GET | `/api/auth/providers` | public; `{github: bool}` |
 
-### Management Console install tokens
+### Management Console licences
 
-Users create install tokens on the SPA dashboard. The Console installer confirms a token with this call:
+Users create licences on the SPA dashboard. The Management Console installer confirms a licence key with this call:
 
 ```bash
-curl -X POST https://<site>/api/install-tokens/verify \
-  -H "Accept: application/json" \
-  -H "Authorization: Bearer <token>"
+curl -X POST https://<site>/api/licenses/verify   -H "Accept: application/json"   -H "Authorization: Bearer <licence key>"
 ```
 
-A valid token returns `200` with `{"valid": true, "user": {id, email, name}, "token": {name}}`. A bad or revoked token returns `401`. Tokens never expire; users revoke them from the dashboard.
+A valid key returns `200` with `{"valid": true, "user": {id, email, name}, "license": {name}, "plan": "free"}`. A bad or revoked key returns `401`.
 
-- Tokens are Sanctum personal access tokens with the `console:install` ability. They are stored hashed and use the `atg_` prefix.
-- Each user can have at most 10 active tokens.
+- Licences never expire; users revoke them from the dashboard.
+- Licence keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and use the `atg_` prefix.
 - `last_used_at` is updated on every verify call.
+- **Plan limits:** each user has a `plan` (default `free`). The limits are set in `config/atglance.php` (`plans`): Free allows 1 licence and Enterprise is unlimited. Admins change a user's plan in Filament, under Users. When a user is at the limit, creating another licence returns `403`.
 
-Content is edited in Filament, so there are no write endpoints for CMS content.
-
-Errors use the standard Laravel format: `{ "message": "...", "errors": { "field": ["..."] } }`.
-
-### How SPA auth works
+## How SPA auth works
 
 1. The SPA calls `GET /sanctum/csrf-cookie`. This sets the `XSRF-TOKEN` cookie.
 2. Axios sends the value back in the `X-XSRF-TOKEN` header (`withXSRFToken: true` in `frontend/src/lib/api.js`).

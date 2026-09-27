@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CmsController;
 use App\Http\Controllers\Api\GithubAuthController;
-use App\Http\Controllers\Api\InstallTokenController;
+use App\Http\Controllers\Api\LicenseController;
 use App\Support\GithubOAuth;
 use Illuminate\Support\Facades\Route;
 
@@ -34,8 +34,8 @@ Route::prefix('cms')->controller(CmsController::class)->group(function () {
 // Logged-in users only
 Route::get('downloads', [CmsController::class, 'downloads'])->middleware('auth:sanctum');
 
-// Management Console install tokens (created on the dashboard, verified by the installer)
-Route::middleware('auth:sanctum')->prefix('install-tokens')->controller(InstallTokenController::class)->group(function () {
+// Management Console licences (created on the dashboard, verified by the Console installer)
+Route::middleware('auth:sanctum')->prefix('licenses')->controller(LicenseController::class)->group(function () {
     Route::post('verify', 'verify')->middleware('throttle:30,1');
     Route::get('/', 'index');
     Route::post('/', 'store')->middleware('throttle:10,1');
