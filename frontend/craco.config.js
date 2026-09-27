@@ -60,7 +60,20 @@ let webpackConfig = {
   },
 };
 
+// In dev, proxy Laravel routes so the SPA and API share one origin (session cookies + CSRF just work).
+// Run Laravel with `php artisan serve` (default http://127.0.0.1:8000) or set LARAVEL_DEV_URL.
+const LARAVEL_DEV_URL = process.env.LARAVEL_DEV_URL || "http://127.0.0.1:8000";
+const LARAVEL_PATHS = ["/api", "/sanctum", "/admin", "/livewire", "/css/filament", "/js/filament", "/fonts/filament"];
+
 webpackConfig.devServer = (devServerConfig) => {
+  if (!process.env.REACT_APP_BACKEND_URL) {
+    // fixRequestBody: the visual-edits dev middleware consumes JSON POST bodies; re-send them to Laravel.
+    const { fixRequestBody } = require("http-proxy-middleware");
+    devServerConfig.proxy = [
+      { context: LARAVEL_PATHS, target: LARAVEL_DEV_URL, changeOrigin: false, onProxyReq: fixRequestBody },
+    ];
+  }
+
   // Add health check endpoints if enabled
   if (config.enableHealthCheck && setupHealthEndpoints && healthPluginInstance) {
     const originalSetupMiddlewares = devServerConfig.setupMiddlewares;

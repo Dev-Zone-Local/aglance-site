@@ -1,5 +1,6 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth-context";
+import { ADMIN_URL } from "../lib/api";
 import { ChevronDown, Terminal as TerminalIcon, Menu, X } from "lucide-react";
 import { useState } from "react";
 
@@ -48,13 +49,24 @@ export function Header() {
         <div className="ml-auto flex items-center gap-2">
           {user && user !== false ? (
             <>
-              <Link
-                to={user.role === "admin" ? "/admin" : "/dashboard"}
-                data-testid="header-dashboard-link"
-                className="hidden sm:inline text-sm text-zinc-300 hover:text-amber-500 px-3 py-1.5"
-              >
-                {user.role === "admin" ? "Admin" : "Dashboard"}
-              </Link>
+              {user.role === "admin" ? (
+                // Filament panel is served by Laravel, so use a full page load.
+                <a
+                  href={ADMIN_URL}
+                  data-testid="header-dashboard-link"
+                  className="hidden sm:inline text-sm text-zinc-300 hover:text-amber-500 px-3 py-1.5"
+                >
+                  Admin
+                </a>
+              ) : (
+                <Link
+                  to="/dashboard"
+                  data-testid="header-dashboard-link"
+                  className="hidden sm:inline text-sm text-zinc-300 hover:text-amber-500 px-3 py-1.5"
+                >
+                  Dashboard
+                </Link>
+              )}
               <button
                 onClick={async () => { await logout(); navigate("/"); }}
                 data-testid="header-logout-btn"

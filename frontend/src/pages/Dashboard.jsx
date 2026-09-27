@@ -4,6 +4,7 @@ import { useAuth } from "../lib/auth-context";
 import { Cpu, Server, Download, BookOpen, Terminal as TerminalIcon, ExternalLink } from "lucide-react";
 import { Link } from "react-router-dom";
 import { CodeBlock } from "../components/Terminal";
+import InstallTokens from "../components/InstallTokens";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -68,6 +69,8 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      <InstallTokens />
 
       <div className="mt-10">
         <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-3">Quick install</div>

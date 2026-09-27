@@ -21,7 +21,6 @@ import Login from "@/pages/Login";
 import Register from "@/pages/Register";
 import GithubCallback from "@/pages/GithubCallback";
 import Dashboard from "@/pages/Dashboard";
-import Admin from "@/pages/Admin";
 
 function NotFound() {
   return (
@@ -61,7 +60,6 @@ export default function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/auth/sso/github/callback" element={<GithubCallback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-              <Route path="/admin/*" element={<ProtectedRoute adminOnly><Admin /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { api, formatApiError } from "../lib/api";
-import { useAuth } from "../lib/auth-context";
+import { useAuth, goToAccountHome } from "../lib/auth-context";
 
 export default function GithubCallback() {
   const [params] = useSearchParams();
@@ -23,9 +23,9 @@ export default function GithubCallback() {
       .post(`/auth/github/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`)
       .then((r) => {
         setUser(r.data);
-        nav(r.data.role === "admin" ? "/admin" : "/dashboard", { replace: true });
+        goToAccountHome(r.data, nav);
       })
-      .catch((e) => setErr(formatApiError(e.response?.data?.detail) || e.message));
+      .catch((e) => setErr(formatApiError(e.response?.data)));
   }, [params, nav, setUser]);
 
   return (

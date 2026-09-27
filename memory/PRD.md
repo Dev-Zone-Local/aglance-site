@@ -13,7 +13,7 @@ Senior product designer + full-stack architect deliverable: design and ship the 
 - Admin CMS to edit: pricing, docs, FAQ, contact, static pages (Terms/Privacy/About), download URLs
 
 ## Architecture
-- **Backend**: FastAPI + MongoDB (motor). Single `/app/backend/server.py`. JWT (httpOnly cookies) + bcrypt. GitHub OAuth via httpx. Startup-time seeding of admin + content.
+- **Backend**: Laravel 12 + MySQL (migrated from FastAPI + MongoDB, Sep 2026). Sanctum SPA session auth, Socialite GitHub SSO, Filament admin at /admin. Seeders for admin + content.
 - **Frontend**: React 19 + Tailwind + Shadcn. Geist + JetBrains Mono fonts. Custom Markdown renderer (no extra deps). React Router v7.
 - **Theme tokens** in `/app/frontend/src/index.css` (amber #F59E0B over #0a0a0a base).
 

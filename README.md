@@ -1,217 +1,145 @@
-# AtGlance
+# AtGlance site
 
-AtGlance is a full-stack application with a FastAPI backend and React frontend, containerized with Docker and orchestrated using Docker Compose.
+Marketing site, documentation and account area for AtGlance.
 
-## Overview
+- **Backend**: Laravel 12 (PHP 8.2+). It is the JSON API for the SPA and hosts the admin CMS.
+- **Admin CMS**: Filament 4 at `/admin`. Only users with role `admin` can use it.
+- **Frontend**: React 19 SPA in `frontend/` (CRA + craco, Tailwind, shadcn/ui).
+- **Database**: MySQL 8 (MariaDB 10.4+ also works). Tests use SQLite in memory.
+- **Auth**: Laravel Sanctum SPA auth (session cookie + CSRF), plus GitHub SSO through Laravel Socialite.
 
-- **Backend**: FastAPI server with MongoDB integration for data persistence
-- **Frontend**: React application served via Nginx
-- **Database**: MongoDB for data storage
-- **Container Orchestration**: Docker Compose for local development and deployment
+## Layout
 
-## Prerequisites
-
-- Docker and Docker Compose installed on your system
-- Node.js 20+ (for local frontend development)
-- Python 3.10+ (for local backend development)
-
-## Quick Start
-
-### 1. Set up environment variables
-
-Copy the example environment file and update with your values:
-
-```bash
-cp .env.docker.example .env
+```
+app/
+  Http/Controllers/Api/   AuthController, GithubAuthController, CmsController
+  Http/Resources/         UserResource (JSON shape the SPA expects)
+  Models/                 User, PricingPlan, Faq, Doc, Page, Setting
+  Filament/               Admin panel resources and settings pages
+config/atglance.php       Admin account and frontend URL
+database/
+  migrations/             Schema
+  seeders/                AdminUserSeeder, ContentSeeder (+ content/*.json default copy)
+routes/api.php            All /api routes
+tests/Feature/            API, auth, GitHub SSO and admin panel tests
+frontend/                 React SPA
+docker/                   Laravel image and boot scripts
+docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :8080
 ```
 
-Edit `.env` and configure:
-- `JWT_SECRET` - Secure secret for JWT token signing (required)
-- `ADMIN_PASSWORD` - Password for admin account (required)
-- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` - Optional, for GitHub OAuth
-- Other optional settings (see `.env` file for defaults)
+## API
 
-### 2. Build and run with Docker Compose
+| Method | Path | Auth |
+|---|---|---|
+| GET | `/api` | public (health) |
+| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | public (CSRF) |
+| GET | `/api/auth/me` | logged in |
+| GET | `/api/auth/github/start` | public; returns `{auth_url}` |
+| POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
+| GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
+| GET | `/api/downloads` | logged in |
+| GET / POST | `/api/install-tokens` | logged in; list / create Console install tokens (plain token returned once) |
+| DELETE | `/api/install-tokens/{id}` | logged in; revoke |
+| POST | `/api/install-tokens/verify` | `Authorization: Bearer <install token>`; used by the Management Console installer |
+| GET | `/api/auth/providers` | public; `{github: bool}` |
+
+### Management Console install tokens
+
+Users create install tokens on the SPA dashboard. The Console installer confirms a token with this call:
 
 ```bash
+curl -X POST https://<site>/api/install-tokens/verify \
+  -H "Accept: application/json" \
+  -H "Authorization: Bearer <token>"
+```
+
+A valid token returns `200` with `{"valid": true, "user": {id, email, name}, "token": {name}}`. A bad or revoked token returns `401`. Tokens never expire; users revoke them from the dashboard.
+
+- Tokens are Sanctum personal access tokens with the `console:install` ability. They are stored hashed and use the `atg_` prefix.
+- Each user can have at most 10 active tokens.
+- `last_used_at` is updated on every verify call.
+
+Content is edited in Filament, so there are no write endpoints for CMS content.
+
+Errors use the standard Laravel format: `{ "message": "...", "errors": { "field": ["..."] } }`.
+
+### How SPA auth works
+
+1. The SPA calls `GET /sanctum/csrf-cookie`. This sets the `XSRF-TOKEN` cookie.
+2. Axios sends the value back in the `X-XSRF-TOKEN` header (`withXSRFToken: true` in `frontend/src/lib/api.js`).
+3. Login and register start a normal Laravel session. The same session also logs the admin into `/admin`.
+
+The SPA and Laravel must share one origin, or the SPA host must be in `SANCTUM_STATEFUL_DOMAINS` and `CORS_ORIGINS`. Both the dev proxy and the nginx config serve them from one origin.
+
+## Local development (no Docker)
+
+You need PHP 8.2+ with `intl`, `pdo_mysql` and `pdo_sqlite`, Composer 2, Node 20+ with Yarn, and MySQL. XAMPP works.
+
+```bash
+# Backend
+composer install
+cp .env.example .env
+php artisan key:generate
+# Edit .env: DB_* settings and ADMIN_PASSWORD
+php artisan migrate --seed
+php artisan serve                  # http://127.0.0.1:8000
+
+# Frontend (second terminal)
+cd frontend
+yarn install
+yarn start                         # http://localhost:3000
+```
+
+In dev, `craco.config.js` proxies `/api`, `/sanctum`, `/admin`, `/livewire` and the Filament assets to `http://127.0.0.1:8000`. Everything therefore runs on `localhost:3000`. Keep `REACT_APP_BACKEND_URL` empty. To point the proxy at another server, set `LARAVEL_DEV_URL`.
+
+For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sqlite` and remove the other `DB_*` lines.
+
+- Admin panel: http://localhost:3000/admin. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Tests: `php artisan test`.
+
+## Docker
+
+```bash
+cp .env.example .env
+# Set at least: APP_KEY (php artisan key:generate --show), DB_PASSWORD, ADMIN_PASSWORD
+# Set FRONTEND_URL=http://localhost:8080
 docker compose up -d --build
 ```
 
-The application will be available at `http://localhost:8080`
+- Site: http://localhost:8080
+- Admin: http://localhost:8080/admin
 
-### 3. Stop the application
+The frontend container (nginx) serves the SPA. It proxies `/api`, `/sanctum`, `/admin`, `/livewire` and `/{css,js,fonts}/filament` to the `app` container.
 
-```bash
-docker compose down
-```
+On boot the `app` container:
+- runs migrations and caches config, routes and views (serversideup `AUTORUN_ENABLED`);
+- runs `db:seed` (`docker/entrypoint.d/60-atglance-seed.sh`).
 
-## Project Structure
+## Environment variables
 
-```
-.
-├── backend/              # FastAPI application
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── server.py
-│   └── tests/
-├── frontend/             # React application
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   ├── public/
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # Page components
-│   │   ├── lib/          # Utilities and API client
-│   │   └── hooks/        # Custom React hooks
-│   └── plugins/          # Webpack plugins (health checks)
-├── docker-compose.yml    # Docker Compose configuration
-├── .env                  # Environment variables (create from .env.docker.example)
-└── design_guidelines.json # Design system configuration
-```
+| Variable | Purpose |
+|---|---|
+| `APP_KEY` | Laravel encryption key. Required. |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
+| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin account. The seeder creates it and re-syncs the password on every deploy. |
+| `FRONTEND_URL` | SPA origin. Allowed for CORS; `/` redirects here. |
+| `CORS_ORIGINS` | Extra allowed origins, comma separated. Wildcards are never used. |
+| `SANCTUM_STATEFUL_DOMAINS` | Hosts (with port) that get cookie auth. Must include the SPA host. |
+| `SESSION_SECURE_COOKIE` | Set `true` in production (HTTPS). |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub OAuth app (optional) |
+| `GITHUB_REDIRECT_URI` | `<FRONTEND_URL>/auth/sso/github/callback` |
+| `REACT_APP_BACKEND_URL` | Frontend build arg. Leave empty for the same-origin setup. |
 
-## Environment Variables
+## Adding a feature
 
-### Backend Configuration
+- **New content type**: create a migration and model, then run `php artisan make:filament-resource Name --generate`. Add a read endpoint in `CmsController` and `routes/api.php` if the SPA needs it.
+- **New setting group**: subclass `App\Filament\Pages\SettingsPage`, and add a key constant to `App\Models\Setting`.
+- **Protected API**: add the `auth:sanctum` middleware to the route. For admin-only routes, also check `$request->user()->isAdmin()`.
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MONGO_URL` | No | `mongodb://mongo:27017` | MongoDB connection string |
-| `DB_NAME` | No | `atglance_db` | Database name |
-| `JWT_SECRET` | **Yes** | - | Secret key for JWT signing |
-| `ADMIN_EMAIL` | No | `admin@atglance.io` | Default admin email |
-| `ADMIN_PASSWORD` | **Yes** | - | Default admin password |
-| `GITHUB_CLIENT_ID` | No | - | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | No | - | GitHub OAuth client secret |
-| `GITHUB_REDIRECT_URI` | No | - | GitHub OAuth redirect URI |
-| `FRONTEND_URL` | No | `http://localhost:8080` | Frontend URL for redirects |
-| `CORS_ORIGINS` | No | - | CORS allowed origins |
+## GitHub OAuth app
 
-### Frontend Configuration
+In the GitHub OAuth app settings, set:
+- Homepage URL: `FRONTEND_URL`
+- Authorization callback URL: `<FRONTEND_URL>/auth/sso/github/callback`
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REACT_APP_BACKEND_URL` | `/api` | Backend API URL (empty = same-origin proxy) |
-
-## Service Details
-
-### MongoDB
-- **Image**: mongo:7
-- **Port**: 27017 (internal)
-- **Health Check**: Ping command every 15 seconds
-- **Volume**: `mongo_data` persists database across restarts
-
-### Backend
-- **Build**: From `./backend/Dockerfile`
-- **Port**: 8000 (internal, proxied through Nginx)
-- **Dependencies**: Requires MongoDB to be healthy
-- **Environment**: All variables from `.env` are passed to the container
-
-### Frontend
-- **Build**: From `./frontend/Dockerfile`
-- **Port**: 80 (Nginx)
-- **External Port**: Configurable via `FRONTEND_PORT` env variable (default: 8080)
-- **Dependencies**: Requires backend to be running
-
-## Local Development
-
-### Backend Development
-
-```bash
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server
-python server.py
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-
-# Install dependencies
-yarn install
-
-# Start development server
-yarn start
-```
-
-## Docker Build
-
-### Building the Backend
-```bash
-docker build -f backend/Dockerfile -t atglance-backend:latest ./backend
-```
-
-### Building the Frontend
-```bash
-docker build -f frontend/Dockerfile -t atglance-frontend:latest ./frontend
-```
-
-## Troubleshooting
-
-### Port Already in Use
-If port 8080 is already in use, change it:
-```bash
-FRONTEND_PORT=3000 docker compose up -d
-```
-
-### Database Connection Issues
-Check MongoDB is running:
-```bash
-docker logs atglance-mongo
-```
-
-### Backend Startup Issues
-View backend logs:
-```bash
-docker logs atglance-backend
-```
-
-### Frontend Build Failures
-Check Node.js version requirements:
-```bash
-node --version  # Should be 20+
-yarn --version
-```
-
-## Testing
-
-### Backend Tests
-```bash
-cd backend
-pytest
-```
-
-### Running Tests in Docker
-```bash
-docker compose run backend pytest
-```
-
-## Health Checks
-
-- **MongoDB**: Responds to mongosh ping command every 15 seconds
-- **Frontend**: Exposed via `/health` endpoint from Nginx
-- **Backend**: Check logs for startup confirmation
-
-## Networking
-
-All services communicate through the `atglance` Docker network:
-- Frontend connects to backend via `http://atglance-backend:8000`
-- Backend connects to MongoDB via `mongodb://mongo:27017`
-
-## Additional Notes
-
-- All containers automatically restart unless stopped (`restart: unless-stopped`)
-- MongoDB data is persisted in the `mongo_data` volume
-- Nginx acts as a reverse proxy, proxying `/api` requests to the backend
-- The frontend is built as a static React app and served via Nginx
-
-## Documentation
-
-- See `design_guidelines.json` for design system specifications
-- See `frontend/README.md` for frontend-specific documentation
-- See `DOCKER.md` for detailed Docker configuration notes
+The SPA page at that URL posts `code` and `state` to `/api/auth/github/callback`.

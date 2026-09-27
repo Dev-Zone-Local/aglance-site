@@ -1,0 +1,38 @@
+[
+  {
+    "question": "Is AtGlance really self-hosted?",
+    "answer": "Yes. Both the CLI and the Management Console run inside your own boundary — on-prem, private cloud, or hybrid. No data leaves your environment.",
+    "category": "General",
+    "order": 0
+  },
+  {
+    "question": "Which Linux distributions are supported?",
+    "answer": "AtGlance CLI is currently optimized for Ubuntu LTS with systemd. Other systemd distributions are typically compatible.",
+    "category": "CLI",
+    "order": 1
+  },
+  {
+    "question": "How does the database circuit breaker work?",
+    "answer": "When the database is unhealthy, the Application app trips the DatabaseCircuitBreaker — writes are buffered as queued jobs in Cache. When the DB recovers, queue workers replay buffered writes idempotently.",
+    "category": "Resilience",
+    "order": 2
+  },
+  {
+    "question": "What is a PAT token?",
+    "answer": "A Personal Access Token is issued per user/system. The CLI uses it to authenticate against the Rest API API Gateway for system register/deregister/reactivate and configuration sync.",
+    "category": "Security",
+    "order": 3
+  },
+  {
+    "question": "Can I deregister and re-register a system?",
+    "answer": "Yes. The CLI supports --system-deregister, --system-deregister-force, and --system-reactivate so you can decommission and bring systems back without losing identity.",
+    "category": "CLI",
+    "order": 4
+  },
+  {
+    "question": "Is AtGlance free?",
+    "answer": "Yes — the Free tier includes the full self-hosted platform with no system limits. Enterprise plans add SLA-backed support.",
+    "category": "Pricing",
+    "order": 5
+  }
+]

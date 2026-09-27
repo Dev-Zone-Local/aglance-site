@@ -1,45 +1,67 @@
 # AtGlance — Docker compose
-# Brings up: MongoDB + FastAPI backend + React (nginx) frontend on a single port.
+# Brings up: MySQL + Laravel (API + Filament admin) + React SPA (nginx) on a single port.
 #
 # Usage:
-#   cp .env.docker.example .env
+#   cp .env.example .env         # fill APP_KEY, ADMIN_PASSWORD, DB_PASSWORD
 #   docker compose up -d --build
-#   open http://localhost:8080
+#   open http://localhost:8080        (site)
+#   open http://localhost:8080/admin  (CMS)
 
 services:
-  mongo:
-    image: mongo:7
-    container_name: atglance-mongo
+  mysql:
+    image: mysql:8.4
+    container_name: atglance-mysql
     restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-atglance}"
+      MYSQL_USER: "${DB_USERNAME:-atglance}"
+      MYSQL_PASSWORD: "${DB_PASSWORD:?DB_PASSWORD is required}"
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD:-${DB_PASSWORD}}"
     volumes:
-      - mongo_data:/data/db
+      - mysql_data:/var/lib/mysql
     networks:
       - atglance
     healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
-      interval: 15s
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 30s
 
-  backend:
+  app:
     build:
-      context: ./backend
-    container_name: atglance-backend
+      context: .
+      dockerfile: docker/app.Dockerfile
+    container_name: atglance-app
     restart: unless-stopped
     depends_on:
-      mongo:
+      mysql:
         condition: service_healthy
     environment:
-      MONGO_URL: "mongodb://mongo:27017"
-      DB_NAME: "${DB_NAME:-atglance_db}"
-      JWT_SECRET: "${JWT_SECRET:?JWT_SECRET is required}"
+      APP_NAME: AtGlance
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_KEY: "${APP_KEY:?APP_KEY is required (php artisan key:generate --show)}"
+      APP_URL: "${APP_URL:-http://localhost:8080}"
+      LOG_CHANNEL: stderr
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: "${DB_DATABASE:-atglance}"
+      DB_USERNAME: "${DB_USERNAME:-atglance}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      SESSION_DRIVER: database
+      SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@atglance.io}"
       ADMIN_PASSWORD: "${ADMIN_PASSWORD:?ADMIN_PASSWORD is required}"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
+      CORS_ORIGINS: "${CORS_ORIGINS:-}"
+      SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost:8080}"
       GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID:-}"
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
       GITHUB_REDIRECT_URI: "${GITHUB_REDIRECT_URI:-}"
-      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
-      CORS_ORIGINS: "${CORS_ORIGINS:-}"
     networks:
       - atglance
 
@@ -47,13 +69,12 @@ services:
     build:
       context: ./frontend
       args:
-        # Empty = same-origin "/api" via nginx proxy. Override only if you
-        # serve the API on a different host (e.g. https://api.atglance.live).
+        # Empty = same-origin "/api" via nginx proxy.
         REACT_APP_BACKEND_URL: "${REACT_APP_BACKEND_URL:-}"
     container_name: atglance-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      - app
     ports:
       - "${FRONTEND_PORT:-8080}:80"
     networks:
@@ -64,4 +85,4 @@ networks:
     driver: bridge
 
 volumes:
-  mongo_data:
+  mysql_data:
