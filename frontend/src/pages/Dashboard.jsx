@@ -5,6 +5,7 @@ import { Cpu, Server, Download, BookOpen, Terminal as TerminalIcon, ExternalLink
 import { Link } from "react-router-dom";
 import { CodeBlock } from "../components/Terminal";
 import Licenses from "../components/Licenses";
+import EmailVerifyBanner from "../components/EmailVerifyBanner";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -16,6 +17,7 @@ export default function Dashboard() {
 
   return (
     <div data-testid="dashboard-page" className="max-w-6xl mx-auto px-5 sm:px-8 py-16">
+      <EmailVerifyBanner />
       <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Dashboard</div>
       <h1 className="text-3xl sm:text-4xl font-semibold tracking-tighter text-zinc-50 mb-2">
         Welcome back{user?.name ? `, ${user.name}` : ""}.

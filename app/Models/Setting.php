@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Key/value settings store. Known keys: "contact", "downloads", "github".
+ * Key/value settings store. Known keys: "contact", "downloads", "github", "mail".
  */
 class Setting extends Model
 {
@@ -14,6 +14,8 @@ class Setting extends Model
     public const DOWNLOADS = 'downloads';
 
     public const GITHUB = 'github';
+
+    public const MAIL = 'mail';
 
     protected $fillable = ['key', 'value'];
 

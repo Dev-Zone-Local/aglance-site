@@ -39,7 +39,8 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 | GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
 | GET | `/api/downloads` | logged in |
 | GET / POST | `/api/licenses` | logged in; list (with plan + limit) / create a Console licence (key returned once) |
-| DELETE | `/api/licenses/{id}` | logged in; revoke |
+| POST | `/api/licenses/{id}/revoke-code` | logged in; emails a 5-digit code to confirm revoking |
+| DELETE | `/api/licenses/{id}` | logged in; revoke. Body: `{password}` or `{code}` |
 | POST | `/api/licenses/verify` | `Authorization: Bearer <licence key>`; used by the Management Console installer |
 | GET | `/api/auth/providers` | public; `{github: bool}` |
 

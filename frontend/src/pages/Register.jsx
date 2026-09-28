@@ -11,6 +11,7 @@ export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [pw2, setPw2] = useState("");
   const [err, setErr] = useState(null);
   const [busy, setBusy] = useState(false);
 
@@ -18,7 +19,11 @@ export default function Register() {
     e.preventDefault();
     setErr(null); setBusy(true);
     try {
-      const u = await register(email, pw, name);
+      if (pw !== pw2) {
+        setErr("Passwords do not match");
+        return;
+      }
+      const u = await register(email, pw, pw2, name);
       goToAccountHome(u, nav);
     } catch (e) {
       setErr(formatApiError(e.response?.data));
@@ -82,6 +87,12 @@ export default function Register() {
             <input data-testid="register-password-input" type="password" required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)}
               className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
               placeholder="At least 6 characters" />
+          </div>
+          <div>
+            <label className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">Confirm password</label>
+            <input data-testid="register-password-confirm-input" type="password" required minLength={6} value={pw2} onChange={(e) => setPw2(e.target.value)}
+              className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
+              placeholder="Repeat your password" />
           </div>
           {err && <div data-testid="register-error" className="text-sm text-red-400">{err}</div>}
           <button type="submit" disabled={busy} data-testid="register-submit-btn"

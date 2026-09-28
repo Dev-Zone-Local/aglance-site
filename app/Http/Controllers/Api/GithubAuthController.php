@@ -68,6 +68,9 @@ class GithubAuthController extends Controller
                 'avatar_url' => $gh->getAvatar(),
                 'auth_method' => 'github',
             ]);
+
+            // Email comes from GitHub; confirm it with our own verification link.
+            $user->sendVerificationSafely();
         }
 
         Auth::login($user);

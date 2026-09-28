@@ -28,7 +28,7 @@ export function Header() {
             <TerminalIcon size={15} className="text-amber-500" />
           </div>
           <span className="font-semibold tracking-tight text-zinc-100">AtGlance</span>
-          <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 ml-1">v1.0</span>
+          <span className="hidden sm:inline text-[10px] font-mono uppercase tracking-[0.18em] text-zinc-500 ml-1">v2.0</span>
         </Link>
         <nav className="hidden lg:flex items-center gap-1 ml-4 flex-1">
           {NAV.map((n) => (

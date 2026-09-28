@@ -49,9 +49,14 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const register = async (email, password, name) => {
+  const register = async (email, password, passwordConfirmation, name) => {
     await ensureCsrf();
-    const { data } = await api.post("/auth/register", { email, password, name });
+    const { data } = await api.post("/auth/register", {
+      email,
+      password,
+      password_confirmation: passwordConfirmation,
+      name,
+    });
     setUser(data);
     return data;
   };

@@ -4,10 +4,15 @@ namespace App\Filament\Resources\Users\Tables;
 
 use App\Http\Controllers\Api\LicenseController;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\EditAction;
+use Filament\Notifications\Notification;
+use Filament\Support\Icons\Heroicon;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 
 class UsersTable
@@ -32,6 +37,10 @@ class UsersTable
                     ->badge()
                     ->formatStateUsing(fn (User $record) => $record->planLabel())
                     ->color(fn (string $state) => $state === 'free' ? 'gray' : 'success'),
+                IconColumn::make('email_verified_at')
+                    ->label('Verified')
+                    ->boolean()
+                    ->state(fn (User $record) => $record->hasVerifiedEmail()),
                 TextColumn::make('tokens_count')
                     ->label('Licences')
                     ->counts(['tokens' => fn ($q) => $q->whereJsonContains('abilities', LicenseController::ABILITY)]),
@@ -52,8 +61,23 @@ class UsersTable
                 SelectFilter::make('plan')->options(
                     collect(config('atglance.plans'))->map(fn (array $p) => $p['label'])->all()
                 ),
+                TernaryFilter::make('email_verified_at')
+                    ->label('Email verified')
+                    ->nullable(),
             ])
             ->recordActions([
+                Action::make('verifyEmail')
+                    ->label('Activate')
+                    ->icon(Heroicon::OutlinedCheckBadge)
+                    ->color('success')
+                    ->visible(fn (User $record) => ! $record->hasVerifiedEmail())
+                    ->requiresConfirmation()
+                    ->modalHeading('Activate account without email verification?')
+                    ->modalDescription(fn (User $record) => "Marks {$record->email} as verified.")
+                    ->action(function (User $record): void {
+                        $record->markEmailAsVerified();
+                        Notification::make()->title("{$record->email} activated")->success()->send();
+                    }),
                 EditAction::make(),
             ]);
     }

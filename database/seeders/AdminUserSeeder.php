@@ -31,6 +31,7 @@ class AdminUserSeeder extends Seeder
         }
 
         $admin->role = User::ROLE_ADMIN;
+        $admin->email_verified_at ??= now(); // the admin account is trusted configuration
         $admin->save();
     }
 }

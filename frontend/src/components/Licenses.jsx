@@ -4,6 +4,8 @@ import { KeyRound, Plus, Trash2, AlertTriangle } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api, API, formatApiError } from "../lib/api";
 import { CodeBlock } from "./Terminal";
+import { useAuth } from "../lib/auth-context";
+import RevokeLicense from "./RevokeLicense";
 
 function fmt(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -19,6 +21,10 @@ export default function Licenses() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(null); // { name, key } — shown once
+  const [codeSentTo, setCodeSentTo] = useState(null); // message after the code is emailed
+  const [code, setCode] = useState("");
+  const [revoking, setRevoking] = useState(null); // licence being revoked
+  const { refresh } = useAuth();
 
   const load = () =>
     api
@@ -34,14 +40,14 @@ export default function Licenses() {
   const limit = data?.limit ?? null; // null = unlimited
   const atLimit = limit !== null && licenses.length >= limit;
 
-  const onCreate = async (e) => {
-    e.preventDefault();
+  // Step 1: email a 5-digit code. Step 2: create the licence with that code.
+  const sendCode = async (e) => {
+    e?.preventDefault();
     setBusy(true);
     try {
-      const { data: lic } = await api.post("/licenses", { name: name.trim() });
-      setCreated(lic);
-      setName("");
-      load();
+      const { data: res } = await api.post("/licenses/code", { name: name.trim() });
+      setCodeSentTo(res.message);
+      setCode("");
     } catch (err) {
       toast.error(formatApiError(err.response?.data));
     } finally {
@@ -49,16 +55,30 @@ export default function Licenses() {
     }
   };
 
-  const onRevoke = async (lic) => {
-    if (!window.confirm(`Revoke licence "${lic.name}"? Consoles installed with it can no longer be verified.`)) return;
+  const onCreate = async (e) => {
+    e.preventDefault();
+    setBusy(true);
     try {
-      await api.delete(`/licenses/${lic.id}`);
-      toast.success("Licence revoked");
+      const { data: lic } = await api.post("/licenses", { name: name.trim(), code });
+      setCreated(lic);
+      setName("");
+      setCode("");
+      setCodeSentTo(null);
       load();
+      refresh(); // the code also verifies the email address
     } catch (err) {
       toast.error(formatApiError(err.response?.data));
+    } finally {
+      setBusy(false);
     }
   };
+
+  const cancelCode = () => {
+    setCodeSentTo(null);
+    setCode("");
+  };
+
+  const onRevoke = (lic) => setRevoking(lic);
 
   return (
     <div className="mt-10 rounded-2xl border border-zinc-800 bg-[#101012] p-7" data-testid="licenses">
@@ -116,25 +136,72 @@ export default function Licenses() {
           .
         </div>
       ) : (
-        <form onSubmit={onCreate} className="flex flex-col sm:flex-row gap-3 mb-6">
-          <input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={100}
-            placeholder="Licence name, e.g. prod-console"
-            data-testid="license-name"
-            className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60"
-          />
-          <button
-            type="submit"
-            disabled={busy || !name.trim()}
-            data-testid="license-create"
-            className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
-          >
-            <Plus size={14} /> Create licence
-          </button>
-        </form>
+        codeSentTo ? (
+          <form onSubmit={onCreate} className="mb-6" data-testid="license-code-form">
+            <div className="text-sm text-zinc-300 mb-3">
+              {codeSentTo} Enter it to create <b className="font-mono">{name.trim()}</b>. The code expires in 10 minutes.
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 5))}
+                required
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                autoFocus
+                placeholder="5-digit code"
+                data-testid="license-code"
+                className="sm:w-44 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2.5 text-lg tracking-[0.4em] font-mono text-zinc-100 placeholder:text-zinc-600 placeholder:tracking-normal placeholder:text-sm focus:outline-none focus:border-amber-500/60"
+              />
+              <button
+                type="submit"
+                disabled={busy || code.length !== 5}
+                data-testid="license-create"
+                className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
+              >
+                <Plus size={14} /> Create licence
+              </button>
+              <button type="button" onClick={sendCode} disabled={busy} className="text-sm text-zinc-400 hover:text-zinc-100 px-2">
+                Resend code
+              </button>
+              <button type="button" onClick={cancelCode} className="text-sm text-zinc-500 hover:text-zinc-300 px-2">
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <form onSubmit={sendCode} className="flex flex-col sm:flex-row gap-3 mb-6">
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+              maxLength={100}
+              placeholder="Licence name, e.g. prod-console"
+              data-testid="license-name"
+              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60"
+            />
+            <button
+              type="submit"
+              disabled={busy || !name.trim()}
+              data-testid="license-send-code"
+              className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
+            >
+              <Plus size={14} /> {busy ? "Sending code…" : "Create licence"}
+            </button>
+          </form>
+        )
+      )}
+
+      {revoking && (
+        <RevokeLicense
+          key={revoking.id}
+          license={revoking}
+          onCancel={() => setRevoking(null)}
+          onDone={() => {
+            setRevoking(null);
+            load();
+          }}
+        />
       )}
 
       {data === null ? (

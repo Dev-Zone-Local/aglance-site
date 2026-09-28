@@ -17,6 +17,7 @@ class AuthApiTest extends TestCase
         $this->postJson('/api/auth/register', [
             'email' => '  New.User@Example.com ',
             'password' => 'password123',
+            'password_confirmation' => 'password123',
             'name' => 'New User',
         ])
             ->assertCreated()
@@ -32,7 +33,7 @@ class AuthApiTest extends TestCase
 
     public function test_register_defaults_name_to_email_prefix(): void
     {
-        $this->postJson('/api/auth/register', ['email' => 'jane@example.com', 'password' => 'password123'])
+        $this->postJson('/api/auth/register', ['email' => 'jane@example.com', 'password' => 'password123', 'password_confirmation' => 'password123'])
             ->assertCreated()
             ->assertJsonPath('name', 'jane');
     }
@@ -41,11 +42,11 @@ class AuthApiTest extends TestCase
     {
         User::factory()->create(['email' => 'taken@example.com']);
 
-        $this->postJson('/api/auth/register', ['email' => 'taken@example.com', 'password' => 'password123'])
+        $this->postJson('/api/auth/register', ['email' => 'taken@example.com', 'password' => 'password123', 'password_confirmation' => 'password123'])
             ->assertUnprocessable()
             ->assertJsonPath('errors.email.0', 'Email already registered');
 
-        $this->postJson('/api/auth/register', ['email' => 'ok@example.com', 'password' => '123'])
+        $this->postJson('/api/auth/register', ['email' => 'ok@example.com', 'password' => '123', 'password_confirmation' => '123'])
             ->assertUnprocessable()
             ->assertJsonValidationErrors('password');
     }
@@ -53,7 +54,7 @@ class AuthApiTest extends TestCase
     public function test_register_with_admin_email_does_not_grant_admin(): void
     {
         // Admin row not seeded yet: registration must still produce a plain user.
-        $this->postJson('/api/auth/register', ['email' => config('atglance.admin_email'), 'password' => 'password123'])
+        $this->postJson('/api/auth/register', ['email' => config('atglance.admin_email'), 'password' => 'password123', 'password_confirmation' => 'password123'])
             ->assertCreated()
             ->assertJsonPath('role', 'user');
     }

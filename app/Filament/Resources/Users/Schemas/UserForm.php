@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Users\Schemas;
 use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class UserForm
@@ -29,6 +30,12 @@ class UserForm
                     ->default(User::ROLE_USER)
                     // Admins cannot demote themselves and lock everyone out.
                     ->disabled(fn (?User $record) => $record?->is(auth()->user())),
+                Toggle::make('email_verified_at')
+                    ->label('Email verified (account active)')
+                    ->helperText('Turn on to activate the account without the user clicking the verification link.')
+                    ->afterStateHydrated(fn (Toggle $component, ?User $record) => $component->state((bool) $record?->hasVerifiedEmail()))
+                    // Keep the original verification time if it was already verified.
+                    ->dehydrateStateUsing(fn (?bool $state, ?User $record) => $state ? ($record?->email_verified_at ?? now()) : null),
                 Select::make('plan')
                     ->options(collect(config('atglance.plans'))->map(fn (array $p) => $p['label'])->all())
                     ->required()
