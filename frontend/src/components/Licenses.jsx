@@ -1,11 +1,62 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { KeyRound, Plus, Trash2, AlertTriangle } from "lucide-react";
+import { KeyRound, Plus, Trash2, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { api, API, formatApiError } from "../lib/api";
 import { CodeBlock } from "./Terminal";
 import { useAuth } from "../lib/auth-context";
 import RevokeLicense from "./RevokeLicense";
+
+const STATUS_STYLES = {
+  unverified: [
+    "border-zinc-600 bg-zinc-800/60 text-zinc-300",
+    "bg-zinc-400",
+    "Awaiting code",
+    "Enter the 5-digit code we emailed you to activate this licence.",
+  ],
+  under_review: [
+    "border-amber-500/40 bg-amber-500/10 text-amber-400",
+    "bg-amber-400",
+    "Under review",
+    "An AtGlance admin must approve this licence before the Management Console can use it.",
+  ],
+  ready: [
+    "border-sky-500/40 bg-sky-500/10 text-sky-400",
+    "bg-sky-400",
+    "Ready",
+    "Active. Enter the key in the Management Console installer.",
+  ],
+  in_use: ["border-emerald-500/40 bg-emerald-500/10 text-emerald-400", "bg-emerald-400", "In Use", undefined],
+};
+
+function StatusBadge({ license }) {
+  const [cls, dot, label, title] = STATUS_STYLES[license.status] || STATUS_STYLES.unverified;
+  return (
+    <span
+      title={title}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${cls}`}
+      data-testid={`license-status-${license.id}`}
+    >
+      <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
+    </span>
+  );
+}
+
+// "5 minutes ago", "3 days ago" — used for the console's last heartbeat.
+function timeAgo(iso) {
+  const secs = Math.max(0, (Date.now() - new Date(iso).getTime()) / 1000);
+  const units = [
+    ["year", 31536000],
+    ["month", 2592000],
+    ["day", 86400],
+    ["hour", 3600],
+    ["minute", 60],
+  ];
+  for (const [unit, size] of units) {
+    if (secs >= size) return new Intl.RelativeTimeFormat(undefined, { numeric: "auto" }).format(-Math.floor(secs / size), unit);
+  }
+  return "just now";
+}
 
 function fmt(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
@@ -21,7 +72,7 @@ export default function Licenses() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [created, setCreated] = useState(null); // { name, key } — shown once
-  const [codeSentTo, setCodeSentTo] = useState(null); // message after the code is emailed
+  const [pending, setPending] = useState(null); // { id, name, message } request waiting for the emailed code
   const [code, setCode] = useState("");
   const [revoking, setRevoking] = useState(null); // licence being revoked
   const { refresh } = useAuth();
@@ -40,14 +91,17 @@ export default function Licenses() {
   const limit = data?.limit ?? null; // null = unlimited
   const atLimit = limit !== null && licenses.length >= limit;
 
-  // Step 1: email a 5-digit code. Step 2: create the licence with that code.
-  const sendCode = async (e) => {
-    e?.preventDefault();
+  // Save the request (visible to admins at once), show the key, and email a 5-digit verification code.
+  const onRequest = async (e) => {
+    e.preventDefault();
     setBusy(true);
     try {
-      const { data: res } = await api.post("/licenses/code", { name: name.trim() });
-      setCodeSentTo(res.message);
+      const { data: lic } = await api.post("/licenses", { name: name.trim() });
+      setCreated(lic);
+      setPending({ id: lic.id, name: lic.name, message: lic.message });
+      setName("");
       setCode("");
+      load();
     } catch (err) {
       toast.error(formatApiError(err.response?.data));
     } finally {
@@ -55,15 +109,15 @@ export default function Licenses() {
     }
   };
 
-  const onCreate = async (e) => {
+  // The emailed code activates the licence (and verifies the user's email address).
+  const onConfirm = async (e) => {
     e.preventDefault();
     setBusy(true);
     try {
-      const { data: lic } = await api.post("/licenses", { name: name.trim(), code });
-      setCreated(lic);
-      setName("");
+      const { data: res } = await api.post(`/licenses/${pending.id}/confirm`, { code });
+      toast.success(res.message);
+      setPending(null);
       setCode("");
-      setCodeSentTo(null);
       load();
       refresh(); // the code also verifies the email address
     } catch (err) {
@@ -73,12 +127,45 @@ export default function Licenses() {
     }
   };
 
+  const resendCode = async () => {
+    setBusy(true);
+    try {
+      const { data: res } = await api.post(`/licenses/${pending.id}/confirm-code`);
+      setPending((p) => ({ ...p, message: res.message }));
+      toast.success(res.message);
+    } catch (err) {
+      toast.error(formatApiError(err.response?.data));
+      load();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Resume an unconfirmed request from the list (e.g. after a reload).
+  const onEnterCode = (lic) => {
+    setPending({ id: lic.id, name: lic.name, message: "Enter the 5-digit code we emailed you." });
+    setCode("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const cancelCode = () => {
-    setCodeSentTo(null);
+    setPending(null);
     setCode("");
   };
 
   const onRevoke = (lic) => setRevoking(lic);
+
+  // Re-show a key; the API allows this for 30 minutes after creation.
+  const onShowKey = async (lic) => {
+    try {
+      const { data: res } = await api.get(`/licenses/${lic.id}/key`);
+      setCreated({ ...lic, key: res.key, key_visible_until: res.key_visible_until });
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err) {
+      toast.error(formatApiError(err.response?.data));
+      load();
+    }
+  };
 
   return (
     <div className="mt-10 rounded-2xl border border-zinc-800 bg-[#101012] p-7" data-testid="licenses">
@@ -104,10 +191,18 @@ export default function Licenses() {
           <div className="flex items-start gap-2 text-sm text-amber-400 mb-3">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <span>
-              Copy the licence key for <b>{created.name}</b> now. It is shown only once; if you lose it, revoke the
-              licence and create a new one.
+              Copy the licence key for <b>{created.name}</b> and keep it safe.
+              {created.key_visible_until
+                ? ` You can view it again from the list until ${new Date(created.key_visible_until).toLocaleTimeString()} (30 minutes after creation). After that it cannot be shown again; if you lose it, revoke the licence and create a new one.`
+                : " If you lose it, revoke the licence and create a new one."}
             </span>
           </div>
+          {created.requires_approval && !created.approved && (
+            <div className="mb-3 text-sm text-zinc-300" data-testid="license-under-review-note">
+              After you enter the emailed code, an AtGlance admin must also approve this licence before the Management
+              Console can use it. We will email you when it is approved.
+            </div>
+          )}
           <CodeBlock title="licence key" code={created.key} />
           <div className="mt-4 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono mb-2">
             Installer check (for reference)
@@ -126,21 +221,12 @@ export default function Licenses() {
         </div>
       )}
 
-      {atLimit ? (
-        <div className="mb-6 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400" data-testid="license-limit">
-          Your {data.plan_label} plan includes {limit} {limit === 1 ? "licence" : "licences"}. Revoke the existing one to
-          create a new licence, or{" "}
-          <Link to="/pricing" className="text-amber-500 hover:text-amber-400">
-            upgrade your plan
-          </Link>
-          .
-        </div>
-      ) : (
-        codeSentTo ? (
-          <form onSubmit={onCreate} className="mb-6" data-testid="license-code-form">
-            <div className="text-sm text-zinc-300 mb-3">
-              {codeSentTo} Enter it to create <b className="font-mono">{name.trim()}</b>. The code expires in 10 minutes.
+      {pending ? (
+          <form onSubmit={onConfirm} className="mb-6 rounded-xl border border-zinc-800 bg-zinc-950 p-5" data-testid="license-code-form">
+            <div className="text-sm text-zinc-300 mb-1">
+              Activate licence <b className="font-mono">{pending.name}</b> — it works once you enter the emailed code.
             </div>
+            <div className="text-sm text-zinc-400 mb-3">{pending.message} The code expires in 10 minutes.</div>
             <div className="flex flex-col sm:flex-row gap-3">
               <input
                 value={code}
@@ -159,18 +245,27 @@ export default function Licenses() {
                 data-testid="license-create"
                 className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
               >
-                <Plus size={14} /> Create licence
+                Activate
               </button>
-              <button type="button" onClick={sendCode} disabled={busy} className="text-sm text-zinc-400 hover:text-zinc-100 px-2">
+              <button type="button" onClick={resendCode} disabled={busy} className="text-sm text-zinc-400 hover:text-zinc-100 px-2">
                 Resend code
               </button>
               <button type="button" onClick={cancelCode} className="text-sm text-zinc-500 hover:text-zinc-300 px-2">
-                Cancel
+                Later
               </button>
             </div>
           </form>
-        ) : (
-          <form onSubmit={sendCode} className="flex flex-col sm:flex-row gap-3 mb-6">
+      ) : atLimit ? (
+        <div className="mb-6 rounded-md border border-zinc-800 bg-zinc-950 px-4 py-3 text-sm text-zinc-400" data-testid="license-limit">
+          Your {data.plan_label} plan includes {limit} {limit === 1 ? "licence" : "licences"}. Revoke the existing one to
+          create a new licence, or{" "}
+          <Link to="/pricing" className="text-amber-500 hover:text-amber-400">
+            upgrade your plan
+          </Link>
+          .
+        </div>
+      ) : (
+          <form onSubmit={onRequest} className="flex flex-col sm:flex-row gap-3 mb-6">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -186,10 +281,9 @@ export default function Licenses() {
               data-testid="license-send-code"
               className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
             >
-              <Plus size={14} /> {busy ? "Sending code…" : "Create licence"}
+              <Plus size={14} /> {busy ? "Requesting…" : "Create licence"}
             </button>
           </form>
-        )
       )}
 
       {revoking && (
@@ -214,8 +308,10 @@ export default function Licenses() {
             <thead>
               <tr className="text-left text-[11px] uppercase tracking-[0.16em] text-zinc-500 border-b border-zinc-800">
                 <th className="py-2 pr-4 font-medium">Name</th>
+                <th className="py-2 pr-4 font-medium">Status</th>
+                <th className="py-2 pr-4 font-medium">Console</th>
                 <th className="py-2 pr-4 font-medium">Created</th>
-                <th className="py-2 pr-4 font-medium">Last verified</th>
+                <th className="py-2 pr-4 font-medium">Last seen</th>
                 <th className="py-2" />
               </tr>
             </thead>
@@ -223,9 +319,43 @@ export default function Licenses() {
               {licenses.map((lic) => (
                 <tr key={lic.id} className="border-b border-zinc-900 text-zinc-300">
                   <td className="py-2.5 pr-4 font-mono">{lic.name}</td>
+                  <td className="py-2.5 pr-4">
+                    <StatusBadge license={lic} />
+                  </td>
+                  <td className="py-2.5 pr-4 text-zinc-400">
+                    {lic.console ? (
+                      <span title={`Instance ${lic.console.instance_id} · activated ${fmt(lic.console.activated_at)}`}>
+                        <span className="font-mono text-zinc-300">{lic.console.hostname || lic.console.instance_id}</span>
+                        {lic.console.version && <span className="text-zinc-500"> · v{lic.console.version}</span>}
+                      </span>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
                   <td className="py-2.5 pr-4">{fmt(lic.created_at)}</td>
-                  <td className="py-2.5 pr-4">{lic.last_used_at ? fmt(lic.last_used_at) : "Never"}</td>
-                  <td className="py-2.5 text-right">
+                  <td className="py-2.5 pr-4" title={lic.console?.last_seen_at || ""}>
+                    {lic.console?.last_seen_at ? timeAgo(lic.console.last_seen_at) : "Never"}
+                  </td>
+                  <td className="py-2.5 text-right whitespace-nowrap">
+                    {lic.awaiting_code && (
+                      <button
+                        onClick={() => onEnterCode(lic)}
+                        data-testid={`license-enter-code-${lic.id}`}
+                        className="inline-flex items-center gap-1.5 text-amber-500 hover:text-amber-400 text-xs mr-4"
+                      >
+                        <KeyRound size={13} /> Enter code
+                      </button>
+                    )}
+                    {lic.key_visible_until && new Date(lic.key_visible_until) > new Date() && (
+                      <button
+                        onClick={() => onShowKey(lic)}
+                        data-testid={`license-show-key-${lic.id}`}
+                        title={`Viewable until ${new Date(lic.key_visible_until).toLocaleTimeString()}`}
+                        className="inline-flex items-center gap-1.5 text-amber-500 hover:text-amber-400 text-xs mr-4"
+                      >
+                        <Eye size={13} /> Show key
+                      </button>
+                    )}
                     <button
                       onClick={() => onRevoke(lic)}
                       data-testid={`license-revoke-${lic.id}`}

@@ -7,7 +7,7 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * 5-digit one-time code a user must enter to create or revoke a Management Console licence.
+ * 5-digit one-time code a user must enter to confirm (and view) or revoke a Management Console licence.
  * Sent synchronously (not queued) so it works without a queue worker.
  */
 class LicenseCodeNotification extends Notification
@@ -16,7 +16,7 @@ class LicenseCodeNotification extends Notification
         public readonly string $code,
         public readonly string $licenseName,
         public readonly int $minutes,
-        public readonly string $purpose = LicenseCode::CREATE,
+        public readonly string $purpose = LicenseCode::CONFIRM,
     ) {}
 
     public function via(object $notifiable): array
@@ -30,10 +30,10 @@ class LicenseCodeNotification extends Notification
 
         return (new MailMessage)
             ->subject("Your AtGlance licence code: {$this->code}")
-            ->greeting($revoke ? 'Confirm licence revocation' : 'Confirm your new licence')
+            ->greeting($revoke ? 'Confirm licence revocation' : 'Confirm your licence request')
             ->line($revoke
                 ? "Use this code to revoke the Management Console licence \"{$this->licenseName}\". Consoles using it will stop being verified:"
-                : "Use this code to create the Management Console licence \"{$this->licenseName}\":")
+                : "Use this code to confirm your Management Console licence request \"{$this->licenseName}\" and view its key:")
             ->line("**{$this->code}**")
             ->line("The code expires in {$this->minutes} minutes.")
             ->line('If you did not request this, you can ignore this email and consider changing your password.');

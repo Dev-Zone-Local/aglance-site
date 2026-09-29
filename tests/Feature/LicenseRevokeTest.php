@@ -102,14 +102,14 @@ class LicenseRevokeTest extends TestCase
         $this->deleteJson("/api/licenses/{$license->id}", ['code' => $this->sentRevokeCode($user)])->assertOk();
     }
 
-    public function test_revoke_and_create_codes_do_not_clash(): void
+    public function test_revoke_and_confirm_codes_do_not_clash(): void
     {
         Notification::fake();
         $user = User::factory()->create(['plan' => 'enterprise']);
         $existing = $user->createToken('old', [self::ABILITY])->accessToken;
         $this->actingAs($user);
 
-        $this->postJson('/api/licenses/code', ['name' => 'new'])->assertOk();
+        $newId = $this->postJson('/api/licenses', ['name' => 'new'])->assertCreated()->json('id');
         $this->postJson("/api/licenses/{$existing->id}/revoke-code")->assertOk();
 
         $codes = [];
@@ -119,7 +119,7 @@ class LicenseRevokeTest extends TestCase
             return true;
         });
 
-        $this->postJson('/api/licenses', ['name' => 'new', 'code' => $codes[LicenseCode::CREATE]])->assertCreated();
+        $this->postJson("/api/licenses/{$newId}/confirm", ['code' => $codes[LicenseCode::CONFIRM]])->assertOk();
         $this->deleteJson("/api/licenses/{$existing->id}", ['code' => $codes[LicenseCode::REVOKE]])->assertOk();
     }
 

@@ -6,8 +6,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * One-time 5-digit email code that gates licence actions ("create" and "revoke").
- * A code is bound to its purpose and subject (licence name, or licence id for revoke).
+ * One-time 5-digit email code that gates licence actions ("confirm" and "revoke").
+ * A code is bound to its purpose and subject (the licence id).
  * Only an HMAC of the code is cached; a code is valid for TTL_MINUTES and
  * MAX_ATTEMPTS wrong guesses, and can be used once.
  */
@@ -17,15 +17,16 @@ class LicenseCode
 
     public const MAX_ATTEMPTS = 5;
 
-    public const CREATE = 'create';
-
     public const REVOKE = 'revoke';
 
-    public static function issue(User $user, string $subject, string $purpose = self::CREATE): string
+    /** Confirms a saved licence request and reveals its key. Subject: licence id. */
+    public const CONFIRM = 'confirm';
+
+    public static function issue(User $user, string $subject, string $purpose): string
     {
         $code = (string) random_int(10000, 99999);
 
-        Cache::put(self::key($user, $purpose), [
+        Cache::put(self::key($user, $purpose, $subject), [
             'hash' => self::hash($user, $purpose, $subject, $code),
             'attempts' => 0,
         ], now()->addMinutes(self::TTL_MINUTES));
@@ -36,9 +37,9 @@ class LicenseCode
     /**
      * @return 'ok'|'missing'|'invalid'|'locked'
      */
-    public static function check(User $user, string $subject, string $code, string $purpose = self::CREATE): string
+    public static function check(User $user, string $subject, string $code, string $purpose): string
     {
-        $key = self::key($user, $purpose);
+        $key = self::key($user, $purpose, $subject);
         $entry = Cache::get($key);
 
         if (! $entry) {
@@ -73,9 +74,9 @@ class LicenseCode
         };
     }
 
-    private static function key(User $user, string $purpose): string
+    private static function key(User $user, string $purpose, string $subject): string
     {
-        return "license-code:{$purpose}:{$user->id}";
+        return "license-code:{$purpose}:{$user->id}:".sha1($subject);
     }
 
     private static function hash(User $user, string $purpose, string $subject, string $code): string

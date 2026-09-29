@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
-use App\Http\Controllers\Api\LicenseController;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -41,9 +40,14 @@ class UsersTable
                     ->label('Verified')
                     ->boolean()
                     ->state(fn (User $record) => $record->hasVerifiedEmail()),
-                TextColumn::make('tokens_count')
+                TextColumn::make('licenses_count')
                     ->label('Licences')
-                    ->counts(['tokens' => fn ($q) => $q->whereJsonContains('abilities', LicenseController::ABILITY)]),
+                    ->counts('licenses')
+                    ->description(function (User $record) {
+                        $pending = $record->licenses()->awaitingApproval()->count();
+
+                        return $pending ? "{$pending} awaiting approval" : null;
+                    }),
                 TextColumn::make('auth_method')
                     ->badge(),
                 TextColumn::make('github_login')

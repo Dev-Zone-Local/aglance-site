@@ -38,25 +38,41 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 | POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
 | GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
 | GET | `/api/downloads` | logged in |
-| GET / POST | `/api/licenses` | logged in; list (with plan + limit) / create a Console licence (key returned once) |
+| GET / POST | `/api/licenses` | logged in; list (with plan + limit) / request a licence. The request is saved as under review, the key is returned, and a 5-digit verification code is emailed. |
+| POST | `/api/licenses/{id}/confirm` | logged in; `{code}`. Confirms the request and verifies the email |
+| POST | `/api/licenses/{id}/confirm-code` | logged in; resends the confirmation code |
+| GET | `/api/licenses/{id}/key` | logged in; shows the key again, for 30 minutes after creation |
 | POST | `/api/licenses/{id}/revoke-code` | logged in; emails a 5-digit code to confirm revoking |
 | DELETE | `/api/licenses/{id}` | logged in; revoke. Body: `{password}` or `{code}` |
-| POST | `/api/licenses/verify` | `Authorization: Bearer <licence key>`; used by the Management Console installer |
+| POST | `/api/licenses/verify` | licence key; verifies the key **and marks the licence In Use** for this console |
+| POST | `/api/licenses/activate` | licence key; same as `verify` (alias) |
+| POST | `/api/licenses/heartbeat` | licence key; console reports it is alive (records last seen) |
 | GET | `/api/auth/providers` | public; `{github: bool}` |
 
 ### Management Console licences
 
-Users create licences on the SPA dashboard. The Management Console installer confirms a licence key with this call:
+Users create licences on the SPA dashboard. The key is shown right away and can be viewed again for **30 minutes** after creation. A 5-digit code is emailed; the licence works once the user enters that code (status `unverified`, then `ready`). If a user cannot receive the code (e.g. a test mailbox), an admin can **Approve** the licence under **Admin → Licences** to skip the code step. **Admin approval is otherwise optional.** It applies only to users flagged with **"Licences need admin approval"** on their admin edit page, e.g. test accounts. Their verified licences stay `under_review` until an admin approves or declines them under **Admin → Licences**, and the user is emailed either way. Each licence works on **exactly one** Management Console instance. On the Free plan, that means one licence and one console.
+
+The Management Console calls three endpoints, each with `Authorization: Bearer <licence key>` and `Accept: application/json`. `activate` and `heartbeat` also take a JSON body `{"instance_id": "...", "hostname": "...", "version": "..."}`.
+
+- `instance_id` is recommended (if omitted, the console is identified by `hostname`, else by its IP address): 8–100 characters from `A-Z a-z 0-9 . _ : -`. The console must generate it once, store it permanently (for example a UUID in its database), and send the same value on every call.
+- `hostname` and `version` are optional. They are shown on the user's dashboard.
+
+| Call | When the console makes it | Results |
+|---|---|---|
+| `POST /api/licenses/verify` | Optional pre-check during install | `200` with `status` `available` or `in_use` (plus `console` details); `403` with `status` `unverified` (code not entered) or `under_review` (approval required); `401` for a bad key |
+| `POST /api/licenses/activate` | Once, when the licence key is entered during install | `201` on first activation (the licence becomes **In Use**); `200` when the same `instance_id` activates again, for example after a reinstall; `403` with `status` `unverified` or `under_review` when the licence is not usable yet; `409` with `status: in_use_elsewhere` when another console owns the licence; `401` for a bad or revoked key |
+| `POST /api/licenses/heartbeat` | Periodically, for example hourly, and on startup | `200` records **last seen**; `409` with `status` `not_activated` or `in_use_elsewhere`; `401` once the licence is revoked. On `401` or `409` the console should stop and ask for a new licence. |
 
 ```bash
-curl -X POST https://<site>/api/licenses/verify   -H "Accept: application/json"   -H "Authorization: Bearer <licence key>"
+curl -X POST https://<site>/api/licenses/activate   -H "Accept: application/json" -H "Content-Type: application/json"   -H "Authorization: Bearer <licence key>"   -d '{"instance_id":"8f1c2d9e-...","hostname":"ops-01","version":"1.2.0"}'
 ```
 
-A valid key returns `200` with `{"valid": true, "user": {id, email, name}, "license": {name}, "plan": "free"}`. A bad or revoked key returns `401`.
+A successful response looks like `{"valid": true, "status": "in_use", "user": {id, email, name}, "license": {name}, "plan": "free", "console": {instance_id, hostname, version, activated_at, last_seen_at}}`.
 
-- Licences never expire; users revoke them from the dashboard.
-- Licence keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and use the `atg_` prefix.
-- `last_used_at` is updated on every verify call.
+- The dashboard shows each licence as **Awaiting code**, **Under review** (flagged users only), **Ready** or **In Use**, with the console hostname and version, and "Last seen" from the latest heartbeat.
+- A licence can't be moved to another console. Revoke it (password or emailed code), then create a new one. Revoking also deletes the activation, so the old console gets `401` on its next heartbeat.
+- Licences never expire. Keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and shown to users as `atg_...` (without Sanctum's `<id>|` prefix; both forms authenticate). Activations are stored in the `license_activations` table.
 - **Plan limits:** each user has a `plan` (default `free`). The limits are set in `config/atglance.php` (`plans`): Free allows 1 licence and Enterprise is unlimited. Admins change a user's plan in Filament, under Users. When a user is at the limit, creating another licence returns `403`.
 
 ## How SPA auth works

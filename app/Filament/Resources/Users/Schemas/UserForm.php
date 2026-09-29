@@ -36,6 +36,9 @@ class UserForm
                     ->afterStateHydrated(fn (Toggle $component, ?User $record) => $component->state((bool) $record?->hasVerifiedEmail()))
                     // Keep the original verification time if it was already verified.
                     ->dehydrateStateUsing(fn (?bool $state, ?User $record) => $state ? ($record?->email_verified_at ?? now()) : null),
+                Toggle::make('license_requires_approval')
+                    ->label('Licences need admin approval')
+                    ->helperText('Off (default): a licence works once the user enters the emailed code. On: an admin must also approve each licence, e.g. for test accounts.'),
                 Select::make('plan')
                     ->options(collect(config('atglance.plans'))->map(fn (array $p) => $p['label'])->all())
                     ->required()

@@ -26,98 +26,141 @@ class LicenseTest extends TestCase
         ]));
     }
 
-    /** Full dashboard flow: request the emailed code, then create the licence with it. */
+    /** Full dashboard flow: request the licence (returns the key), then verify with the emailed code. */
     private function createLicense(string $name)
     {
         Notification::fake();
 
-        $res = $this->postJson('/api/licenses/code', ['name' => $name]);
-        if ($res->status() !== 200) {
-            return $res;
+        $res = $this->postJson('/api/licenses', ['name' => $name]);
+        if ($res->status() === 201) {
+            $this->postJson("/api/licenses/{$res->json('id')}/confirm", ['code' => $this->sentCode()])->assertOk();
         }
 
-        $code = null;
-        Notification::assertSentTo(
-            auth()->user(),
-            LicenseCodeNotification::class,
-            function (LicenseCodeNotification $n) use (&$code) {
-                $code = $n->code;
-
-                return true;
-            }
-        );
-
-        return $this->postJson('/api/licenses', ['name' => $name, 'code' => $code]);
+        return $res;
     }
 
-    public function test_code_is_required_and_single_use(): void
+    private function sentCode(): string
+    {
+        $code = null;
+        Notification::assertSentTo(auth()->user(), LicenseCodeNotification::class, function (LicenseCodeNotification $n) use (&$code) {
+            $code = $n->code;
+
+            return true;
+        });
+
+        return $code;
+    }
+
+    public function test_request_is_saved_immediately_and_code_confirms_it(): void
     {
         Notification::fake();
         $user = User::factory()->unverified()->create();
         $this->actingAs($user);
 
-        $this->postJson('/api/licenses', ['name' => 'prod'])->assertUnprocessable()->assertJsonValidationErrors('code');
-        $this->postJson('/api/licenses', ['name' => 'prod', 'code' => '12345'])
-            ->assertUnprocessable()
-            ->assertJsonPath('errors.code.0', 'The code expired or was not requested. Request a new code.');
+        $created = $this->postJson('/api/licenses', ['name' => 'prod'])
+            ->assertCreated()
+            ->assertJsonPath('status', 'unverified')
+            ->assertJsonPath('status_label', 'Awaiting code')
+            ->assertJsonPath('requires_approval', false)
+            ->assertJsonPath('confirmed', false)
+            ->assertJsonPath('awaiting_code', true)
+            ->assertJsonPath('code_sent', true)
+            ->assertJsonPath('key', fn ($key) => (bool) preg_match('/^atg_\w+$/', $key))
+            ->json();
 
-        $this->postJson('/api/licenses/code', ['name' => 'prod'])->assertOk()->assertJsonPath('expires_in_minutes', 10);
+        // Saved right away, so admins see it before the user enters the code.
+        $this->assertSame(1, $user->licenses()->count());
+
+        // Key is viewable right away, before the code is entered.
+        $this->getJson("/api/licenses/{$created['id']}/key")->assertOk()->assertJsonPath('key', $created['key']);
 
         $code = null;
         Notification::assertSentTo($user, LicenseCodeNotification::class, function ($n) use (&$code) {
             $code = $n->code;
 
-            return strlen($n->code) === 5 && ctype_digit($n->code) && $n->licenseName === 'prod';
+            return strlen($n->code) === 5 && ctype_digit($n->code) && $n->licenseName === 'prod' && $n->purpose === 'confirm';
         });
 
-        // Code is bound to the licence name.
-        $this->postJson('/api/licenses', ['name' => 'other', 'code' => $code])->assertUnprocessable();
+        $this->postJson("/api/licenses/{$created['id']}/confirm", ['code' => $code])
+            ->assertOk()
+            ->assertJsonPath('confirmed', true)
+            ->assertJsonPath('awaiting_code', false)
+            ->assertJsonPath('status', 'ready') // usable without admin approval
+            ->assertJsonMissingPath('key');
 
-        $this->postJson('/api/licenses', ['name' => 'prod', 'code' => $code])->assertCreated();
         $this->assertTrue($user->fresh()->hasVerifiedEmail(), 'a correct code verifies the email');
 
         // Single use.
-        $this->deleteJson('/api/licenses/'.$user->tokens()->first()->id, ['password' => 'password'])->assertOk();
-        $this->postJson('/api/licenses', ['name' => 'prod', 'code' => $code])->assertUnprocessable();
+        $this->postJson("/api/licenses/{$created['id']}/confirm", ['code' => $code])->assertUnprocessable();
     }
 
-    public function test_code_locks_after_five_wrong_attempts(): void
+    public function test_confirm_code_locks_after_five_wrong_attempts_and_can_be_resent(): void
     {
         Notification::fake();
         $user = User::factory()->create();
-        $this->actingAs($user)->postJson('/api/licenses/code', ['name' => 'prod'])->assertOk();
-
-        $code = null;
-        Notification::assertSentTo($user, LicenseCodeNotification::class, function ($n) use (&$code) {
-            $code = $n->code;
-
-            return true;
-        });
+        $this->actingAs($user);
+        $id = $this->postJson('/api/licenses', ['name' => 'prod'])->assertCreated()->json('id');
+        $code = $this->sentCode();
         $wrong = $code === '00000' ? '11111' : '00000';
 
         foreach (range(1, 4) as $i) {
-            $this->postJson('/api/licenses', ['name' => 'prod', 'code' => $wrong])
+            $this->postJson("/api/licenses/{$id}/confirm", ['code' => $wrong])
                 ->assertJsonPath('errors.code.0', 'The code is incorrect.');
         }
-        $this->postJson('/api/licenses', ['name' => 'prod', 'code' => $wrong])
+        $this->postJson("/api/licenses/{$id}/confirm", ['code' => $wrong])
             ->assertJsonPath('errors.code.0', 'Too many wrong attempts. Request a new code.');
+        $this->postJson("/api/licenses/{$id}/confirm", ['code' => $code])->assertUnprocessable();
 
-        // Even the right code no longer works.
-        $this->postJson('/api/licenses', ['name' => 'prod', 'code' => $code])->assertUnprocessable();
+        Notification::fake();
+        $this->postJson("/api/licenses/{$id}/confirm-code")->assertOk();
+        $this->postJson("/api/licenses/{$id}/confirm", ['code' => $this->sentCode()])->assertOk();
     }
 
-    public function test_code_request_respects_plan_limit_and_deliverable_email(): void
+    public function test_code_is_bound_to_its_licence(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create(['plan' => 'enterprise']);
+        $this->actingAs($user);
+
+        $a = $this->postJson('/api/licenses', ['name' => 'a'])->json('id');
+        $b = $this->postJson('/api/licenses', ['name' => 'b'])->json('id');
+
+        $codes = [];
+        Notification::assertSentTo($user, LicenseCodeNotification::class, function ($n) use (&$codes) {
+            $codes[$n->licenseName] = $n->code;
+
+            return true;
+        });
+
+        $this->postJson("/api/licenses/{$b}/confirm", ['code' => $codes['a']])->assertUnprocessable();
+        $this->postJson("/api/licenses/{$a}/confirm", ['code' => $codes['a']])->assertOk();
+        $this->postJson("/api/licenses/{$b}/confirm", ['code' => $codes['b']])->assertOk();
+    }
+
+    public function test_request_respects_plan_limit_and_deliverable_email(): void
     {
         Notification::fake();
         $user = User::factory()->create();
         $user->createToken('existing', [self::ABILITY]);
 
-        $this->actingAs($user)->postJson('/api/licenses/code', ['name' => 'more'])->assertForbidden();
+        $this->actingAs($user)->postJson('/api/licenses', ['name' => 'more'])->assertForbidden();
         Notification::assertNothingSent();
 
         $this->actingAs(User::factory()->create(['email' => 'octo@users.noreply.github.com']))
-            ->postJson('/api/licenses/code', ['name' => 'x'])
+            ->postJson('/api/licenses', ['name' => 'x'])
             ->assertUnprocessable();
+    }
+
+    public function test_request_is_kept_when_email_fails(): void
+    {
+        $user = User::factory()->create();
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1', 'mail.mailers.smtp.port' => 1]);
+
+        $this->actingAs($user)->postJson('/api/licenses', ['name' => 'prod'])
+            ->assertCreated()
+            ->assertJsonPath('code_sent', false);
+
+        $this->assertSame(1, $user->licenses()->count());
     }
 
     public function test_guest_cannot_manage_licenses(): void
@@ -143,7 +186,7 @@ class LicenseTest extends TestCase
             ->assertJsonPath('name', 'prod-console')
             ->json();
 
-        $this->assertMatchesRegularExpression('/^\d+\|atg_\w+$/', $created['key']);
+        $this->assertMatchesRegularExpression('/^atg_\w+$/', $created['key'], 'no "<id>|" prefix');
         $this->assertNull($user->tokens()->first()->expires_at);
 
         $this->getJson('/api/licenses')
@@ -162,7 +205,7 @@ class LicenseTest extends TestCase
     {
         $this->actingAs(User::factory()->create());
 
-        $first = $this->createLicense('first')->assertCreated()->json();
+        $first = $this->createLicense('first')->assertSuccessful()->json();
 
         $this->createLicense('second')
             ->assertForbidden()
@@ -170,7 +213,7 @@ class LicenseTest extends TestCase
 
         // Revoking frees the slot again.
         $this->deleteJson("/api/licenses/{$first['id']}", ['password' => 'password'])->assertOk();
-        $this->createLicense('replacement')->assertCreated();
+        $this->createLicense('replacement')->assertSuccessful();
     }
 
     public function test_enterprise_plan_is_unlimited(): void
@@ -179,7 +222,7 @@ class LicenseTest extends TestCase
         $this->actingAs($user);
 
         foreach (range(1, 3) as $i) {
-            $this->createLicense("console-{$i}")->assertCreated();
+            $this->createLicense("console-{$i}")->assertSuccessful();
         }
 
         $this->getJson('/api/licenses')->assertJsonPath('limit', null)->assertJsonCount(3, 'licenses');
@@ -189,7 +232,7 @@ class LicenseTest extends TestCase
     {
         $this->actingAs(User::factory()->create(['plan' => 'legacy']));
 
-        $this->createLicense('one')->assertCreated();
+        $this->createLicense('one')->assertSuccessful();
         $this->createLicense('two')->assertForbidden();
     }
 
@@ -199,7 +242,7 @@ class LicenseTest extends TestCase
         $user->createToken('something-else', ['other:ability']);
 
         $this->actingAs($user);
-        $this->createLicense('console')->assertCreated();
+        $this->createLicense('console')->assertSuccessful();
     }
 
     public function test_validation(): void
@@ -227,12 +270,15 @@ class LicenseTest extends TestCase
     public function test_installer_verifies_valid_license(): void
     {
         $user = User::factory()->create(['email' => 'ops@example.com']);
-        $key = $user->createToken('prod', [self::ABILITY])->plainTextToken;
+        $new = $user->createToken('prod', [self::ABILITY]);
+        $new->accessToken->forceFill(['confirmed_at' => now()])->save();
+        $key = $new->plainTextToken;
 
         $this->installer($key)
             ->postJson('/api/licenses/verify')
-            ->assertOk()
+            ->assertCreated()
             ->assertJsonPath('valid', true)
+            ->assertJsonPath('status', 'in_use')
             ->assertJsonPath('user.email', 'ops@example.com')
             ->assertJsonPath('license.name', 'prod')
             ->assertJsonPath('plan', 'free');

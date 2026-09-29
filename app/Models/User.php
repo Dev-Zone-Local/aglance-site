@@ -7,6 +7,7 @@ use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
@@ -31,11 +32,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     protected $attributes = [
         'role' => self::ROLE_USER,
         'plan' => 'free',
+        'license_requires_approval' => false,
         'auth_method' => 'email',
     ];
 
     /**
-     * `role`, `plan` and `email_verified_at` are fillable so the admin panel can edit them. API controllers must
+     * `role`, `plan`, `license_requires_approval` and `email_verified_at` are fillable so the admin panel can edit them. API controllers must
      * never pass raw request input to fill()/create() for this model.
      *
      * @var list<string>
@@ -46,6 +48,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'password',
         'role',
         'plan',
+        'license_requires_approval',
         'email_verified_at',
         'auth_method',
         'github_id',
@@ -70,7 +73,14 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'github_id' => 'integer',
+            'license_requires_approval' => 'boolean',
         ];
+    }
+
+    /** Management Console licences (Sanctum tokens with the console:license ability). */
+    public function licenses(): MorphMany
+    {
+        return $this->morphMany(License::class, 'tokenable')->whereJsonContains('abilities', License::ABILITY);
     }
 
     public function isAdmin(): bool

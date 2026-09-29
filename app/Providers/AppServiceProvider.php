@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Models\License;
 use App\Support\MailSettings;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Sanctum\Sanctum;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +29,9 @@ class AppServiceProvider extends ServiceProvider
     {
         // The SPA expects bare JSON objects, not {"data": ...}.
         JsonResource::withoutWrapping();
+
+        // Licence keys are Sanctum tokens; resolve them as License models (status, approval, activation).
+        Sanctum::usePersonalAccessTokenModel(License::class);
 
         // Verification links hit the API (proxied on the SPA origin), which then redirects to the dashboard.
         VerifyEmail::createUrlUsing(fn ($user) => URL::temporarySignedRoute(
