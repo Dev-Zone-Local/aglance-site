@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { KeyRound, Plus, Trash2, AlertTriangle, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
-import { api, API, formatApiError } from "../lib/api";
+import { api, formatApiError } from "../lib/api";
 import { CodeBlock } from "./Terminal";
 import { useAuth } from "../lib/auth-context";
 import RevokeLicense from "./RevokeLicense";
@@ -60,11 +60,6 @@ function timeAgo(iso) {
 
 function fmt(iso) {
   return iso ? new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : "—";
-}
-
-// Absolute API URL the Console installer calls to confirm a licence.
-function verifyUrl() {
-  return new URL(`${API}/licenses/verify`, window.location.origin).toString();
 }
 
 export default function Licenses() {
@@ -204,13 +199,6 @@ export default function Licenses() {
             </div>
           )}
           <CodeBlock title="licence key" code={created.key} />
-          <div className="mt-4 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono mb-2">
-            Installer check (for reference)
-          </div>
-          <CodeBlock
-            title="bash"
-            code={`curl -X POST ${verifyUrl()} \\\n  -H "Accept: application/json" \\\n  -H "Authorization: Bearer ${created.key}"`}
-          />
           <button
             onClick={() => setCreated(null)}
             className="mt-4 text-sm text-zinc-400 hover:text-zinc-100"
