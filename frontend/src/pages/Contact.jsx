@@ -18,8 +18,8 @@ export default function Contact() {
 
   return (
     <div data-testid="contact-page" className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Contact</div>
-      <h1 className="text-4xl sm:text-5xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6">
+      <div className="text-xs font-medium text-ag-teal mb-4">Contact</div>
+      <h1 className="text-4xl sm:text-5xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6">
         Talk to a real engineer.
       </h1>
       <p className="text-lg text-zinc-400 leading-relaxed">
@@ -32,7 +32,7 @@ export default function Contact() {
             key={i}
             href={`mailto:${it.value}`}
             data-testid={`contact-${it.label.toLowerCase()}`}
-            className="lift rounded-xl border border-zinc-800 bg-[#101012] p-6 block"
+            className="lift rounded-card bg-white shadow-ag p-6 block"
           >
             <it.icon size={18} className="text-amber-500 mb-4" />
             <div className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono mb-1">{it.label}</div>
@@ -47,7 +47,7 @@ export default function Contact() {
           target="_blank"
           rel="noreferrer"
           data-testid="contact-github"
-          className="lift inline-flex items-center gap-3 mt-8 rounded-xl border border-zinc-800 bg-[#101012] px-5 py-4"
+          className="lift inline-flex items-center gap-3 mt-8 rounded-card bg-white shadow-ag px-5 py-4"
         >
           <Github size={18} className="text-amber-500" />
           <div>

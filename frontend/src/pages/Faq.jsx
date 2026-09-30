@@ -21,8 +21,8 @@ export default function Faq() {
 
   return (
     <div data-testid="faq-page" className="max-w-4xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">FAQ</div>
-      <h1 className="text-4xl sm:text-5xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6">
+      <div className="text-xs font-medium text-ag-teal mb-4">FAQ</div>
+      <h1 className="text-4xl sm:text-5xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6">
         Frequently asked.
       </h1>
       <p className="text-lg text-zinc-400 leading-relaxed mb-12">
@@ -36,7 +36,7 @@ export default function Faq() {
           {Object.entries(groups).map(([cat, items]) => (
             <div key={cat}>
               <div className="text-[11px] uppercase tracking-[0.22em] text-zinc-500 font-mono mb-3">{cat}</div>
-              <Accordion type="single" collapsible className="rounded-xl border border-zinc-800 bg-[#101012] divide-y divide-zinc-800">
+              <Accordion type="single" collapsible className="rounded-card bg-white shadow-ag divide-y divide-zinc-800">
                 {items.map((f) => (
                   <AccordionItem key={f.id} value={f.id} className="border-0 px-5">
                     <AccordionTrigger data-testid={`faq-q-${f.id}`} className="text-zinc-100 hover:no-underline text-left py-4">

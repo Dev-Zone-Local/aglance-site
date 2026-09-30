@@ -11,7 +11,7 @@ const SECTIONS = [
 export function DocsSidebar() {
   return (
     <aside className="lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] overflow-y-auto" data-testid="docs-sidebar">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4 px-1">Documentation</div>
+      <div className="text-xs font-medium text-ag-teal mb-4 px-1">Documentation</div>
       <nav className="space-y-6">
         {SECTIONS.map((sec) => (
           <div key={sec.title}>

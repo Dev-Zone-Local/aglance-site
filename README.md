@@ -44,16 +44,17 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 | GET | `/api/licenses/{id}/key` | logged in; shows the key again, for 30 minutes after creation |
 | POST | `/api/licenses/{id}/revoke-code` | logged in; emails a 5-digit code to confirm revoking |
 | DELETE | `/api/licenses/{id}` | logged in; revoke. Body: `{password}` or `{code}` |
-| POST | `/api/licenses/verify` | licence key; verifies the key **and marks the licence In Use** for this console |
-| POST | `/api/licenses/activate` | licence key; same as `verify` (alias) |
+| POST | `/api/licenses/verify` | licence key; read-only check. With `org_name` in the body it also marks the licence **In Use** for that organization |
+| POST | `/api/licenses/activate` | licence key; `{org_name}` required. Marks the licence In Use |
 | POST | `/api/licenses/heartbeat` | licence key; console reports it is alive (records last seen) |
+| PUT | `/api/licenses/org` | licence key; `{org_name}` required. Changes the organization of an activated licence (owning console only) |
 | GET | `/api/auth/providers` | public; `{github: bool}` |
 
 ### Management Console licences
 
 Users create licences on the SPA dashboard. The key is shown right away and can be viewed again for **30 minutes** after creation. A 5-digit code is emailed; the licence works once the user enters that code (status `unverified`, then `ready`). If a user cannot receive the code (e.g. a test mailbox), an admin can **Approve** the licence under **Admin → Licences** to skip the code step. **Admin approval is otherwise optional.** It applies only to users flagged with **"Licences need admin approval"** on their admin edit page, e.g. test accounts. Their verified licences stay `under_review` until an admin approves or declines them under **Admin → Licences**, and the user is emailed either way. Each licence works on **exactly one** Management Console instance. On the Free plan, that means one licence and one console.
 
-The Management Console calls three endpoints, each with `Authorization: Bearer <licence key>` and `Accept: application/json`. `activate` and `heartbeat` also take a JSON body `{"instance_id": "...", "hostname": "...", "version": "..."}`.
+The Management Console calls three endpoints, each with `Authorization: Bearer <licence key>` and `Accept: application/json`. `activate` and `heartbeat` also take a JSON body `{"org_name": "...", "instance_id": "...", "hostname": "...", "version": "..."}`. `org_name` is required to activate: the licence is marked In Use only once the console reports its organization, and users see that organization name on the dashboard.
 
 - `instance_id` is recommended (if omitted, the console is identified by `hostname`, else by its IP address): 8–100 characters from `A-Z a-z 0-9 . _ : -`. The console must generate it once, store it permanently (for example a UUID in its database), and send the same value on every call.
 - `hostname` and `version` are optional. They are shown on the user's dashboard.

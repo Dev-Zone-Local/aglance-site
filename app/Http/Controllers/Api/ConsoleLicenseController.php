@@ -18,17 +18,29 @@ use Illuminate\Http\Request;
 class ConsoleLicenseController extends Controller
 {
     /**
-     * Verify the key and mark the licence "In Use" for this console (same as activate()).
-     * The first console to verify owns the licence; others get 409.
+     * Check the key. Read-only: nothing is written unless the console also sends
+     * `org_name`, in which case this marks the licence "In Use" (same as activate()).
      */
     public function verify(Request $request): JsonResponse
     {
-        return $this->activate($request);
+        if (filled($request->input('org_name'))) {
+            return $this->activate($request);
+        }
+
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+        if (! $token->isUsable()) {
+            return $this->notUsable($token);
+        }
+
+        return response()->json($this->payload($request, $token, $this->activation($token)));
     }
 
     /**
-     * Bind the licence to this console. Idempotent for the same console identity;
-     * 409 when another console already uses the licence.
+     * Bind the licence to this console and record its organization ("In Use").
+     * Idempotent for the same console identity; 409 when another console uses it.
      */
     public function activate(Request $request): JsonResponse
     {
@@ -40,7 +52,7 @@ class ConsoleLicenseController extends Controller
             return $this->notUsable($token);
         }
 
-        $data = $this->validateConsole($request);
+        $data = $this->validateConsole($request, orgRequired: true);
         $activation = $this->activation($token);
 
         if (! $activation) {
@@ -48,6 +60,7 @@ class ConsoleLicenseController extends Controller
                 $activation = LicenseActivation::create([
                     'token_id' => $token->id,
                     'instance_id' => $data['instance_id'],
+                    'org_name' => $data['org_name'],
                     'hostname' => $data['hostname'] ?? null,
                     'console_version' => $data['version'] ?? null,
                     'ip_address' => $request->ip(),
@@ -72,6 +85,36 @@ class ConsoleLicenseController extends Controller
     }
 
     /**
+     * Change the organization name of an activated licence (e.g. after a company rename).
+     * Only the console that activated the licence may do this.
+     */
+    public function updateOrg(Request $request): JsonResponse
+    {
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+
+        $data = $this->validateConsole($request, orgRequired: true);
+        $activation = $this->activation($token);
+
+        if (! $activation) {
+            return $this->notActivated();
+        }
+        if ($activation->instance_id !== $data['instance_id']) {
+            return $this->inUseElsewhere($activation);
+        }
+
+        $previous = $activation->org_name;
+        $this->touch($request, $activation, $data);
+
+        return response()->json([
+            ...$this->payload($request, $token, $activation),
+            'previous_org_name' => $previous,
+        ]);
+    }
+
+    /**
      * Periodic "still alive" call from the activated console. Records last seen.
      */
     public function heartbeat(Request $request): JsonResponse
@@ -85,11 +128,7 @@ class ConsoleLicenseController extends Controller
         $activation = $this->activation($token);
 
         if (! $activation) {
-            return response()->json([
-                'valid' => false,
-                'status' => 'not_activated',
-                'message' => 'This licence is not activated. Activate it first.',
-            ], 409);
+            return $this->notActivated();
         }
 
         if ($activation->instance_id !== $data['instance_id']) {
@@ -122,13 +161,20 @@ class ConsoleLicenseController extends Controller
      * Validate the console details and resolve its identity: instance_id when sent
      * (recommended), otherwise the hostname, otherwise the caller's IP address.
      */
-    private function validateConsole(Request $request): array
+    private function validateConsole(Request $request, bool $orgRequired = false): array
     {
         $data = $request->validate([
+            'org_name' => [$orgRequired ? 'required' : 'nullable', 'string', 'max:255'],
             'instance_id' => ['nullable', 'string', 'min:8', 'max:100', 'regex:/^[A-Za-z0-9._:-]+$/'],
             'hostname' => ['nullable', 'string', 'max:255'],
             'version' => ['nullable', 'string', 'max:50'],
+        ], [
+            'org_name.required' => 'Send the organization name (org_name) to activate this licence.',
         ]);
+
+        if (isset($data['org_name'])) {
+            $data['org_name'] = trim($data['org_name']);
+        }
 
         $data['instance_id'] = $data['instance_id']
             ?? (filled($data['hostname'] ?? null) ? 'host:'.mb_substr($data['hostname'], 0, 95) : 'ip:'.$request->ip());
@@ -139,6 +185,7 @@ class ConsoleLicenseController extends Controller
     private function touch(Request $request, LicenseActivation $activation, array $data): void
     {
         $activation->fill(array_filter([
+            'org_name' => $data['org_name'] ?? null,
             'hostname' => $data['hostname'] ?? null,
             'console_version' => $data['version'] ?? null,
         ]))->fill([
@@ -175,6 +222,15 @@ class ConsoleLicenseController extends Controller
         ], 403);
     }
 
+    private function notActivated(): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'not_activated',
+            'message' => 'This licence is not activated. Activate it first.',
+        ], 409);
+    }
+
     private function invalid(): JsonResponse
     {
         return response()->json(['valid' => false, 'message' => 'Invalid licence'], 401);
@@ -186,7 +242,7 @@ class ConsoleLicenseController extends Controller
             'valid' => false,
             'status' => 'in_use_elsewhere',
             'message' => 'This licence is already in use by another Management Console'
-                .($activation->hostname ? " ({$activation->hostname})" : '')
+                .($activation->org_name ? " (organization: {$activation->org_name})" : '')
                 .'. Revoke it and create a new licence to move it.',
         ], 409);
     }

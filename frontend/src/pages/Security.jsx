@@ -14,8 +14,8 @@ const ITEMS = [
 export default function Security() {
   return (
     <div data-testid="security-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Security</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
+      <div className="text-xs font-medium text-ag-teal mb-4">Security</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
         Quiet by default.<br />Auditable by design.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">
@@ -24,7 +24,7 @@ export default function Security() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5 mt-14">
         {ITEMS.map((it, i) => (
-          <div key={i} className="lift rounded-xl border border-zinc-800 bg-[#101012] p-6" data-testid={`security-${i}`}>
+          <div key={i} className="lift rounded-card bg-white shadow-ag p-6" data-testid={`security-${i}`}>
             <div className="w-10 h-10 rounded-lg flex items-center justify-center bg-amber-500/10 border border-amber-500/30 mb-5">
               <it.icon size={18} className="text-amber-500" />
             </div>

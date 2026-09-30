@@ -35,7 +35,7 @@ export default function GithubCallback() {
           <>
             <div className="text-red-400 font-mono mb-3">GitHub sign-in failed</div>
             <div className="text-zinc-500 text-sm">{err}</div>
-            <button onClick={() => nav("/login")} className="mt-6 px-4 py-2 bg-amber-500 text-zinc-950 rounded-md">Back to login</button>
+            <button onClick={() => nav("/login")} className="mt-6 px-4 py-2 bg-ag-gradient text-ag-ink rounded-full">Back to login</button>
           </>
         ) : (
           <div className="text-zinc-500 font-mono">Authenticating with GitHub…</div>

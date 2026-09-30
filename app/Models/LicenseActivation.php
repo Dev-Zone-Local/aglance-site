@@ -12,7 +12,7 @@ use Laravel\Sanctum\PersonalAccessToken;
 class LicenseActivation extends Model
 {
     protected $fillable = [
-        'token_id', 'instance_id', 'hostname', 'console_version', 'ip_address', 'activated_at', 'last_seen_at',
+        'token_id', 'instance_id', 'org_name', 'hostname', 'console_version', 'ip_address', 'activated_at', 'last_seen_at',
     ];
 
     protected function casts(): array
@@ -32,6 +32,7 @@ class LicenseActivation extends Model
     {
         return [
             'instance_id' => $this->instance_id,
+            'org_name' => $this->org_name,
             'hostname' => $this->hostname,
             'version' => $this->console_version,
             'activated_at' => $this->activated_at?->toIso8601String(),

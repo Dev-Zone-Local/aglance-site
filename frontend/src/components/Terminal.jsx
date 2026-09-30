@@ -1,27 +1,29 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
 
+// Terminals and code stay dark: ink cards with JetBrains Mono (design-doc §4, §7.3).
+// Explicit hex colours on purpose, so the transitional zinc remap does not lighten them.
+
 export function Terminal({ lines = [], title = "atglance@host", className = "", live = false }) {
   return (
-    <div className={`relative rounded-xl overflow-hidden border border-zinc-800 bg-[#08080a] ${className}`} data-testid="terminal-block">
-      <div className="flex items-center gap-2 px-4 py-2.5 border-b border-zinc-800 bg-zinc-950/60">
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="ml-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">{title}</span>
-        <span className="ml-auto text-[10px] text-zinc-600 font-mono">bash</span>
+    <div className={`relative overflow-hidden rounded-card bg-[#14171B] shadow-ag-strong ${className}`} data-testid="terminal-block">
+      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-2.5">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#E45757]/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#D98A0B]/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#1FA874]/80" />
+        <span className="ml-3 font-mono text-[11px] text-[#8A9099]">{title}</span>
+        <span className="ml-auto font-mono text-[10px] text-[#5B626B]">bash</span>
       </div>
-      <pre className="m-0 p-5 font-mono text-[13px] leading-relaxed text-zinc-300 overflow-x-auto">
-        {lines.map((l, i) => (
-          <div key={i} className="whitespace-pre">
-            {l.startsWith("$") || l.startsWith("#") ? (
-              <span className="text-amber-500">{l[0]} </span>
-            ) : null}
-            <span className={l.startsWith("$") || l.startsWith("#") ? "text-zinc-200" : "text-zinc-400"}>
-              {l.startsWith("$") || l.startsWith("#") ? l.slice(2) : l}
-            </span>
-          </div>
-        ))}
+      <pre className="m-0 overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-[#E6E9EE]">
+        {lines.map((l, i) => {
+          const prompt = l.startsWith("$") || l.startsWith("#");
+          return (
+            <div key={i} className="whitespace-pre">
+              {prompt && <span className="text-[#71F7D4]">{l[0]} </span>}
+              <span className={prompt ? "text-white" : "text-[#B7BEC6]"}>{prompt ? l.slice(2) : l}</span>
+            </div>
+          );
+        })}
         {live && <span className="cursor" />}
       </pre>
     </div>
@@ -38,18 +40,18 @@ export function CodeBlock({ code, lang = "bash", title }) {
     } catch {}
   };
   return (
-    <div className="relative rounded-lg overflow-hidden border border-zinc-800 bg-zinc-950" data-testid="code-block">
-      <div className="flex items-center justify-between px-4 py-2 border-b border-zinc-800 bg-zinc-900/60">
-        <span className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">{title || lang}</span>
+    <div className="relative overflow-hidden rounded-input bg-[#14171B]" data-testid="code-block">
+      <div className="flex items-center justify-between border-b border-white/10 px-4 py-2">
+        <span className="font-mono text-[11px] text-[#8A9099]">{title || lang}</span>
         <button
           onClick={onCopy}
           data-testid="code-copy-btn"
-          className="text-zinc-500 hover:text-amber-500 text-xs flex items-center gap-1.5 transition-colors"
+          className="flex items-center gap-1.5 text-xs text-[#B7BEC6] transition-colors hover:text-[#71F7D4]"
         >
           {copied ? <><Check size={12} /> Copied</> : <><Copy size={12} /> Copy</>}
         </button>
       </div>
-      <pre className="m-0 p-4 font-mono text-[13px] leading-relaxed text-zinc-300 overflow-x-auto">{code}</pre>
+      <pre className="m-0 overflow-x-auto p-4 font-mono text-[13px] leading-relaxed text-[#E6E9EE]">{code}</pre>
     </div>
   );
 }

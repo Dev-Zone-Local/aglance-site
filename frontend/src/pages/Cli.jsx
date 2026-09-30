@@ -28,8 +28,8 @@ const FLAGS = [
 export default function Cli() {
   return (
     <div data-testid="cli-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">AtGlance CLI</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
+      <div className="text-xs font-medium text-ag-teal mb-4">AtGlance CLI</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
         A focused, idempotent agent for systemd hosts.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">

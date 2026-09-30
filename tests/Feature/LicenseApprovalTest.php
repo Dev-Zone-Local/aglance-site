@@ -143,14 +143,14 @@ class LicenseApprovalTest extends TestCase
         $console = fn () => $this->withHeaders(['Accept' => 'application/json', 'Authorization' => "Bearer {$key}"]);
 
         $this->flushHeaders();
-        $console()->postJson('/api/licenses/activate', ['instance_id' => 'console-1234'])->assertForbidden();
+        $console()->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => 'console-1234'])->assertForbidden();
 
         $this->actingAs($this->admin);
         LicenseActions::approveOne(License::find($new->accessToken->id));
 
         $this->flushHeaders();
         app('auth')->forgetGuards();
-        $console()->postJson('/api/licenses/activate', ['instance_id' => 'console-1234'])->assertCreated();
+        $console()->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => 'console-1234'])->assertCreated();
     }
 
     public function test_admin_sees_licences_on_user_edit_page(): void

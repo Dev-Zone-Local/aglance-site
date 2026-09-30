@@ -72,7 +72,7 @@ export function ScreenshotCarousel({ type = "console" }) {
 
   return (
     <div className="w-full">
-      <div className="relative rounded-2xl border border-zinc-800 bg-[#101012] overflow-hidden">
+      <div className="relative rounded-card bg-white shadow-ag overflow-hidden">
         {/* Main image display */}
         <div className="relative aspect-video bg-zinc-950 flex items-center justify-center overflow-hidden">
           <img

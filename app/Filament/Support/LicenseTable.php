@@ -48,11 +48,11 @@ class LicenseTable
                     ->tooltip(fn (License $record) => $record->isConfirmed()
                         ? 'User entered the emailed code'
                         : 'User has not entered the emailed code yet'),
-                TextColumn::make('activation.hostname')
-                    ->label('Console')
+                TextColumn::make('activation.org_name')
+                    ->label('Organization')
                     ->placeholder('—')
                     ->description(fn (License $record) => $record->activation?->console_version
-                        ? 'v'.$record->activation->console_version
+                        ? 'Console v'.$record->activation->console_version
                         : null),
                 TextColumn::make('activation.last_seen_at')
                     ->label('Last seen')

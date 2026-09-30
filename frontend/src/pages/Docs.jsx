@@ -18,8 +18,8 @@ export function DocsLanding() {
     <div data-testid="docs-landing" className="max-w-7xl mx-auto px-5 sm:px-8 py-16 grid lg:grid-cols-[240px_1fr] gap-10">
       <DocsSidebar />
       <div>
-        <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Documentation</div>
-        <h1 className="text-4xl sm:text-5xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-4">
+        <div className="text-xs font-medium text-ag-teal mb-4">Documentation</div>
+        <h1 className="text-4xl sm:text-5xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-4">
           Build, deploy, operate.
         </h1>
         <p className="text-lg text-zinc-400 max-w-2xl mb-12">
@@ -35,7 +35,7 @@ export function DocsLanding() {
                     key={d.slug}
                     to={`/docs/${d.slug}`}
                     data-testid={`docs-card-${d.slug}`}
-                    className="lift rounded-xl border border-zinc-800 bg-[#101012] p-5 group"
+                    className="lift rounded-card bg-white shadow-ag p-5 group"
                   >
                     <BookOpen size={16} className="text-amber-500 mb-3" />
                     <div className="font-medium text-zinc-100 mb-1">{d.title}</div>
@@ -72,7 +72,7 @@ export function DocPage() {
           <div className="text-zinc-500 font-mono">Loading…</div>
         ) : (
           <article className="max-w-3xl">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-3">{doc.section}</div>
+            <div className="text-xs font-medium text-ag-teal mb-3">{doc.section}</div>
             <Markdown source={doc.content} />
           </article>
         )}

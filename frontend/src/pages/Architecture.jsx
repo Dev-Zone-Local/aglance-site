@@ -10,8 +10,8 @@ const ARCH = {
 export default function Architecture() {
   return (
     <div data-testid="architecture-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Architecture</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
+      <div className="text-xs font-medium text-ag-teal mb-4">Architecture</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
         Everything you need.<br />Nothing you don't.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">
@@ -48,8 +48,8 @@ export default function Architecture() {
           ["Cache", "Queue (jobs), Cache (reads), Buffer (writes during DB outage)."],
           ["Database 8", "Users, orgs, workspaces, systems, services, configuration, files, raw_data, tokens, activity_logs."],
         ].map(([t, d]) => (
-          <div key={t} className="rounded-xl border border-zinc-800 bg-[#101012] p-5">
-            <div className="text-[11px] uppercase tracking-[0.18em] text-amber-500 font-mono mb-2">{t}</div>
+          <div key={t} className="rounded-card bg-white shadow-ag p-5">
+            <div className="text-xs font-medium text-ag-teal mb-2">{t}</div>
             <p className="text-sm text-zinc-400 leading-relaxed">{d}</p>
           </div>
         ))}
