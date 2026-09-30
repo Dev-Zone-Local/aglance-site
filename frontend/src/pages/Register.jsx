@@ -2,7 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth, goToAccountHome, useGithubEnabled } from "../lib/auth-context";
 import { api, formatApiError } from "../lib/api";
-import { Github, ArrowRight, Terminal as TerminalIcon } from "lucide-react";
+import { ArrowRight } from "lucide-react";
+import { AuthShell, GithubButton, OrDivider } from "../components/AuthShell";
+import { Alert, Button, Input, Label } from "../components/ag";
 
 export default function Register() {
   const { register } = useAuth();
@@ -40,71 +42,47 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center px-5 py-12" data-testid="register-page">
-      <div className="w-full max-w-md">
-        <Link to="/" className="inline-flex items-center gap-2.5 mb-8">
-          <div className="w-8 h-8 rounded-md bg-amber-500/10 border border-amber-500/40 flex items-center justify-center">
-            <TerminalIcon size={15} className="text-amber-500" />
-          </div>
-          <span className="font-semibold tracking-tight text-zinc-100">AtGlance</span>
-        </Link>
-        <h1 className="text-3xl font-semibold tracking-tighter text-zinc-50 mb-2">Create your free account</h1>
-        <p className="text-zinc-500 mb-8 text-sm">Get access to the AtGlance CLI and self-hosted Console downloads.</p>
+    <AuthShell
+      testId="register-page"
+      title="Create your free account"
+      subtitle="Get the AtGlance CLI and self-hosted Console downloads."
+    >
+      {githubEnabled && (
+        <>
+          <GithubButton onClick={onGithub}>Sign up with GitHub</GithubButton>
+          <OrDivider />
+        </>
+      )}
 
-        {githubEnabled && (
-          <>
-          <button
-            onClick={onGithub}
-            data-testid="github-sso-btn"
-            className="lift w-full inline-flex items-center justify-center gap-2.5 px-4 py-2.5 rounded-md border border-zinc-800 bg-zinc-950 text-zinc-200 hover:bg-zinc-900 mb-5"
-          >
-            <Github size={16} /> Sign up with GitHub
-          </button>
-
-          <div className="flex items-center gap-3 mb-5">
-            <div className="flex-1 h-px bg-zinc-900" />
-            <span className="text-[11px] uppercase tracking-[0.2em] text-zinc-500 font-mono">or</span>
-            <div className="flex-1 h-px bg-zinc-900" />
-          </div>
-          </>
-        )}
-
-        <form onSubmit={onSubmit} className="space-y-3">
-          <div>
-            <label className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">Name</label>
-            <input data-testid="register-name-input" type="text" value={name} onChange={(e) => setName(e.target.value)}
-              className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
-              placeholder="Jane Doe" />
-          </div>
-          <div>
-            <label className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">Email</label>
-            <input data-testid="register-email-input" type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-              className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
-              placeholder="you@company.com" />
-          </div>
-          <div>
-            <label className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">Password</label>
-            <input data-testid="register-password-input" type="password" required minLength={6} value={pw} onChange={(e) => setPw(e.target.value)}
-              className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
-              placeholder="At least 6 characters" />
-          </div>
-          <div>
-            <label className="text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">Confirm password</label>
-            <input data-testid="register-password-confirm-input" type="password" required minLength={6} value={pw2} onChange={(e) => setPw2(e.target.value)}
-              className="mt-1 w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-md text-zinc-100 focus:outline-none focus:border-amber-500/50 focus:ring-1 focus:ring-amber-500/30"
-              placeholder="Repeat your password" />
-          </div>
-          {err && <div data-testid="register-error" className="text-sm text-red-400">{err}</div>}
-          <button type="submit" disabled={busy} data-testid="register-submit-btn"
-            className="w-full inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium py-2.5 rounded-md hover:bg-amber-400 disabled:opacity-60">
-            {busy ? "Creating account…" : <>Create account <ArrowRight size={14} /></>}
-          </button>
-        </form>
-
-        <div className="text-sm text-zinc-500 mt-6">
-          Already have an account? <Link to="/login" className="text-amber-500" data-testid="register-to-login">Sign in</Link>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <Label htmlFor="reg-name">Name</Label>
+          <Input id="reg-name" data-testid="register-name-input" type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Doe" autoComplete="name" />
         </div>
+        <div>
+          <Label htmlFor="reg-email">Email</Label>
+          <Input id="reg-email" data-testid="register-email-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required autoComplete="email" />
+        </div>
+        <div>
+          <Label htmlFor="reg-password">Password</Label>
+          <Input id="reg-password" data-testid="register-password-input" type="password" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="At least 6 characters" required minLength={6} autoComplete="new-password" />
+        </div>
+        <div>
+          <Label htmlFor="reg-password2">Confirm password</Label>
+          <Input id="reg-password2" data-testid="register-password-confirm-input" type="password" value={pw2} onChange={(e) => setPw2(e.target.value)} placeholder="Repeat your password" required minLength={6} autoComplete="new-password" />
+        </div>
+        {err && <Alert variant="danger" data-testid="register-error">{err}</Alert>}
+        <Button type="submit" disabled={busy} data-testid="register-submit-btn" className="w-full">
+          {busy ? "Creating account…" : <>Create account <ArrowRight size={14} /></>}
+        </Button>
+      </form>
+
+      <div className="mt-6 text-sm text-ag-subtle">
+        Already have an account?{" "}
+        <Link to="/login" className="font-medium text-ag-teal hover:underline" data-testid="register-to-login">
+          Sign in
+        </Link>
       </div>
-    </div>
+    </AuthShell>
   );
 }

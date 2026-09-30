@@ -10,8 +10,8 @@ const ARCH_E2E = "/images/End-to-End Architecture.png";
 export default function Product() {
   return (
     <div data-testid="product-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Product</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
+      <div className="text-xs font-medium text-ag-teal mb-4">Product</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
         Two surfaces. One source of truth.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">
@@ -20,7 +20,7 @@ export default function Product() {
 
       {/* The two surfaces side by side */}
       <div className="grid md:grid-cols-2 gap-6 mt-14">
-        <div className="rounded-2xl border border-zinc-800 bg-[#101012] p-7" data-testid="product-cli">
+        <div className="rounded-card bg-white shadow-ag p-7" data-testid="product-cli">
           <Cpu size={20} className="text-amber-500 mb-5" />
           <h3 className="text-2xl font-semibold text-zinc-100 mb-2">CLI agent</h3>
           <p className="text-zinc-400 leading-relaxed mb-5">
@@ -37,7 +37,7 @@ export default function Product() {
           <Link to="/cli" data-testid="product-cli-link" className="inline-flex items-center gap-2 mt-5 text-amber-500 text-sm hover:gap-3 transition-all">CLI reference <ArrowRight size={14} /></Link>
         </div>
 
-        <div className="rounded-2xl border border-zinc-800 bg-[#101012] p-7" data-testid="product-console">
+        <div className="rounded-card bg-white shadow-ag p-7" data-testid="product-console">
           <Server size={20} className="text-amber-500 mb-5" />
           <h3 className="text-2xl font-semibold text-zinc-100 mb-2">Management Console</h3>
           <p className="text-zinc-400 leading-relaxed mb-5">

@@ -11,8 +11,8 @@ const ARCH_SYSTEM = "/images/Atglance System Architecture.png";
 export default function Console() {
   return (
     <div data-testid="console-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4">Management Console</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
+      <div className="text-xs font-medium text-ag-teal mb-4">Management Console</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl">
         Self-hosted control plane.<br />Inside your boundary.
       </h1>
       <p className="text-lg text-zinc-400 max-w-3xl leading-relaxed">

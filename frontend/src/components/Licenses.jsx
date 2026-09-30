@@ -7,26 +7,27 @@ import { CodeBlock } from "./Terminal";
 import { useAuth } from "../lib/auth-context";
 import RevokeLicense from "./RevokeLicense";
 
+// Status colours from design-doc §2.4 (soft background + strong text).
 const STATUS_STYLES = {
   unverified: [
-    "border-zinc-600 bg-zinc-800/60 text-zinc-300",
-    "bg-zinc-400",
+    "bg-ag-surface text-ag-subtle",
+    "bg-ag-muted",
     "Awaiting code",
     "Enter the 5-digit code we emailed you to activate this licence.",
   ],
   under_review: [
-    "border-amber-500/40 bg-amber-500/10 text-amber-400",
-    "bg-amber-400",
+    "bg-ag-warning-soft text-ag-warning",
+    "bg-ag-warning",
     "Under review",
     "An AtGlance admin must approve this licence before the Management Console can use it.",
   ],
   ready: [
-    "border-sky-500/40 bg-sky-500/10 text-sky-400",
-    "bg-sky-400",
+    "bg-ag-info-soft text-ag-info",
+    "bg-ag-info",
     "Ready",
     "Active. Enter the key in the Management Console installer.",
   ],
-  in_use: ["border-emerald-500/40 bg-emerald-500/10 text-emerald-400", "bg-emerald-400", "In Use", undefined],
+  in_use: ["bg-ag-success-soft text-ag-success", "bg-ag-success", "In Use", undefined],
 };
 
 function StatusBadge({ license }) {
@@ -34,7 +35,7 @@ function StatusBadge({ license }) {
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs ${cls}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 py-1 text-xs font-medium ${cls}`}
       data-testid={`license-status-${license.id}`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} /> {label}
@@ -163,9 +164,9 @@ export default function Licenses() {
   };
 
   return (
-    <div className="mt-10 rounded-2xl border border-zinc-800 bg-[#101012] p-7" data-testid="licenses">
+    <div className="mt-10 rounded-card bg-white shadow-ag p-7" data-testid="licenses">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
-        <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] font-mono text-amber-500">
+        <div className="flex items-center gap-2 text-xs font-medium text-ag-teal">
           <KeyRound size={14} /> Management Console licences
         </div>
         {data?.plan_label && (
@@ -182,8 +183,8 @@ export default function Licenses() {
       </p>
 
       {created && (
-        <div className="mb-6 rounded-xl border border-amber-500/40 bg-amber-500/5 p-5" data-testid="license-created">
-          <div className="flex items-start gap-2 text-sm text-amber-400 mb-3">
+        <div className="mb-6 rounded-input bg-ag-warning-soft p-5" data-testid="license-created">
+          <div className="flex items-start gap-2 text-sm text-ag-warning-text mb-3">
             <AlertTriangle size={16} className="mt-0.5 shrink-0" />
             <span>
               Copy the licence key for <b>{created.name}</b> and keep it safe.
@@ -225,13 +226,13 @@ export default function Licenses() {
                 autoFocus
                 placeholder="5-digit code"
                 data-testid="license-code"
-                className="sm:w-44 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2.5 text-lg tracking-[0.4em] font-mono text-zinc-100 placeholder:text-zinc-600 placeholder:tracking-normal placeholder:text-sm focus:outline-none focus:border-amber-500/60"
+                className="sm:w-44 rounded-input border border-transparent bg-ag-surface px-3.5 py-[11px] text-lg tracking-[0.4em] font-mono text-zinc-100 placeholder:text-zinc-600 placeholder:tracking-normal placeholder:text-sm focus:outline-none focus:border-ag-mint focus:bg-white focus:shadow-ag-focus"
               />
               <button
                 type="submit"
                 disabled={busy || code.length !== 5}
                 data-testid="license-create"
-                className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 bg-ag-gradient text-ag-ink font-medium px-4 py-2.5 rounded-full hover:bg-ag-gradient-hover hover:shadow-ag-glow transition-colors disabled:opacity-50"
               >
                 Activate
               </button>
@@ -261,13 +262,13 @@ export default function Licenses() {
               maxLength={100}
               placeholder="Licence name, e.g. prod-console"
               data-testid="license-name"
-              className="flex-1 bg-zinc-950 border border-zinc-800 rounded-md px-3 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500/60"
+              className="flex-1 rounded-input border border-transparent bg-ag-surface px-3.5 py-[11px] text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-ag-mint focus:bg-white focus:shadow-ag-focus"
             />
             <button
               type="submit"
               disabled={busy || !name.trim()}
               data-testid="license-send-code"
-              className="inline-flex items-center justify-center gap-2 bg-amber-500 text-zinc-950 font-medium px-4 py-2.5 rounded-md hover:bg-amber-400 transition-colors disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 bg-ag-gradient text-ag-ink font-medium px-4 py-2.5 rounded-full hover:bg-ag-gradient-hover hover:shadow-ag-glow transition-colors disabled:opacity-50"
             >
               <Plus size={14} /> {busy ? "Requesting…" : "Create licence"}
             </button>

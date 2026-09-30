@@ -1,47 +1,81 @@
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=JetBrains+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * AtGlance design system (see design-doc.md). Same tokens as the Management Console
+ * (atGlance-managementGUI/composer/public/css/atglance.css) so both look like one product.
+ */
 :root {
-    --bg: #0a0a0a;
-    --bg-paper: #121212;
-    --bg-elevated: #1a1a1a;
-    --border: #27272a;
-    --border-hover: #3f3f46;
-    --text: #f4f4f5;
-    --text-muted: #a1a1aa;
-    --text-dim: #71717a;
-    --gold: #f59e0b;
-    --gold-hover: #d97706;
-    --gold-light: #fbbf24;
-    --gold-glow: rgba(245, 158, 11, 0.4);
-    --gold-subtle: rgba(245, 158, 11, 0.1);
+    --ag-sky: #4cc9ff;
+    --ag-teal: #2cb7d9;
+    --ag-mint: #71f7d4;
+    --ag-ink: #14171b;
+
+    --ag-bg: #eef1f4;
+    --ag-bg-glow: rgba(113, 247, 212, 0.35);
+    --ag-bg-glow-2: rgba(76, 201, 255, 0.22);
+    --ag-frame: rgba(255, 255, 255, 0.55);
+    --ag-card: #ffffff;
+    --ag-card-dark: var(--ag-ink);
+    --ag-surface: #f4f6f8;
+    --ag-line: #e6e9ee;
+
+    --ag-accent: var(--ag-mint);
+    --ag-accent-strong: #3fe3bc;
+    --ag-accent-soft: #e5fcf6;
+    --ag-gradient: linear-gradient(135deg, var(--ag-mint) 0%, var(--ag-sky) 100%);
+    --ag-gradient-hover: linear-gradient(135deg, #5ff0c9 0%, #2fbaf2 100%);
+
+    --ag-text: var(--ag-ink);
+    --ag-muted: #8a9099;
+    --ag-subtle: #5b626b;
+
+    --ag-danger: #e45757;
+    --ag-danger-soft: #fdecec;
+    --ag-warning: #d98a0b;
+    --ag-warning-soft: #fef4e2;
+    --ag-success: #1fa874;
+    --ag-success-soft: #e3faf3;
+
+    --ag-radius-card: 20px;
+    --ag-radius-input: 12px;
+    --ag-radius-pill: 999px;
+    --ag-shadow: 0 8px 30px rgba(17, 20, 24, 0.06);
+    --ag-shadow-strong: 0 12px 40px rgba(17, 20, 24, 0.12);
+
+    --ag-font: "Neue Haas Grotesk Text", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
 }
 
 @layer base {
     :root {
-        --background: 0 0% 4%;
-        --foreground: 0 0% 96%;
-        --card: 0 0% 7%;
-        --card-foreground: 0 0% 96%;
-        --popover: 0 0% 7%;
-        --popover-foreground: 0 0% 96%;
-        --primary: 38 92% 50%;
-        --primary-foreground: 0 0% 4%;
-        --secondary: 240 5% 15%;
-        --secondary-foreground: 0 0% 96%;
-        --muted: 240 5% 15%;
-        --muted-foreground: 240 5% 64%;
-        --accent: 38 92% 50%;
-        --accent-foreground: 0 0% 4%;
-        --destructive: 0 72% 51%;
-        --destructive-foreground: 0 0% 96%;
-        --border: 240 6% 16%;
-        --input: 240 6% 16%;
-        --ring: 38 92% 50%;
-        --radius: 0.5rem;
+        --background: 210 21% 95%;
+        --foreground: 214 15% 9%;
+        --card: 0 0% 100%;
+        --card-foreground: 214 15% 9%;
+        --popover: 0 0% 100%;
+        --popover-foreground: 214 15% 9%;
+        --primary: 164 89% 71%;
+        --primary-foreground: 214 15% 9%;
+        --secondary: 210 22% 96%;
+        --secondary-foreground: 214 15% 9%;
+        --muted: 210 22% 96%;
+        --muted-foreground: 216 7% 57%;
+        --accent: 164 79% 94%;
+        --accent-foreground: 214 15% 9%;
+        --destructive: 0 72% 62%;
+        --destructive-foreground: 0 0% 100%;
+        --border: 218 19% 92%;
+        --input: 210 22% 96%;
+        --ring: 164 89% 71%;
+        --radius: 0.75rem;
+        --chart-1: 164 89% 71%;
+        --chart-2: 198 100% 65%;
+        --chart-3: 192 69% 51%;
+        --chart-4: 214 15% 9%;
+        --chart-5: 216 7% 57%;
     }
 }
 
@@ -50,71 +84,122 @@
         @apply border-border;
     }
     html {
-        background: var(--bg);
-        color-scheme: dark;
+        color-scheme: light;
     }
     body {
         margin: 0;
-        font-family:
-            "Geist", system-ui, -apple-system, sans-serif;
-        background: var(--bg);
-        color: var(--text);
+        font-family: var(--ag-font);
+        font-size: 14px;
+        color: var(--ag-text);
+        /* Sky glow top-right, mint glow bottom-left, pale background; fixed while scrolling. */
+        background:
+            radial-gradient(900px 520px at 100% 0%, rgba(76, 201, 255, 0.22) 0%, rgba(76, 201, 255, 0) 65%),
+            radial-gradient(900px 600px at 0% 100%, rgba(113, 247, 212, 0.35) 0%, rgba(113, 247, 212, 0) 60%),
+            var(--ag-bg);
+        background-attachment: fixed;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
-        font-feature-settings: "ss01", "ss02";
+    }
+    h1, h2, h3, h4 {
+        font-weight: 500;
+        letter-spacing: -0.02em;
     }
     code,
     pre,
     .font-mono {
-        font-family: "JetBrains Mono", "Menlo", monospace;
+        font-family: "JetBrains Mono", ui-monospace, "Menlo", monospace;
     }
     ::selection {
-        background: var(--gold);
-        color: #0a0a0a;
+        background: var(--ag-mint);
+        color: var(--ag-ink);
     }
-    /* Custom scrollbar */
     ::-webkit-scrollbar {
         width: 10px;
         height: 10px;
     }
     ::-webkit-scrollbar-track {
-        background: #0a0a0a;
+        background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-        background: #27272a;
+        background: #d5dae0;
         border-radius: 6px;
     }
     ::-webkit-scrollbar-thumb:hover {
-        background: #3f3f46;
+        background: #b7bec6;
     }
 }
 
-/* ---- Grain & glow utilities ---- */
-.grain::before {
+/* ---- Layout: frosted frame around all page content ---- */
+.ag-frame {
+    max-width: 1440px;
+    margin: 24px auto;
+    padding: 20px 24px 8px;
+    background: var(--ag-frame);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 28px;
+    box-shadow: var(--ag-shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    min-height: calc(100vh - 48px);
+}
+@media (max-width: 900px) {
+    .ag-frame {
+        margin: 0;
+        border-radius: 0;
+        padding: 14px;
+        min-height: 100vh;
+    }
+}
+
+/* ---- Dark ink hero / banner with mint + sky corner glows ---- */
+.ag-hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--ag-ink);
+    color: #fff;
+    border-radius: var(--ag-radius-card);
+}
+.ag-hero::after {
     content: "";
     position: absolute;
-    inset: 0;
+    right: -120px;
+    top: -120px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, rgba(76, 201, 255, 0.35) 0%, rgba(76, 201, 255, 0) 70%);
     pointer-events: none;
-    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.96  0 0 0 0 0.62  0 0 0 0 0.04  0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
-    opacity: 0.5;
-    mix-blend-mode: overlay;
-    z-index: 0;
+}
+.ag-hero::before {
+    content: "";
+    position: absolute;
+    left: -140px;
+    bottom: -160px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(113, 247, 212, 0.35) 0%, rgba(113, 247, 212, 0) 70%);
+    pointer-events: none;
+}
+.ag-hero > * {
+    position: relative;
+    z-index: 1;
 }
 
+/* ---- Legacy helpers, restyled for the light theme ---- */
 .gold-glow {
-    box-shadow: 0 0 0 1px var(--gold-subtle), 0 20px 60px -20px var(--gold-glow);
+    box-shadow: var(--ag-shadow-strong);
 }
-
 .dotted-bg {
-    background-image: radial-gradient(rgba(245, 158, 11, 0.08) 1px, transparent 1px);
+    background-image: radial-gradient(rgba(44, 183, 217, 0.12) 1px, transparent 1px);
     background-size: 24px 24px;
 }
-
 .grid-bg {
     background-image:
-        linear-gradient(to right, rgba(63, 63, 70, 0.18) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(63, 63, 70, 0.18) 1px, transparent 1px);
+        linear-gradient(to right, rgba(20, 23, 27, 0.05) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(20, 23, 27, 0.05) 1px, transparent 1px);
     background-size: 56px 56px;
+}
+.grain::before {
+    content: none;
 }
 
 /* ---- Terminal cursor ---- */
@@ -122,77 +207,86 @@
     content: "▋";
     display: inline-block;
     margin-left: 2px;
-    color: var(--gold);
+    color: var(--ag-mint);
     animation: blink 1s steps(1) infinite;
 }
 @keyframes blink {
     50% { opacity: 0; }
 }
 
-/* ---- Hover lift ---- */
+/* ---- Card hover lift ---- */
 .lift {
-    transition: transform 240ms ease, border-color 240ms ease, background-color 240ms ease, box-shadow 240ms ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
 }
 .lift:hover {
     transform: translateY(-2px);
-    border-color: var(--gold);
+    box-shadow: var(--ag-shadow-strong);
 }
 
-/* Markdown content (docs / static pages) */
+/* ---- Markdown content (docs / static pages) ---- */
 .prose-atg h1 {
-    @apply text-3xl sm:text-4xl font-semibold tracking-tight text-zinc-100 mt-2 mb-6;
+    @apply text-[30px] font-medium tracking-heading text-ag-ink mt-2 mb-6;
 }
 .prose-atg h2 {
-    @apply text-xl sm:text-2xl font-semibold tracking-tight text-zinc-100 mt-10 mb-4;
+    @apply text-[22px] font-medium tracking-heading text-ag-ink mt-10 mb-4;
 }
 .prose-atg h3 {
-    @apply text-lg font-semibold text-zinc-100 mt-8 mb-3;
+    @apply text-[17px] font-medium text-ag-ink mt-8 mb-3;
 }
 .prose-atg p {
-    @apply text-zinc-400 leading-relaxed my-3 text-[15px];
+    @apply text-ag-subtle leading-relaxed my-3 text-[15px];
 }
 .prose-atg ul {
-    @apply list-disc pl-6 space-y-1 text-zinc-400 my-3;
+    @apply list-disc pl-6 space-y-1 text-ag-subtle my-3;
 }
 .prose-atg ol {
-    @apply list-decimal pl-6 space-y-1 text-zinc-400 my-3;
+    @apply list-decimal pl-6 space-y-1 text-ag-subtle my-3;
 }
 .prose-atg a {
-    @apply text-amber-500 underline-offset-4 hover:underline;
+    @apply text-ag-teal underline-offset-4 hover:underline;
 }
 .prose-atg code {
-    @apply bg-zinc-900 border border-zinc-800 px-1.5 py-0.5 rounded text-amber-400 text-[13px];
+    @apply bg-ag-surface px-1.5 py-0.5 rounded-md text-ag-ink text-[13px];
 }
 .prose-atg pre {
-    @apply bg-zinc-950 border border-zinc-800 rounded-lg p-4 overflow-x-auto text-[13px] my-4;
+    @apply bg-ag-ink rounded-input p-4 overflow-x-auto text-[13px] my-4;
 }
 .prose-atg pre code {
-    @apply bg-transparent border-0 p-0 text-zinc-300;
+    @apply bg-transparent p-0 text-[#e6e9ee];
 }
 .prose-atg table {
-    @apply w-full border border-zinc-800 my-4 text-sm;
+    @apply w-full my-4 text-sm;
 }
 .prose-atg th {
-    @apply text-left px-3 py-2 bg-zinc-900 border-b border-zinc-800 text-zinc-200 font-medium;
+    @apply text-left px-4 py-2.5 bg-ag-surface text-ag-muted text-xs font-medium first:rounded-l-input last:rounded-r-input;
 }
 .prose-atg td {
-    @apply px-3 py-2 border-b border-zinc-800 text-zinc-400;
+    @apply px-4 py-3 border-b border-ag-line text-ag-subtle;
 }
 .prose-atg blockquote {
-    @apply border-l-2 border-amber-500 pl-4 italic text-zinc-300 my-4;
+    @apply border-l-2 border-ag-mint pl-4 italic text-ag-subtle my-4;
 }
 .prose-atg hr {
-    @apply border-zinc-800 my-6;
+    @apply border-ag-line my-6;
 }
 .prose-atg strong {
-    @apply text-zinc-200;
+    @apply text-ag-ink font-medium;
 }
 
-/* Reveal animations */
-@keyframes rise {
-    from { opacity: 0; transform: translateY(12px); }
+/* ---- Motion: fade + 6px rise, max 0.3s ---- */
+@keyframes ag-fade {
+    from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
 }
 .rise {
-    animation: rise 600ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation: ag-fade 0.25s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .rise, .cursor::after {
+        animation: none;
+    }
+    .lift, .lift:hover {
+        transition: none;
+        transform: none;
+    }
 }

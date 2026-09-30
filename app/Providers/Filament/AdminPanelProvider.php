@@ -29,15 +29,26 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // AtGlance design system (design-doc.md): light only, teal/mint brand, Inter, console logo.
             ->brandName('AtGlance CMS')
-            ->darkMode(true)
+            ->brandLogo('/branding/atglance-logo.png')
+            ->brandLogoHeight('2rem')
+            ->favicon('/branding/favicon.ico')
+            ->font('Inter')
+            ->darkMode(false)
+            ->colors([
+                'primary' => Color::hex('#2CB7D9'),
+                'success' => Color::hex('#1FA874'),
+                'warning' => Color::hex('#D98A0B'),
+                'danger' => Color::hex('#E45757'),
+                'info' => Color::hex('#2CB7D9'),
+                'gray' => Color::Slate,
+            ])
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.theme-styles'))
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn (): View => view('filament.auth.github-login-button'),
             )
-            ->colors([
-                'primary' => Color::Amber,
-            ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

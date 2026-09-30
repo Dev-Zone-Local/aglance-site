@@ -47,28 +47,29 @@ export function HeroTerminal() {
   const currentCmd = SCRIPT[cmdIdx];
 
   return (
-    <div className="relative rounded-2xl overflow-hidden border border-zinc-800 bg-[#08080a] gold-glow" data-testid="hero-terminal">
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-800 bg-zinc-950/80">
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="w-2.5 h-2.5 rounded-full bg-zinc-700" />
-        <span className="ml-3 text-[11px] uppercase tracking-[0.18em] text-zinc-500 font-mono">sre@web-01 — atglance</span>
-        <span className="ml-auto text-[10px] text-amber-500/80 font-mono">● live</span>
+    // Ink terminal with explicit colours (not zinc), so it stays dark on the light theme.
+    <div className="relative overflow-hidden rounded-card bg-[#0E1114] ring-1 ring-white/10" data-testid="hero-terminal">
+      <div className="flex items-center gap-2 border-b border-white/10 px-4 py-3">
+        <span className="h-2.5 w-2.5 rounded-full bg-[#E45757]/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#D98A0B]/80" />
+        <span className="h-2.5 w-2.5 rounded-full bg-[#1FA874]/80" />
+        <span className="ml-3 font-mono text-[11px] text-[#8A9099]">sre@web-01 — atglance</span>
+        <span className="ml-auto font-mono text-[10px] text-[#71F7D4]">● live</span>
       </div>
-      <div className="p-5 font-mono text-[13px] leading-7 min-h-[340px]">
+      <div className="min-h-[320px] overflow-x-auto p-5 font-mono text-[12px] sm:text-[13px] leading-7 [&>div]:whitespace-nowrap">
         {history.map((h, i) => (
-          <div key={i} className="opacity-60 mb-3">
-            <div><span className="text-amber-500">$</span> <span className="text-zinc-200">{h.t}</span></div>
-            {h.out.map((o, j) => <div key={j} className="text-zinc-500">{o}</div>)}
+          <div key={i} className="mb-3 opacity-60">
+            <div><span className="text-[#71F7D4]">$</span> <span className="text-white">{h.t}</span></div>
+            {h.out.map((o, j) => <div key={j} className="text-[#8A9099]">{o}</div>)}
           </div>
         ))}
         <div>
-          <span className="text-amber-500">$</span>{" "}
-          <span className="text-zinc-100">{typed}</span>
+          <span className="text-[#71F7D4]">$</span>{" "}
+          <span className="text-white">{typed}</span>
           {!showOut && <span className="cursor" />}
         </div>
         {showOut && currentCmd.out.slice(0, outIdx).map((o, i) => (
-          <div key={i} className="text-zinc-400 rise">{o}</div>
+          <div key={i} className="rise text-[#B7BEC6]">{o}</div>
         ))}
       </div>
     </div>

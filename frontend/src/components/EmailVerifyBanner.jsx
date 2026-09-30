@@ -43,10 +43,10 @@ export default function EmailVerifyBanner() {
 
   return (
     <div
-      className="mb-10 flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-amber-500/40 bg-amber-500/5 px-5 py-4"
+      className="mb-10 flex flex-col sm:flex-row sm:items-center gap-3 rounded-input bg-ag-warning-soft px-5 py-4"
       data-testid="email-verify-banner"
     >
-      <MailWarning size={18} className="text-amber-500 shrink-0" />
+      <MailWarning size={18} className="text-ag-warning shrink-0" />
       <div className="flex-1 text-sm text-zinc-300">
         {user.email_deliverable ? (
           <>
@@ -61,7 +61,7 @@ export default function EmailVerifyBanner() {
           onClick={onResend}
           disabled={busy}
           data-testid="email-verify-resend"
-          className="text-sm font-medium px-3.5 py-1.5 rounded-md border border-amber-500/50 text-amber-400 hover:bg-amber-500/10 disabled:opacity-50"
+          className="text-sm font-medium px-3.5 py-1.5 rounded-full bg-white text-ag-warning-text shadow-ag hover:shadow-ag-strong disabled:opacity-50"
         >
           {busy ? "Sending…" : "Resend email"}
         </button>

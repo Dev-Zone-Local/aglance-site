@@ -15,8 +15,8 @@ export default function Pricing() {
 
   return (
     <div data-testid="pricing-page" className="max-w-7xl mx-auto px-5 sm:px-8 py-16">
-      <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-4 text-center">Pricing</div>
-      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-semibold tracking-tighter text-zinc-50 leading-[1.05] mb-6 max-w-4xl mx-auto text-center">
+      <div className="text-xs font-medium text-ag-teal mb-4 text-center">Pricing</div>
+      <h1 className="text-4xl sm:text-5xl lg:text-6xl font-medium tracking-heading text-zinc-50 leading-[1.05] mb-6 max-w-4xl mx-auto text-center">
         Free. Self-hosted. Forever.
       </h1>
       <p className="text-lg text-zinc-400 max-w-2xl leading-relaxed mx-auto text-center">
@@ -32,18 +32,18 @@ export default function Pricing() {
               key={p.id}
               data-testid={`pricing-plan-${p.name.toLowerCase()}`}
               className={`relative rounded-2xl p-7 ${p.highlighted
-                ? "border border-amber-500/40 bg-[#13110a] gold-glow"
-                : "border border-zinc-800 bg-[#101012]"
+                ? "border border-amber-500/40 bg-white gold-glow"
+                : "bg-white shadow-ag"
               }`}
             >
               {p.highlighted && (
-                <div className="absolute -top-3 left-7 text-[10px] uppercase tracking-[0.22em] font-mono px-2.5 py-1 rounded-full bg-amber-500 text-zinc-950">
+                <div className="absolute -top-3 left-7 text-[10px] uppercase tracking-[0.22em] font-mono px-2.5 py-1 rounded-full bg-ag-gradient text-ag-ink">
                   Most popular
                 </div>
               )}
-              <div className="text-[11px] uppercase tracking-[0.22em] text-amber-500 font-mono mb-3">{p.name}</div>
+              <div className="text-xs font-medium text-ag-teal mb-3">{p.name}</div>
               <div className="flex items-baseline gap-2 mb-3">
-                <span className="text-5xl font-semibold tracking-tighter text-zinc-100">{p.price}</span>
+                <span className="text-5xl font-medium tracking-heading text-zinc-100">{p.price}</span>
                 {p.period && <span className="text-sm text-zinc-500">{p.period}</span>}
               </div>
               <p className="text-sm text-zinc-400 leading-relaxed mb-6">{p.description}</p>
@@ -60,7 +60,7 @@ export default function Pricing() {
                 data-testid={`pricing-cta-${p.name.toLowerCase()}`}
                 className={`inline-flex items-center justify-center gap-2 w-full px-5 py-3 rounded-md font-medium transition-colors ${
                   p.highlighted
-                    ? "bg-amber-500 text-zinc-950 hover:bg-amber-400"
+                    ? "bg-ag-gradient text-ag-ink hover:bg-ag-gradient-hover hover:shadow-ag-glow"
                     : "border border-zinc-700 text-zinc-200 hover:bg-zinc-900"
                 }`}
               >
