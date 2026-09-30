@@ -52,6 +52,22 @@ class License extends PersonalAccessToken
 
     protected $hidden = ['token', 'plain_key'];
 
+    /**
+     * Sanctum writes last_used_at on every authenticated request. Skip that write so a
+     * read-only licence check changes nothing; console usage is tracked on the
+     * activation (last_seen_at) instead.
+     */
+    public function save(array $options = []): bool
+    {
+        if ($this->exists && array_keys($this->getDirty()) === ['last_used_at']) {
+            $this->syncOriginalAttribute('last_used_at');
+
+            return true;
+        }
+
+        return parent::save($options);
+    }
+
     /** Keep the plain key (encrypted) so the owner can view it for KEY_VISIBLE_MINUTES. */
     public function rememberPlainKey(string $plainKey): void
     {

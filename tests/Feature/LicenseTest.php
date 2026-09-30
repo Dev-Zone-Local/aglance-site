@@ -276,14 +276,15 @@ class LicenseTest extends TestCase
 
         $this->installer($key)
             ->postJson('/api/licenses/verify')
-            ->assertCreated()
+            ->assertOk()
             ->assertJsonPath('valid', true)
-            ->assertJsonPath('status', 'in_use')
+            ->assertJsonPath('status', 'available')
             ->assertJsonPath('user.email', 'ops@example.com')
             ->assertJsonPath('license.name', 'prod')
             ->assertJsonPath('plan', 'free');
 
-        $this->assertNotNull($user->tokens()->first()->last_used_at);
+        // Read-only: not even Sanctum's last_used_at is written.
+        $this->assertNull($user->tokens()->first()->last_used_at);
     }
 
     public function test_verify_rejects_bad_and_revoked_licenses(): void

@@ -297,7 +297,7 @@ export default function Licenses() {
               <tr className="text-left text-[11px] uppercase tracking-[0.16em] text-zinc-500 border-b border-zinc-800">
                 <th className="py-2 pr-4 font-medium">Name</th>
                 <th className="py-2 pr-4 font-medium">Status</th>
-                <th className="py-2 pr-4 font-medium">Console</th>
+                <th className="py-2 pr-4 font-medium">Organization</th>
                 <th className="py-2 pr-4 font-medium">Created</th>
                 <th className="py-2 pr-4 font-medium">Last seen</th>
                 <th className="py-2" />
@@ -312,8 +312,8 @@ export default function Licenses() {
                   </td>
                   <td className="py-2.5 pr-4 text-zinc-400">
                     {lic.console ? (
-                      <span title={`Instance ${lic.console.instance_id} · activated ${fmt(lic.console.activated_at)}`}>
-                        <span className="font-mono text-zinc-300">{lic.console.hostname || lic.console.instance_id}</span>
+                      <span title={`In use since ${fmt(lic.console.activated_at)}`}>
+                        <span className="text-zinc-200">{lic.console.org_name || "—"}</span>
                         {lic.console.version && <span className="text-zinc-500"> · v{lic.console.version}</span>}
                       </span>
                     ) : (

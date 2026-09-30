@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->prefix('licenses')->controller(ConsoleLicense
     Route::post('verify', 'verify')->middleware('throttle:30,1,license-verify');
     Route::post('activate', 'activate')->middleware('throttle:30,1,license-activate');
     Route::post('heartbeat', 'heartbeat')->middleware('throttle:60,1,license-heartbeat');
+    Route::put('org', 'updateOrg')->middleware('throttle:10,1,license-org');
 });
 
 // Management Console licences managed from the dashboard
