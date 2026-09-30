@@ -22,7 +22,7 @@ class ListLicenses extends ListRecords
                 ->badge($awaiting ?: null)
                 ->badgeColor('warning')
                 ->modifyQueryUsing(fn (Builder $query) => $query->awaitingApproval()),
-            'unverified' => Tab::make('Awaiting code')
+            'unverified' => Tab::make('Pending')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNull('confirmed_at')),
             'active' => Tab::make('Active')
                 ->modifyQueryUsing(fn (Builder $query) => $query->whereNotNull('confirmed_at')),

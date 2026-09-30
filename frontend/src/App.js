@@ -19,6 +19,8 @@ import { PageBySlug } from "@/pages/StaticPage";
 import { DocsLanding, DocPage } from "@/pages/Docs";
 import Login from "@/pages/Login";
 import Register from "@/pages/Register";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
 import GithubCallback from "@/pages/GithubCallback";
 import Dashboard from "@/pages/Dashboard";
 
@@ -58,6 +60,8 @@ export default function App() {
               <Route path="/docs/:slug" element={<DocPage />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/sso/github/callback" element={<GithubCallback />} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

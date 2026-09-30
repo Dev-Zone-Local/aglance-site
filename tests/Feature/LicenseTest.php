@@ -60,7 +60,7 @@ class LicenseTest extends TestCase
         $created = $this->postJson('/api/licenses', ['name' => 'prod'])
             ->assertCreated()
             ->assertJsonPath('status', 'unverified')
-            ->assertJsonPath('status_label', 'Awaiting code')
+            ->assertJsonPath('status_label', 'Pending')
             ->assertJsonPath('requires_approval', false)
             ->assertJsonPath('confirmed', false)
             ->assertJsonPath('awaiting_code', true)

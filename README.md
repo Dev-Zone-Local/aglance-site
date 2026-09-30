@@ -34,6 +34,7 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 | GET | `/api` | public (health) |
 | POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | public (CSRF) |
 | GET | `/api/auth/me` | logged in |
+| POST | `/api/auth/forgot-password`, `/api/auth/reset-password` | public; the reset email links to the SPA page `/reset-password?token=&email=` (valid 60 min, single use) |
 | GET | `/api/auth/github/start` | public; returns `{auth_url}` |
 | POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
 | GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
@@ -71,7 +72,7 @@ curl -X POST https://<site>/api/licenses/activate   -H "Accept: application/json
 
 A successful response looks like `{"valid": true, "status": "in_use", "user": {id, email, name}, "license": {name}, "plan": "free", "console": {instance_id, hostname, version, activated_at, last_seen_at}}`.
 
-- The dashboard shows each licence as **Awaiting code**, **Under review** (flagged users only), **Ready** or **In Use**, with the console hostname and version, and "Last seen" from the latest heartbeat.
+- The dashboard shows each licence as **Pending**, **Under review** (flagged users only), **Ready** or **In Use**, with the console hostname and version, and "Last seen" from the latest heartbeat.
 - A licence can't be moved to another console. Revoke it (password or emailed code), then create a new one. Revoking also deletes the activation, so the old console gets `401` on its next heartbeat.
 - Licences never expire. Keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and shown to users as `atg_...` (without Sanctum's `<id>|` prefix; both forms authenticate). Activations are stored in the `license_activations` table.
 - **Plan limits:** each user has a `plan` (default `free`). The limits are set in `config/atglance.php` (`plans`): Free allows 1 licence and Enterprise is unlimited. Admins change a user's plan in Filament, under Users. When a user is at the limit, creating another licence returns `403`.

@@ -72,7 +72,7 @@ class LicenseTable
             ->filters([
                 SelectFilter::make('verification')
                     ->label('Code')
-                    ->options(['verified' => 'Code entered', 'unverified' => 'Awaiting code'])
+                    ->options(['verified' => 'Code entered', 'unverified' => 'Pending'])
                     ->query(fn (Builder $query, array $data) => match ($data['value'] ?? null) {
                         'verified' => $query->whereNotNull('confirmed_at'),
                         'unverified' => $query->whereNull('confirmed_at'),

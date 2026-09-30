@@ -29,7 +29,7 @@ class License extends PersonalAccessToken
     public const IN_USE = 'in_use';
 
     public const STATUS_LABELS = [
-        self::UNVERIFIED => 'Awaiting code',
+        self::UNVERIFIED => 'Pending',
         self::UNDER_REVIEW => 'Under review',
         self::READY => 'Ready',
         self::IN_USE => 'In use',

@@ -112,7 +112,7 @@ class LicenseApprovalTest extends TestCase
             ->assertTableActionHidden('decline', $awaitingCode)
             ->assertTableColumnFormattedStateSet('status', 'Ready', $ready)
             ->assertTableColumnFormattedStateSet('status', 'Under review', $flagged)
-            ->assertTableColumnFormattedStateSet('status', 'Awaiting code', $awaitingCode);
+            ->assertTableColumnFormattedStateSet('status', 'Pending', $awaitingCode);
     }
 
     public function test_admin_approve_bypasses_missing_code(): void

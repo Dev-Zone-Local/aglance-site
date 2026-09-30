@@ -12,7 +12,7 @@ const STATUS_STYLES = {
   unverified: [
     "bg-ag-surface text-ag-subtle",
     "bg-ag-muted",
-    "Awaiting code",
+    "Pending",
     "Enter the 5-digit code we emailed you to activate this licence.",
   ],
   under_review: [
@@ -144,10 +144,6 @@ export default function Licenses() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const cancelCode = () => {
-    setPending(null);
-    setCode("");
-  };
 
   const onRevoke = (lic) => setRevoking(lic);
 
@@ -238,9 +234,6 @@ export default function Licenses() {
               </button>
               <button type="button" onClick={resendCode} disabled={busy} className="text-sm text-zinc-400 hover:text-zinc-100 px-2">
                 Resend code
-              </button>
-              <button type="button" onClick={cancelCode} className="text-sm text-zinc-500 hover:text-zinc-300 px-2">
-                Later
               </button>
             </div>
           </form>
