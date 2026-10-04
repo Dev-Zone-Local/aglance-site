@@ -42,6 +42,13 @@ Route::prefix('cms')->controller(CmsController::class)->group(function () {
 
 // Logged-in users only
 Route::get('downloads', [CmsController::class, 'downloads'])->middleware('auth:sanctum');
+Route::put('account/preferences', [CmsController::class, 'updatePreferences'])->middleware('auth:sanctum');
+Route::put('account/profile', [CmsController::class, 'updateProfile'])->middleware('auth:sanctum');
+Route::put('account/password', [CmsController::class, 'updatePassword'])->middleware(['auth:sanctum', 'throttle:5,1,account-password']);
+
+// Signed link in release emails
+Route::get('updates/unsubscribe/{id}', [CmsController::class, 'unsubscribe'])
+    ->whereNumber('id')->middleware('throttle:20,1,unsubscribe')->name('updates.unsubscribe');
 
 // Called by the self-hosted Management Console with "Authorization: Bearer <licence key>"
 Route::middleware('auth:sanctum')->prefix('licenses')->controller(ConsoleLicenseController::class)->group(function () {

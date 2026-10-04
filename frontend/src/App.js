@@ -22,7 +22,11 @@ import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import GithubCallback from "@/pages/GithubCallback";
-import Dashboard from "@/pages/Dashboard";
+import { AppLayout } from "@/components/AppLayout";
+import Overview from "@/pages/app/Overview";
+import Install from "@/pages/app/Install";
+import LicencesPage from "@/pages/app/LicencesPage";
+import Profile from "@/pages/app/Profile";
 
 function NotFound() {
   return (
@@ -63,8 +67,16 @@ export default function App() {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
               <Route path="/auth/sso/github/callback" element={<GithubCallback />} />
-              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />
+            </Route>
+            {/* Signed-in app area: own header with account navigation + user menu */}
+            <Route path="/dashboard" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
+              <Route index element={<Overview />} />
+              <Route path="install" element={<Install />} />
+              <Route path="install/:product" element={<Install />} />
+              <Route path="install/:product/:target" element={<Install />} />
+              <Route path="licences" element={<LicencesPage />} />
+              <Route path="profile" element={<Profile />} />
             </Route>
           </Routes>
         </BrowserRouter>

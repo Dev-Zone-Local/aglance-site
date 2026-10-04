@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -10,6 +11,7 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 use Illuminate\Contracts\View\View;
@@ -29,6 +31,18 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
+            // Profile page (name, email, password) + links back to the site in the user menu.
+            ->profile(isSimple: false)
+            ->userMenuItems([
+                Action::make('dashboard')
+                    ->label('My dashboard')
+                    ->icon(Heroicon::OutlinedSquares2x2)
+                    ->url(fn () => rtrim(config('atglance.frontend_url'), '/').'/dashboard'),
+                Action::make('website')
+                    ->label('Back to website')
+                    ->icon(Heroicon::OutlinedGlobeAlt)
+                    ->url(fn () => config('atglance.frontend_url')),
+            ])
             // AtGlance design system (design-doc.md): light only, teal/mint brand, Inter, console logo.
             ->brandName('AtGlance CMS')
             ->brandLogo('/branding/atglance-logo.png')

@@ -22,6 +22,7 @@ class UserResource extends JsonResource
             'email_verified' => $this->hasVerifiedEmail(),
             'email_deliverable' => $this->hasDeliverableEmail(),
             'has_password' => filled($this->password),
+            'notify_updates' => (bool) $this->notify_updates,
             'avatar_url' => $this->avatar_url,
             'github_login' => $this->github_login,
             'auth_method' => $this->auth_method,

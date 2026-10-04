@@ -33,6 +33,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'role' => self::ROLE_USER,
         'plan' => 'free',
         'license_requires_approval' => false,
+        'notify_updates' => true,
         'auth_method' => 'email',
     ];
 
@@ -49,6 +50,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'role',
         'plan',
         'license_requires_approval',
+        'notify_updates',
         'email_verified_at',
         'auth_method',
         'github_id',
@@ -74,6 +76,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             'password' => 'hashed',
             'github_id' => 'integer',
             'license_requires_approval' => 'boolean',
+            'notify_updates' => 'boolean',
         ];
     }
 

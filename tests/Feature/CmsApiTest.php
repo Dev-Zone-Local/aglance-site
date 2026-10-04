@@ -86,7 +86,7 @@ class CmsApiTest extends TestCase
         $this->actingAs(User::factory()->create())
             ->getJson('/api/downloads')
             ->assertOk()
-            ->assertJsonStructure(['cli_url', 'cli_version', 'console_url', 'console_version', 'cli_install_command']);
+            ->assertJsonStructure(['cli_url', 'cli_version', 'console_url', 'console_version', 'cli' => ['url', 'install_steps', 'latest', 'previous'], 'console' => ['url', 'install_steps', 'latest', 'previous']]);
     }
 
     public function test_seeder_is_idempotent(): void

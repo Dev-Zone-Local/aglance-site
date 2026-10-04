@@ -131,7 +131,7 @@
 
 /* ---- Layout: frosted frame around all page content ---- */
 .ag-frame {
-    max-width: 1440px;
+    max-width: 1680px;
     margin: 24px auto;
     padding: 20px 24px 8px;
     background: var(--ag-frame);

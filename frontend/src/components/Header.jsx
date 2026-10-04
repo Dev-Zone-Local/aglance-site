@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Menu, X, LayoutDashboard, LogOut, Shield } from "lucide-react";
 import { useAuth } from "../lib/auth-context";
 import { ADMIN_URL } from "../lib/api";
+import { UserMenu } from "./UserMenu";
 
 const NAV = [
   { to: "/product", label: "Product" },
@@ -74,18 +75,7 @@ export function Header() {
 
         <div className="ml-auto min-[901px]:ml-0 flex items-center gap-2">
           {signedIn ? (
-            <>
-              <span className="hidden min-[901px]:inline-flex">{accountLink}</span>
-              <button
-                onClick={onLogout}
-                data-testid="header-logout-btn"
-                className="hidden min-[901px]:inline-flex h-[42px] w-[42px] items-center justify-center rounded-[14px] bg-white text-ag-subtle shadow-ag transition-colors hover:text-ag-ink"
-                aria-label="Sign out"
-                title="Sign out"
-              >
-                <LogOut size={15} />
-              </button>
-            </>
+            <UserMenu showDashboard />
           ) : (
             <>
               <Link to="/login" data-testid="header-login-link" className="hidden min-[901px]:inline-flex rounded-full bg-ag-surface px-[18px] py-2.5 text-sm font-medium text-ag-ink transition-colors hover:bg-ag-line">
