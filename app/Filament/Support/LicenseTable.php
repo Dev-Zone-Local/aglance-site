@@ -39,6 +39,7 @@ class LicenseTable
                         License::UNVERIFIED => 'gray',
                         License::UNDER_REVIEW => 'warning',
                         License::IN_USE => 'success',
+                        License::EXPIRED => 'danger',
                         default => 'info',
                     }),
                 IconColumn::make('confirmed_at')
@@ -68,6 +69,12 @@ class LicenseTable
                     ->label('Requested')
                     ->dateTime()
                     ->sortable(),
+                TextColumn::make('expires_at')
+                    ->label('Expires')
+                    ->date()
+                    ->sortable()
+                    ->color(fn (License $record) => $record->isExpired() ? 'danger' : null)
+                    ->placeholder('Never'),
             ])))
             ->filters([
                 SelectFilter::make('verification')

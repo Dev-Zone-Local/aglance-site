@@ -34,6 +34,16 @@ class AppServiceProvider extends ServiceProvider
         // Licence keys are Sanctum tokens; resolve them as License models (status, approval, activation).
         Sanctum::usePersonalAccessTokenModel(License::class);
 
+        // Sanctum rejects expired tokens with a bare 401. Let expired licence keys through so
+        // the console licence API can answer "expired" (ConsoleLicenseController refuses them).
+        // Only on those console endpoints; every other route still refuses expired keys.
+        Sanctum::authenticateAccessTokensUsing(fn ($token, bool $isValid) => $isValid
+            || ($token instanceof License
+                && $token->can(License::ABILITY)
+                && $token->isExpired()
+                && $token->tokenable !== null
+                && request()->is('api/licenses/verify', 'api/licenses/activate', 'api/licenses/heartbeat', 'api/licenses/org')));
+
         // Password reset links open the SPA page, which posts token + new password to the API.
         ResetPassword::createUrlUsing(fn ($user, string $token) => rtrim(config('atglance.frontend_url'), '/')
             .'/reset-password?token='.$token.'&email='.urlencode($user->getEmailForPasswordReset()));

@@ -14,7 +14,8 @@ use Laravel\Sanctum\PersonalAccessToken;
  * A licence becomes usable once the owner enters the emailed 5-digit code. For users with
  * `license_requires_approval`, an admin must also approve it.
  *
- * Status: unverified (code not entered) → under_review (flagged users only) → ready → in_use.
+ * Status: unverified (code not entered) → under_review (flagged users only) → ready → in_use,
+ * or expired once expires_at (1 year after creation) has passed.
  */
 class License extends PersonalAccessToken
 {
@@ -28,11 +29,17 @@ class License extends PersonalAccessToken
 
     public const IN_USE = 'in_use';
 
+    public const EXPIRED = 'expired';
+
+    /** New licences expire this many years after creation. */
+    public const VALID_YEARS = 1;
+
     public const STATUS_LABELS = [
         self::UNVERIFIED => 'Pending',
         self::UNDER_REVIEW => 'Under review',
         self::READY => 'Ready',
         self::IN_USE => 'In use',
+        self::EXPIRED => 'Expired',
     ];
 
     /** The owner can view the plain key for this long after creating the licence. */
@@ -130,15 +137,22 @@ class License extends PersonalAccessToken
         return $this->requiresApproval() && ! $this->isApproved();
     }
 
+    /** Licences created before expiry was added have no expires_at and never expire. */
+    public function isExpired(): bool
+    {
+        return $this->expires_at?->isPast() ?? false;
+    }
+
     /** A Management Console may activate / use this licence. */
     public function isUsable(): bool
     {
-        return $this->isConfirmed() && ! $this->needsApproval();
+        return ! $this->isExpired() && $this->isConfirmed() && ! $this->needsApproval();
     }
 
     public function status(): string
     {
         return match (true) {
+            $this->isExpired() => self::EXPIRED,
             ! $this->isConfirmed() => self::UNVERIFIED,
             $this->needsApproval() => self::UNDER_REVIEW,
             $this->activation !== null => self::IN_USE,

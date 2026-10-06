@@ -94,6 +94,9 @@ class ConsoleLicenseController extends Controller
         if (! $token) {
             return $this->invalid();
         }
+        if ($token->isExpired()) {
+            return $this->notUsable($token);
+        }
 
         $data = $this->validateConsole($request, orgRequired: true);
         $activation = $this->activation($token);
@@ -122,6 +125,9 @@ class ConsoleLicenseController extends Controller
         $token = $this->licenseToken($request);
         if (! $token) {
             return $this->invalid();
+        }
+        if ($token->isExpired()) {
+            return $this->notUsable($token);
         }
 
         $data = $this->validateConsole($request);
@@ -202,7 +208,7 @@ class ConsoleLicenseController extends Controller
             'valid' => true,
             'status' => $activation ? 'in_use' : 'available',
             'user' => ['id' => (string) $user->id, 'email' => $user->email, 'name' => $user->name],
-            'license' => ['name' => $token->name],
+            'license' => ['name' => $token->name, 'expires_at' => $token->expires_at?->toIso8601String()],
             'plan' => $user->plan,
             'console' => $activation?->toConsoleArray(),
         ];
@@ -216,9 +222,11 @@ class ConsoleLicenseController extends Controller
         return response()->json([
             'valid' => false,
             'status' => $status,
-            'message' => $status === License::UNVERIFIED
-                ? 'This licence is not verified yet. Enter the 5-digit code we emailed you on your AtGlance dashboard.'
-                : 'This licence is under review. It can be used once an AtGlance admin approves it.',
+            'message' => match ($status) {
+                License::UNVERIFIED => 'This licence is not verified yet. Enter the 5-digit code we emailed you on your AtGlance dashboard.',
+                License::EXPIRED => 'This licence expired on '.$license->expires_at->toDateString().'. Create a new licence on your AtGlance dashboard.',
+                default => 'This licence is under review. It can be used once an AtGlance admin approves it.',
+            },
         ], 403);
     }
 

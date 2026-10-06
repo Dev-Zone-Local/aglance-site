@@ -52,8 +52,8 @@ class LicenseController extends Controller
         $this->ensureWithinLimit($user);
         $this->ensureDeliverable($user);
 
-        // Licences do not expire; they stay valid until the user revokes them.
-        $new = $user->createToken($name, [self::ABILITY]);
+        // Valid for one year from creation (or until the user revokes it).
+        $new = $user->createToken($name, [self::ABILITY], now()->addYears(License::VALID_YEARS));
         $license = License::findOrFail($new->accessToken->id);
         // Hide Sanctum's "<id>|" prefix: users only see "atg_...". Sanctum finds such keys by hash.
         $key = Str::after($new->plainTextToken, '|');
@@ -272,6 +272,8 @@ class LicenseController extends Controller
             'requires_approval' => $license->requiresApproval(),
             'approved_at' => $license->approved_at?->toIso8601String(),
             'created_at' => $license->created_at?->toIso8601String(),
+            'expires_at' => $license->expires_at?->toIso8601String(),
+            'expired' => $status === License::EXPIRED,
             'last_used_at' => $license->last_used_at?->toIso8601String(),
             'in_use' => $status === License::IN_USE,
             'key_visible_until' => $license->keyIsVisible() ? $license->key_visible_until->toIso8601String() : null,

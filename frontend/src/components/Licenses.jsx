@@ -28,6 +28,12 @@ const STATUS_STYLES = {
     "Active. Enter the key in the Management Console installer.",
   ],
   in_use: ["bg-ag-success-soft text-ag-success", "bg-ag-success", "In Use", undefined],
+  expired: [
+    "bg-red-50 text-red-600",
+    "bg-red-500",
+    "Expired",
+    "This licence has expired. Create a new licence for the Management Console.",
+  ],
 };
 
 function StatusBadge({ license }) {
@@ -293,6 +299,7 @@ export default function Licenses() {
                 <th className="py-2 pr-4 font-medium">Status</th>
                 <th className="py-2 pr-4 font-medium">Organization</th>
                 <th className="py-2 pr-4 font-medium">Created</th>
+                <th className="py-2 pr-4 font-medium">Expires</th>
                 <th className="py-2 pr-4 font-medium">Last seen</th>
                 <th className="py-2" />
               </tr>
@@ -315,6 +322,9 @@ export default function Licenses() {
                     )}
                   </td>
                   <td className="py-2.5 pr-4">{fmt(lic.created_at)}</td>
+                  <td className={`py-2.5 pr-4 ${lic.expired ? "text-red-500" : ""}`} data-testid={`license-expires-${lic.id}`}>
+                    {lic.expires_at ? fmt(lic.expires_at) : "Never"}
+                  </td>
                   <td className="py-2.5 pr-4" title={lic.console?.last_seen_at || ""}>
                     {lic.console?.last_seen_at ? timeAgo(lic.console.last_seen_at) : "Never"}
                   </td>

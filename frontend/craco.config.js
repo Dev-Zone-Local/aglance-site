@@ -63,7 +63,7 @@ let webpackConfig = {
 // In dev, proxy Laravel routes so the SPA and API share one origin (session cookies + CSRF just work).
 // Run Laravel with `php artisan serve` (default http://127.0.0.1:8000) or set LARAVEL_DEV_URL.
 const LARAVEL_DEV_URL = process.env.LARAVEL_DEV_URL || "http://127.0.0.1:8000";
-const LARAVEL_PATHS = ["/api", "/sanctum", "/admin", "/livewire", "/css/filament", "/js/filament", "/fonts/filament"];
+const LARAVEL_PATHS = ["/api", "/sanctum", "/admin", "/livewire", "/css/filament", "/js/filament", "/fonts/filament", "/sitemap.xml", "/robots.txt"];
 
 webpackConfig.devServer = (devServerConfig) => {
   if (!process.env.REACT_APP_BACKEND_URL) {
@@ -93,21 +93,5 @@ webpackConfig.devServer = (devServerConfig) => {
 
   return devServerConfig;
 };
-
-// Wrap with visual edits (automatically adds babel plugin, dev server, and overlay in dev mode)
-if (isDevServer) {
-  try {
-    const { withVisualEdits } = require("@emergentbase/visual-edits/craco");
-    webpackConfig = withVisualEdits(webpackConfig);
-  } catch (err) {
-    if (err.code === 'MODULE_NOT_FOUND' && err.message.includes('@emergentbase/visual-edits/craco')) {
-      console.warn(
-        "[visual-edits] @emergentbase/visual-edits not installed — visual editing disabled."
-      );
-    } else {
-      throw err;
-    }
-  }
-}
 
 module.exports = webpackConfig;

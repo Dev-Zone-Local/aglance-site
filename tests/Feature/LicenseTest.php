@@ -187,7 +187,8 @@ class LicenseTest extends TestCase
             ->json();
 
         $this->assertMatchesRegularExpression('/^atg_\w+$/', $created['key'], 'no "<id>|" prefix');
-        $this->assertNull($user->tokens()->first()->expires_at);
+        // Licences expire one year after creation.
+        $this->assertTrue($user->tokens()->first()->expires_at->between(now()->addYear()->subMinute(), now()->addYear()->addMinute()));
 
         $this->getJson('/api/licenses')
             ->assertOk()

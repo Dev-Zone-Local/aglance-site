@@ -86,6 +86,55 @@ class ConsoleLicenseTest extends TestCase
         $this->assertSame(0, LicenseActivation::count());
     }
 
+    public function test_new_licence_expires_one_year_after_creation(): void
+    {
+        Notification::fake();
+        $this->freezeTime();
+        $user = User::factory()->create();
+
+        $created = $this->actingAs($user)->postJson('/api/licenses', ['name' => 'prod'])->assertCreated()->json();
+
+        $this->assertSame(now()->addYear()->toIso8601String(), $created['expires_at']);
+        $this->assertFalse($created['expired']);
+    }
+
+    public function test_expired_licence_is_refused_with_expired_status(): void
+    {
+        $key = $this->newKey();
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => self::CONSOLE_A])->assertCreated();
+
+        License::query()->update(['expires_at' => now()->subDay()]);
+
+        foreach (['verify', 'activate', 'heartbeat'] as $endpoint) {
+            $this->console($key)->postJson("/api/licenses/{$endpoint}", ['org_name' => 'Acme Corp', 'instance_id' => self::CONSOLE_A])
+                ->assertForbidden()
+                ->assertJsonPath('valid', false)
+                ->assertJsonPath('status', 'expired');
+        }
+        $this->console($key)->putJson('/api/licenses/org', ['org_name' => 'New', 'instance_id' => self::CONSOLE_A])
+            ->assertForbidden()
+            ->assertJsonPath('status', 'expired');
+
+        $this->assertSame('expired', License::first()->status());
+    }
+
+    public function test_licence_without_expiry_never_expires(): void
+    {
+        $key = $this->newKey();
+        License::query()->update(['expires_at' => null]);
+
+        $this->console($key)->postJson('/api/licenses/verify')->assertOk()->assertJsonPath('license.expires_at', null);
+    }
+
+    public function test_expired_licence_key_cannot_use_other_api_routes(): void
+    {
+        $key = $this->newKey();
+        License::query()->update(['expires_at' => now()->subDay()]);
+
+        // Accepted only so the licence API can say "expired"; dashboard routes stay closed.
+        $this->console($key)->getJson('/api/licenses')->assertUnauthorized();
+    }
+
     public function test_verified_licence_works_without_admin_approval(): void
     {
         $key = $this->newKey();
