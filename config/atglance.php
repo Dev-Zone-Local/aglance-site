@@ -10,9 +10,10 @@ return [
     'admin_password' => env('ADMIN_PASSWORD'),
 
     /*
-    | Origin of the React SPA. Used for CORS and as the post-login redirect.
+    | Public address of the website (e.g. https://atglance.live). Used in emails, the
+    | sitemap and the GitHub callback URL. Defaults to APP_URL.
     */
-    'frontend_url' => env('FRONTEND_URL', 'http://localhost:3000'),
+    'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
     /*
     | Subscription plans. `licenses` is the max number of Management Console

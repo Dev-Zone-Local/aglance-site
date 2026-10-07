@@ -56,7 +56,7 @@ class GithubOAuth
         ]]);
     }
 
-    /** The SPA page that receives GitHub's redirect and posts code + state to the API. */
+    /** The page that receives GitHub's redirect (Auth\GithubController::callback). */
     public static function defaultRedirect(): string
     {
         return rtrim(config('atglance.frontend_url'), '/').'/auth/sso/github/callback';

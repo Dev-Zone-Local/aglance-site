@@ -1,5 +1,5 @@
 # AtGlance — Docker compose
-# Brings up: MySQL + Laravel (API + Filament admin) + React SPA (nginx) on a single port.
+# Brings up: MySQL + Laravel (website, dashboard, API and Filament admin) on one port.
 #
 # Usage:
 #   cp .env.example .env         # fill APP_KEY, ADMIN_PASSWORD, DB_PASSWORD
@@ -62,21 +62,8 @@ services:
       GITHUB_CLIENT_ID: "${GITHUB_CLIENT_ID:-}"
       GITHUB_CLIENT_SECRET: "${GITHUB_CLIENT_SECRET:-}"
       GITHUB_REDIRECT_URI: "${GITHUB_REDIRECT_URI:-}"
-    networks:
-      - atglance
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        # Empty = same-origin "/api" via nginx proxy.
-        REACT_APP_BACKEND_URL: "${REACT_APP_BACKEND_URL:-}"
-    container_name: atglance-frontend
-    restart: unless-stopped
-    depends_on:
-      - app
     ports:
-      - "${FRONTEND_PORT:-8080}:80"
+      - "${APP_PORT:-8080}:8080"
     networks:
       - atglance
 

@@ -41,20 +41,23 @@ class DownloadReleasesTest extends TestCase
         $this->assertNull($all['console']['releases'][0]['checksum']);
     }
 
-    public function test_publish_puts_new_release_first_and_keeps_five(): void
+    public function test_publish_puts_new_release_first_and_keeps_the_limit(): void
     {
-        foreach (['1.0', '1.1', '1.2', '1.3', '1.4', '1.5'] as $v) {
-            Downloads::publish('cli', $v, $this->sha($v));
+        $max = Downloads::MAX_RELEASES;
+        foreach (range(0, $max) as $n) {
+            Downloads::publish('cli', "1.{$n}", $this->sha("1.{$n}"));
         }
 
         $releases = Downloads::all()['cli']['releases'];
-        $this->assertCount(5, $releases);
-        $this->assertSame(['1.5', '1.4', '1.3', '1.2', '1.1'], array_column($releases, 'version'));
+        $this->assertCount($max, $releases);
+        $this->assertSame("1.{$max}", $releases[0]['version']);
+        $this->assertNotContains('1.0', array_column($releases, 'version'), 'oldest dropped');
 
         // Re-publishing an existing version replaces it and moves it to the top.
         Downloads::publish('cli', '1.3', $this->sha('fixed'));
         $releases = Downloads::all()['cli']['releases'];
-        $this->assertSame(['1.3', '1.5', '1.4', '1.2', '1.1'], array_column($releases, 'version'));
+        $this->assertSame(['1.3', "1.{$max}"], array_slice(array_column($releases, 'version'), 0, 2));
+        $this->assertCount($max, $releases);
         $this->assertSame($this->sha('fixed'), $releases[0]['checksum']);
 
         // Console history is separate.

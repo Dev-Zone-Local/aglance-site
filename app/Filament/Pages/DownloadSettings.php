@@ -7,7 +7,9 @@ use App\Support\Downloads;
 use App\Support\ReleaseNotifier;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -25,8 +27,9 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
 
 /**
  * CLI and Management Console downloads: URL, install steps, and a release history
- * (latest first, up to 5 versions with SHA-256 checksums). Publishing a release can
- * email all verified users.
+ * (latest first, up to 20 versions with SHA-256 checksums, title, type, date and Markdown
+ * release notes). The notes are public on /releases. Publishing a release can email all
+ * verified users.
  */
 class DownloadSettings extends SettingsPage
 {
@@ -54,7 +57,11 @@ class DownloadSettings extends SettingsPage
                 'platforms' => $product['platforms'] ?? null,
                 'new_version' => null,
                 'new_checksum' => null,
-                'new_notes' => null,
+                'new_title' => null,
+                'new_type' => null,
+                'new_released_at' => now()->toDateString(),
+                'new_summary' => null,
+                'new_notes' => Downloads::NOTES_TEMPLATE,
                 'notify' => false,
             ];
         }
@@ -101,13 +108,10 @@ class DownloadSettings extends SettingsPage
                                     ->validationMessages(['regex' => 'Enter a SHA-256 checksum: 64 hex characters.'])
                                     ->helperText('Required when you enter a version.')
                                     ->dehydrateStateUsing(fn (?string $state) => $state ? strtolower(trim($state)) : null),
-                                Textarea::make("{$p}.new_notes")
-                                    ->label('Release notes (optional, included in the email)')
-                                    ->rows(2)
-                                    ->maxLength(1000)
-                                    ->columnSpanFull(),
+                                ...self::releaseDetailFields("{$p}.new_"),
                                 Toggle::make("{$p}.notify")
                                     ->label('Email all verified users about this release')
+                                    ->helperText('The email shows the summary (or the notes) and links to the release notes page.')
                                     ->columnSpanFull(),
                             ]),
 
@@ -191,6 +195,39 @@ class DownloadSettings extends SettingsPage
         return Tabs::make("{$p}-platforms")->tabs($tabs)->columnSpanFull();
     }
 
+    /**
+     * Title, type, date, summary and Markdown notes of a release. Used by the publish form
+     * ($prefix "cli.new_") and the edit modal ($prefix "").
+     */
+    private static function releaseDetailFields(string $prefix): array
+    {
+        return [
+            TextInput::make("{$prefix}title")
+                ->label('Title (optional)')
+                ->placeholder('Faster discovery and Windows support')
+                ->maxLength(120),
+            Select::make("{$prefix}type")
+                ->label('Release type')
+                ->options(Downloads::RELEASE_TYPES)
+                ->placeholder('Not set'),
+            DatePicker::make("{$prefix}released_at")
+                ->label('Release date')
+                ->native(false)
+                ->displayFormat('d M Y'),
+            Textarea::make("{$prefix}summary")
+                ->label('Summary')
+                ->helperText('One or two sentences. Shown on cards and in the release email.')
+                ->rows(2)
+                ->maxLength(300)
+                ->columnSpanFull(),
+            MarkdownEditor::make("{$prefix}notes")
+                ->label('Release notes')
+                ->helperText('What is in this release. Markdown: headings (###), lists, links, `code` and ```bash blocks. Shown on the public Release notes page.')
+                ->maxLength(20000)
+                ->columnSpanFull(),
+        ];
+    }
+
     /** "Edit" button on a release in the history. Arguments: product, index. */
     public function editReleaseAction(): Action
     {
@@ -200,10 +237,19 @@ class DownloadSettings extends SettingsPage
             ->color('gray')
             ->size('sm')
             ->modalHeading(fn (array $arguments) => 'Edit '.Downloads::PRODUCTS[$arguments['product']].' release')
+            ->modalWidth('4xl')
             ->fillForm(function (array $arguments) {
                 $r = Downloads::all()[$arguments['product']]['releases'][$arguments['index']] ?? [];
 
-                return ['version' => $r['version'] ?? null, 'checksum' => $r['checksum'] ?? null, 'notes' => $r['notes'] ?? null];
+                return [
+                    'version' => $r['version'] ?? null,
+                    'checksum' => $r['checksum'] ?? null,
+                    'title' => $r['title'] ?? null,
+                    'type' => $r['type'] ?? null,
+                    'released_at' => ! empty($r['released_at']) ? substr($r['released_at'], 0, 10) : null,
+                    'summary' => $r['summary'] ?? null,
+                    'notes' => $r['notes'] ?? null,
+                ];
             })
             ->schema(fn (array $arguments) => [
                 TextInput::make('version')->required()->maxLength(30)->regex('/^[A-Za-z0-9._+-]+$/'),
@@ -213,11 +259,11 @@ class DownloadSettings extends SettingsPage
                     ->required()
                     ->regex('/^[A-Fa-f0-9]{64}$/')
                     ->validationMessages(['regex' => 'Enter a SHA-256 checksum: 64 hex characters.']),
-                Textarea::make('notes')->label('Release notes')->rows(3)->maxLength(1000),
+                ...self::releaseDetailFields(''),
             ])
             ->action(function (array $data, array $arguments) {
                 try {
-                    Downloads::updateRelease($arguments['product'], (int) $arguments['index'], trim($data['version']), $data['checksum'] ?? null, $data['notes'] ?? null);
+                    Downloads::updateRelease($arguments['product'], (int) $arguments['index'], trim($data['version']), $data['checksum'] ?? null, $data['notes'] ?? null, $data);
                 } catch (HttpException $e) {
                     Notification::make()->title($e->getMessage())->danger()->send();
 
@@ -285,7 +331,12 @@ class DownloadSettings extends SettingsPage
 
         foreach (array_keys(Downloads::PRODUCTS) as $p) {
             if (filled($data[$p]['new_version'] ?? null)) {
-                $product = Downloads::publish($p, trim($data[$p]['new_version']), $data[$p]['new_checksum'] ?? null, $data[$p]['new_notes'] ?? null);
+                $product = Downloads::publish($p, trim($data[$p]['new_version']), $data[$p]['new_checksum'] ?? null, $data[$p]['new_notes'] ?? null, [
+                    'title' => $data[$p]['new_title'] ?? null,
+                    'type' => $data[$p]['new_type'] ?? null,
+                    'summary' => $data[$p]['new_summary'] ?? null,
+                    'released_at' => $data[$p]['new_released_at'] ?? null,
+                ]);
                 $published[$p] = ['release' => $product['releases'][0], 'notify' => (bool) ($data[$p]['notify'] ?? false)];
             }
         }

@@ -17,6 +17,9 @@ class ReleasePublishedNotification extends Notification
         public readonly string $version,
         public readonly ?string $checksum,
         public readonly ?string $notes,
+        public readonly ?string $summary = null,
+        public readonly ?string $title = null,
+        public readonly ?string $releaseNotesUrl = null,
     ) {}
 
     public function via(object $notifiable): array
@@ -34,8 +37,17 @@ class ReleasePublishedNotification extends Notification
             ->greeting("{$this->productName} {$this->version}")
             ->line("A new version of the {$this->productName} is available.");
 
-        if ($this->notes) {
+        if ($this->title) {
+            $mail->line("**{$this->title}**");
+        }
+        // The summary is short; without one, include the full notes (Markdown renders in the email).
+        if ($this->summary) {
+            $mail->line($this->summary);
+        } elseif ($this->notes) {
             $mail->line($this->notes);
+        }
+        if ($this->releaseNotesUrl) {
+            $mail->line("[Read the full release notes]({$this->releaseNotesUrl})");
         }
         if ($this->checksum) {
             $mail->line("SHA-256: `{$this->checksum}`");

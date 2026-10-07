@@ -23,6 +23,9 @@ class ReleaseNotifier
             $release['version'],
             $release['checksum'] ?? null,
             $release['notes'] ?? null,
+            $release['summary'] ?? null,
+            $release['title'] ?? null,
+            rtrim(config('atglance.frontend_url'), '/').'/releases?product='.$product.'#'.Downloads::anchor($product, $release['version']),
         );
 
         User::query()

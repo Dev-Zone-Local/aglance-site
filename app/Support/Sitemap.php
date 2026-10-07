@@ -6,14 +6,13 @@ use App\Models\Doc;
 use App\Models\Page;
 
 /**
- * sitemap.xml and robots.txt for the public SPA. URLs use FRONTEND_URL, so they match the
- * domain users visit. Served by the /sitemap.xml and /robots.txt routes, and also written to
- * public/ as static files (write()), so nginx can serve them even when its SPA fallback would
- * otherwise answer those paths with index.html.
+ * sitemap.xml and robots.txt, served by the /sitemap.xml and /robots.txt routes. Docs and CMS
+ * pages come from the database, so new ones show up without a deploy. URLs use FRONTEND_URL
+ * (the public site address).
  */
 class Sitemap
 {
-    /** Marketing pages of the SPA: path => [changefreq, priority]. */
+    /** Marketing pages: path => [changefreq, priority]. */
     private const STATIC_PAGES = [
         '/' => ['weekly', '1.0'],
         '/product' => ['monthly', '0.9'],
@@ -26,10 +25,11 @@ class Sitemap
         '/faq' => ['monthly', '0.6'],
         '/contact' => ['yearly', '0.5'],
         '/docs' => ['weekly', '0.8'],
+        '/releases' => ['weekly', '0.7'],
         '/register' => ['yearly', '0.4'],
     ];
 
-    /** CMS pages that have a public route in the SPA. */
+    /** CMS pages that have a public route. */
     private const CMS_PAGES = ['about', 'terms', 'privacy'];
 
     public static function xml(): string
@@ -76,40 +76,6 @@ class Sitemap
             'Sitemap: '.self::base().'/sitemap.xml',
             '',
         ]);
-    }
-
-    /**
-     * Write public/sitemap.xml and public/robots.txt. Skipped in tests so the suite
-     * never touches the real public folder.
-     *
-     * @return array<int, string> the files written
-     */
-    public static function write(?string $dir = null): array
-    {
-        if ($dir === null && app()->runningUnitTests()) {
-            return [];
-        }
-
-        $dir = rtrim($dir ?? public_path(), '/\\');
-        $files = ["{$dir}/sitemap.xml" => self::xml(), "{$dir}/robots.txt" => self::robots()];
-
-        foreach ($files as $path => $content) {
-            // Write then rename, so nginx never serves a half-written file.
-            file_put_contents("{$path}.tmp", $content);
-            rename("{$path}.tmp", $path);
-        }
-
-        return array_keys($files);
-    }
-
-    /** write() for model hooks: a file error is logged, never breaks the admin save. */
-    public static function refresh(): void
-    {
-        try {
-            self::write();
-        } catch (\Throwable $e) {
-            report($e);
-        }
     }
 
     private static function base(): string

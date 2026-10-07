@@ -3,23 +3,38 @@
 namespace App\Support;
 
 use App\Models\Setting;
+use Illuminate\Support\Carbon;
 
 /**
  * CLI and Management Console downloads, stored in the "downloads" settings row:
  *
- *   { "cli":     { "url", "file_name", "install_steps", "releases": [ {version, checksum, notes, released_at}, ... ] },
+ *   { "cli":     { "url", "file_name", "install_steps",
+ *                  "releases": [ {version, checksum, title, type, summary, notes, released_at}, ... ] },
  *     "console": { ... } }
  *
  * The console also has "platforms": { "linux": {install_steps, update_steps, script_url}, "windows": {...} }.
  *
  * releases[0] is the latest. Publishing a release puts it first and keeps only MAX_RELEASES.
- * Checksums are SHA-256.
+ * Checksums are SHA-256. "notes" is Markdown (the full release notes shown on /releases);
+ * "summary" is one or two plain sentences for emails and cards.
  */
 class Downloads
 {
     public const PRODUCTS = ['cli' => 'AtGlance CLI', 'console' => 'Management Console'];
 
-    public const MAX_RELEASES = 5;
+    public const MAX_RELEASES = 20;
+
+    /** Release types shown as a badge next to the version. */
+    public const RELEASE_TYPES = [
+        'major' => 'Major',
+        'minor' => 'Feature',
+        'patch' => 'Bug fix',
+        'security' => 'Security',
+        'beta' => 'Beta',
+    ];
+
+    /** Starting text for the release notes editor. */
+    public const NOTES_TEMPLATE = "### New\n- \n\n### Improved\n- \n\n### Fixed\n- \n";
 
     public const CHECKSUM_RULE = '/^[a-f0-9]{64}$/';
 
@@ -64,7 +79,7 @@ class Downloads
      *
      * @return array the updated product
      */
-    public static function publish(string $product, string $version, ?string $checksum = null, ?string $notes = null): array
+    public static function publish(string $product, string $version, ?string $checksum = null, ?string $notes = null, array $details = []): array
     {
         $all = self::all();
         $releases = array_values(array_filter(
@@ -75,8 +90,9 @@ class Downloads
         array_unshift($releases, [
             'version' => $version,
             'checksum' => $checksum && self::hasChecksum($product) ? strtolower($checksum) : null,
-            'notes' => $notes ?: null,
-            'released_at' => now()->toIso8601String(),
+            ...self::details($details),
+            'notes' => self::cleanNotes($notes),
+            'released_at' => self::date($details['released_at'] ?? null) ?? now()->toIso8601String(),
         ]);
 
         $all[$product]['releases'] = array_slice($releases, 0, self::MAX_RELEASES);
@@ -86,7 +102,7 @@ class Downloads
     }
 
     /** Edit one release in the history (index 0 = latest). Keeps its position and date. */
-    public static function updateRelease(string $product, int $index, string $version, ?string $checksum, ?string $notes): void
+    public static function updateRelease(string $product, int $index, string $version, ?string $checksum, ?string $notes, array $details = []): void
     {
         $all = self::all();
         abort_unless(isset($all[$product]['releases'][$index]), 404, 'Release not found');
@@ -99,9 +115,62 @@ class Downloads
             ...$all[$product]['releases'][$index],
             'version' => $version,
             'checksum' => $checksum && self::hasChecksum($product) ? strtolower($checksum) : null,
-            'notes' => $notes ?: null,
+            ...self::details($details),
+            'notes' => self::cleanNotes($notes),
+            'released_at' => self::date($details['released_at'] ?? null) ?? ($all[$product]['releases'][$index]['released_at'] ?? null),
         ];
         self::save($all);
+    }
+
+    /** Every published release of every product, newest first, for the public changelog. */
+    public static function changelog(?string $product = null): array
+    {
+        $out = [];
+        foreach (self::all() as $p => $data) {
+            if ($product && $p !== $product) {
+                continue;
+            }
+            foreach ($data['releases'] as $i => $r) {
+                $out[] = [...$r, 'product' => $p, 'product_name' => self::PRODUCTS[$p], 'latest' => $i === 0];
+            }
+        }
+        usort($out, fn ($a, $b) => strcmp((string) ($b['released_at'] ?? ''), (string) ($a['released_at'] ?? '')));
+
+        return $out;
+    }
+
+    /** Anchor id of a release on the /releases page, e.g. "cli-2.1.0". */
+    public static function anchor(string $product, string $version): string
+    {
+        return $product.'-'.preg_replace('/[^A-Za-z0-9_-]/', '-', $version);
+    }
+
+    /** Optional release fields: title, type, summary. */
+    private static function details(array $details): array
+    {
+        $type = $details['type'] ?? null;
+
+        return [
+            'title' => filled($details['title'] ?? null) ? trim($details['title']) : null,
+            'type' => isset(self::RELEASE_TYPES[$type]) ? $type : null,
+            'summary' => filled($details['summary'] ?? null) ? trim($details['summary']) : null,
+        ];
+    }
+
+    /** Empty notes, or the untouched editor template, count as no notes. */
+    private static function cleanNotes(?string $notes): ?string
+    {
+        $notes = trim((string) $notes);
+        if ($notes === '' || preg_replace('/\s+/', '', $notes) === preg_replace('/\s+/', '', self::NOTES_TEMPLATE)) {
+            return null;
+        }
+
+        return $notes;
+    }
+
+    private static function date(mixed $value): ?string
+    {
+        return filled($value) ? Carbon::parse($value)->toIso8601String() : null;
     }
 
     public static function deleteRelease(string $product, int $index): void
@@ -211,7 +280,10 @@ class Downloads
                 'url' => $current['url'] ?? null,
                 'file_name' => $current['file_name'] ?? null,
                 'install_steps' => $current['install_steps'] ?? null,
-                'releases' => array_values($current['releases'] ?? []),
+                'releases' => array_map(
+                    fn (array $r) => $r + ['title' => null, 'type' => null, 'summary' => null, 'notes' => null, 'released_at' => null],
+                    array_values($current['releases'] ?? []),
+                ),
             ];
         }
 
@@ -226,6 +298,9 @@ class Downloads
             'releases' => $version ? [[
                 'version' => $version,
                 'checksum' => ($legacy["{$p}_checksum"] ?? null) ?: null,
+                'title' => null,
+                'type' => null,
+                'summary' => null,
                 'notes' => null,
                 'released_at' => null,
             ]] : [],

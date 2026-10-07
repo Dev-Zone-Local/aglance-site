@@ -1,40 +1,50 @@
 # AtGlance site
 
-Marketing site, documentation and account area for AtGlance.
+Marketing site, documentation and account area for AtGlance. Everything is one Laravel app.
 
-- **Backend**: Laravel 12 (PHP 8.2+). It is the JSON API for the SPA and hosts the admin CMS.
+- **Laravel 12** (PHP 8.2+): public pages, docs, sign-in, the user dashboard, the JSON API for the Management Console, and the admin CMS.
+- **Pages**: Blade views + Tailwind CSS. Interactive dashboard pages (Licences, Profile) are **Livewire** components; small UI bits (menus, copy buttons) use Alpine.js, which ships with Livewire.
 - **Admin CMS**: Filament 4 at `/admin`. Only users with role `admin` can use it.
-- **Frontend**: React 19 SPA in `frontend/` (CRA + craco, Tailwind, shadcn/ui).
 - **Database**: MySQL 8 (MariaDB 10.4+ also works). Tests use SQLite in memory.
-- **Auth**: Laravel Sanctum SPA auth (session cookie + CSRF), plus GitHub SSO through Laravel Socialite.
+- **Auth**: Laravel session login, password reset, email verification, and GitHub SSO through Laravel Socialite.
 
 ## Layout
 
 ```
 app/
-  Http/Controllers/Api/   AuthController, GithubAuthController, CmsController
-  Http/Resources/         UserResource (JSON shape the SPA expects)
-  Models/                 User, PricingPlan, Faq, Doc, Page, Setting
-  Filament/               Admin panel resources and settings pages
-config/atglance.php       Admin account and frontend URL
-database/
-  migrations/             Schema
-  seeders/                AdminUserSeeder, ContentSeeder (+ content/*.json default copy)
-routes/api.php            All /api routes
-tests/Feature/            API, auth, GitHub SSO and admin panel tests
-frontend/                 React SPA
-docker/                   Laravel image and boot scripts
-docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :8080
+  Http/Controllers/         SiteController (public pages), DashboardController, SitemapController
+  Http/Controllers/Auth/    Login, Register, PasswordReset, Github (web sign-in)
+  Http/Controllers/Api/     JSON API (console licence API, CMS, account)
+  Livewire/                 Licences, Profile (dashboard pages)
+  Support/                  LicenceManager, InstallCatalog, Downloads, Sitemap, Markdown, ...
+  Models/                   User, License, PricingPlan, Faq, Doc, Page, Setting
+  Filament/                 Admin panel resources and settings pages
+resources/
+  views/site/               Public pages (home, product, cli, console, pricing, docs, ...)
+  views/auth/               Sign in, sign up, forgot / reset password
+  views/dashboard/          Overview and install wizard
+  views/livewire/           Licences and Profile
+  views/components/         Layouts and shared Blade components (x-button, x-card, x-hero, x-glyph icons, ...)
+  css/app.css, js/app.js    Tailwind entry and Alpine components (built by Vite into public/build)
+config/atglance.php         Admin account, site URL, plans
+routes/web.php              Website, sign-in and dashboard routes
+routes/api.php              /api routes
+tests/Feature/              Pages, auth, dashboard, licences, API and admin panel tests
+deploy/                     aaPanel deploy scripts and the static download pages for app.atglance.live
+docker/                     Laravel image and boot scripts
+docker-compose.yml          mysql + app (Laravel), exposed on :8080
 ```
 
-## API
+## JSON API
+
+The website itself does not use these endpoints (it uses the Blade pages and Livewire). The Management Console uses the licence endpoints marked "licence key"; the others are kept for scripts and integrations.
 
 | Method | Path | Auth |
 |---|---|---|
 | GET | `/api` | public (health) |
 | POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | public (CSRF) |
 | GET | `/api/auth/me` | logged in |
-| POST | `/api/auth/forgot-password`, `/api/auth/reset-password` | public; the reset email links to the SPA page `/reset-password?token=&email=` (valid 60 min, single use) |
+| POST | `/api/auth/forgot-password`, `/api/auth/reset-password` | public; the reset email links to the page `/reset-password?token=&email=` (valid 60 min, single use) |
 | GET | `/api/auth/github/start` | public; returns `{auth_url}` |
 | POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
 | GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
@@ -53,7 +63,7 @@ docker-compose.yml        mysql + app (Laravel) + frontend (nginx), exposed on :
 
 ### Management Console licences
 
-Users create licences on the SPA dashboard. The key is shown right away and can be viewed again for **30 minutes** after creation. A 5-digit code is emailed; the licence works once the user enters that code (status `unverified`, then `ready`). If a user cannot receive the code (e.g. a test mailbox), an admin can **Approve** the licence under **Admin → Licences** to skip the code step. **Admin approval is otherwise optional.** It applies only to users flagged with **"Licences need admin approval"** on their admin edit page, e.g. test accounts. Their verified licences stay `under_review` until an admin approves or declines them under **Admin → Licences**, and the user is emailed either way. Each licence works on **exactly one** Management Console instance. On the Free plan, that means one licence and one console.
+Users create licences on the dashboard (`/dashboard/licences`). The key is shown right away and can be viewed again for **30 minutes** after creation. A 5-digit code is emailed; the licence works once the user enters that code (status `unverified`, then `ready`). If a user cannot receive the code (e.g. a test mailbox), an admin can **Approve** the licence under **Admin → Licences** to skip the code step. **Admin approval is otherwise optional.** It applies only to users flagged with **"Licences need admin approval"** on their admin edit page, e.g. test accounts. Their verified licences stay `under_review` until an admin approves or declines them under **Admin → Licences**, and the user is emailed either way. Each licence works on **exactly one** Management Console instance. On the Free plan, that means one licence and one console.
 
 The Management Console calls three endpoints, each with `Authorization: Bearer <licence key>` and `Accept: application/json`. `activate` and `heartbeat` also take a JSON body `{"org_name": "...", "instance_id": "...", "hostname": "...", "version": "..."}`. `org_name` is required to activate: the licence is marked In Use only once the console reports its organization, and users see that organization name on the dashboard.
 
@@ -74,41 +84,36 @@ A successful response looks like `{"valid": true, "status": "in_use", "user": {i
 
 - The dashboard shows each licence as **Pending**, **Under review** (flagged users only), **Ready** or **In Use**, with the console hostname and version, and "Last seen" from the latest heartbeat.
 - A licence can't be moved to another console. Revoke it (password or emailed code), then create a new one. Revoking also deletes the activation, so the old console gets `401` on its next heartbeat.
-- Licences never expire. Keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and shown to users as `atg_...` (without Sanctum's `<id>|` prefix; both forms authenticate). Activations are stored in the `license_activations` table.
+- Licences expire **one year** after creation (`expires_at`); expired keys get `403` with `status: expired`. Licences created before expiry was added have no `expires_at` and never expire. Keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and shown to users as `atg_...` (without Sanctum's `<id>|` prefix; both forms authenticate). Activations are stored in the `license_activations` table.
 - **Plan limits:** each user has a `plan` (default `free`). The limits are set in `config/atglance.php` (`plans`): Free allows 1 licence and Enterprise is unlimited. Admins change a user's plan in Filament, under Users. When a user is at the limit, creating another licence returns `403`.
 
-## How SPA auth works
+## Admin content
 
-1. The SPA calls `GET /sanctum/csrf-cookie`. This sets the `XSRF-TOKEN` cookie.
-2. Axios sends the value back in the `X-XSRF-TOKEN` header (`withXSRFToken: true` in `frontend/src/lib/api.js`).
-3. Login and register start a normal Laravel session. The same session also logs the admin into `/admin`.
-
-The SPA and Laravel must share one origin, or the SPA host must be in `SANCTUM_STATEFUL_DOMAINS` and `CORS_ORIGINS`. Both the dev proxy and the nginx config serve them from one origin.
+- **Downloads** (Settings → Downloads): publish CLI / Console releases. Each release has a version, an optional title, a type (Major, Feature, Bug fix, Security, Beta), a release date, a short summary and Markdown release notes. The last 20 releases per product are kept and shown on the public **/releases** page (filter with `?product=cli` or `?product=console`). Product pages and the dashboard link to the latest release notes, and the optional release email includes the summary and a link to them.
+- **Product pages** (Content → Product pages, `/admin/product-pages`): edit the public `/console` and `/cli` pages. Each product has tabs for the **Hero** (badge, title, subtitle, buttons, check marks, hero screenshot), **Feature sections** (icon, heading, text, bullets, screenshot and caption; drag to reorder, duplicate or hide), **More features** (cards without screenshots), **Gallery** (extra screenshots) and **Page blocks** (show or hide the built-in architecture, install and other blocks). Uploads go to `storage/app/public/showcase`; replaced or removed images are deleted on save. **Reset to defaults** restores the built-in text from `App\Support\ProductShowcase`. Sections without a screenshot show an empty window frame; signed-in admins also see what to capture.
+- **Contact** (Settings → Contact): page heading and intro, response time, general / sales / support / security / billing / press emails, phone, support hours, company name, address and map link, and social links (GitHub, X, LinkedIn, YouTube, Discord, Slack, status page). Empty fields are hidden. Toggles control whether the address is shown and whether social icons appear in the site footer.
 
 ## Local development (no Docker)
 
 You need PHP 8.2+ with `intl`, `pdo_mysql` and `pdo_sqlite`, Composer 2, Node 20+ with Yarn, and MySQL. XAMPP works.
 
 ```bash
-# Backend
 composer install
+yarn install
 cp .env.example .env
 php artisan key:generate
-# Edit .env: DB_* settings and ADMIN_PASSWORD
+# Edit .env: DB_* settings, ADMIN_PASSWORD, APP_URL / FRONTEND_URL (e.g. http://localhost:8000)
 php artisan migrate --seed
+yarn build                         # or `yarn dev` while editing views/CSS (hot reload)
 php artisan serve                  # http://127.0.0.1:8000
-
-# Frontend (second terminal)
-cd frontend
-yarn install
-yarn start                         # http://localhost:3000
 ```
 
-In dev, `craco.config.js` proxies `/api`, `/sanctum`, `/admin`, `/livewire` and the Filament assets to `http://127.0.0.1:8000`. Everything therefore runs on `localhost:3000`. Keep `REACT_APP_BACKEND_URL` empty. To point the proxy at another server, set `LARAVEL_DEV_URL`.
+Node is only needed to compile CSS/JS (Vite + Tailwind into `public/build`); nothing JavaScript runs on the server.
 
 For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sqlite` and remove the other `DB_*` lines.
 
-- Admin panel: http://localhost:3000/admin. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Admin panel: http://127.0.0.1:8000/admin. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Local test user: set `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` in `.env` (with `APP_ENV=local`) and run `php artisan db:seed --class=TestUserSeeder`.
 - Tests: `php artisan test`.
 
 ## Docker
@@ -116,39 +121,41 @@ For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sql
 ```bash
 cp .env.example .env
 # Set at least: APP_KEY (php artisan key:generate --show), DB_PASSWORD, ADMIN_PASSWORD
-# Set FRONTEND_URL=http://localhost:8080
+# Set APP_URL / FRONTEND_URL=http://localhost:8080
 docker compose up -d --build
 ```
 
 - Site: http://localhost:8080
 - Admin: http://localhost:8080/admin
 
-The frontend container (nginx) serves the SPA. It proxies `/api`, `/sanctum`, `/admin`, `/livewire` and `/{css,js,fonts}/filament` to the `app` container.
-
-On boot the `app` container:
+The image builds the CSS/JS in a Node stage, then serves everything from Laravel (php-fpm + nginx). On boot the `app` container:
 - runs migrations and caches config, routes and views (serversideup `AUTORUN_ENABLED`);
 - runs `db:seed` (`docker/entrypoint.d/60-atglance-seed.sh`).
+
+## Deploying on aaPanel
+
+`deploy/atglance.live.sh` and `deploy/dev.atglance.live.sh` pull the branch, run composer, build CSS/JS (`yarn build`), migrate, cache, and make sure nginx sends every path to `public/index.php` (the aaPanel URL-rewrite file gets `try_files $uri $uri/ /index.php?$query_string;`). They finish with a health check.
 
 ## Environment variables
 
 | Variable | Purpose |
 |---|---|
 | `APP_KEY` | Laravel encryption key. Required. |
+| `APP_URL` | Site address. |
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
 | `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin account. The seeder creates it and re-syncs the password on every deploy. |
-| `FRONTEND_URL` | SPA origin. Allowed for CORS; `/` redirects here. |
-| `CORS_ORIGINS` | Extra allowed origins, comma separated. Wildcards are never used. |
-| `SANCTUM_STATEFUL_DOMAINS` | Hosts (with port) that get cookie auth. Must include the SPA host. |
+| `FRONTEND_URL` | Public site address (defaults to `APP_URL`). Used in emails, the sitemap and the GitHub callback. |
+| `CORS_ORIGINS` | Extra allowed origins for the API, comma separated. Wildcards are never used. |
 | `SESSION_SECURE_COOKIE` | Set `true` in production (HTTPS). |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub OAuth app (optional) |
+| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub OAuth app (optional; can also be set in the admin panel) |
 | `GITHUB_REDIRECT_URI` | `<FRONTEND_URL>/auth/sso/github/callback` |
-| `REACT_APP_BACKEND_URL` | Frontend build arg. Leave empty for the same-origin setup. |
 
 ## Adding a feature
 
-- **New content type**: create a migration and model, then run `php artisan make:filament-resource Name --generate`. Add a read endpoint in `CmsController` and `routes/api.php` if the SPA needs it.
+- **New public page**: add a Blade view in `resources/views/site`, a method in `SiteController`, a route in `routes/web.php`, and (if it should be indexed) a line in `App\Support\Sitemap`.
+- **New dashboard page**: a controller + view, or a Livewire component in `app/Livewire` for interactive forms. Put it under the `auth` route group.
+- **New content type**: create a migration and model, then run `php artisan make:filament-resource Name --generate`, and read it in the page controller.
 - **New setting group**: subclass `App\Filament\Pages\SettingsPage`, and add a key constant to `App\Models\Setting`.
-- **Protected API**: add the `auth:sanctum` middleware to the route. For admin-only routes, also check `$request->user()->isAdmin()`.
 
 ## GitHub OAuth app
 
@@ -156,4 +163,4 @@ In the GitHub OAuth app settings, set:
 - Homepage URL: `FRONTEND_URL`
 - Authorization callback URL: `<FRONTEND_URL>/auth/sso/github/callback`
 
-The SPA page at that URL posts `code` and `state` to `/api/auth/github/callback`.
+That URL is handled by `Auth\GithubController::callback`, which signs the user in and sends admins to `/admin`.

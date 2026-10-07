@@ -4,7 +4,7 @@
 !.env.example
 vendor
 node_modules
-frontend
+public/build
 memory
 storage/logs/*
 storage/framework/cache/*

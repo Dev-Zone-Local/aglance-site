@@ -13,9 +13,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Session + CSRF for requests coming from the SPA (SANCTUM_STATEFUL_DOMAINS).
+        // Session + CSRF for API calls made from our own pages (SANCTUM_STATEFUL_DOMAINS).
         $middleware->statefulApi();
         $middleware->trustProxies(at: '*');
+        // Signed-in users who open /login or /register go to their dashboard.
+        $middleware->redirectUsersTo(fn (Request $request) => $request->user()?->role === 'admin' ? '/admin' : route('dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
