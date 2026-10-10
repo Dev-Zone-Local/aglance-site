@@ -213,4 +213,52 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
         $this->actingAs(User::factory()->create())->get('/admin/product-pages')->assertForbidden();
         $this->actingAs($this->admin())->get('/admin/product-pages')->assertOk()->assertSee('Feature sections');
     }
+
+    public function test_known_problems_page_filters_by_product_and_hides_unpublished(): void
+    {
+        \App\Models\KnownIssue::create(['title' => 'Console proxy problem', 'product' => 'console', 'tags' => ['proxy'], 'symptom' => 'No styles on <your-domain>', 'solution' => "### Fix\n- Set `Host`"]);
+        \App\Models\KnownIssue::create(['title' => 'CLI token rejected', 'product' => 'cli', 'platforms' => ['linux'], 'solution' => 'Run atglance --validate']);
+        \App\Models\KnownIssue::create(['title' => 'Draft problem', 'product' => 'cli', 'solution' => 'x', 'is_published' => false]);
+
+        $this->get('/known-problems')->assertOk()
+            ->assertSee('Console proxy problem')->assertSee('CLI token rejected')->assertDontSee('Draft problem')
+            ->assertSee('id="console-proxy-problem"', false)
+            ->assertSee('#proxy')
+            ->assertSee('No styles on &lt;your-domain&gt;', false)
+            ->assertSee('<h3>Fix</h3>', false);
+        $this->get('/known-problems?product=cli')->assertOk()->assertSee('CLI token rejected')->assertDontSee('Console proxy problem');
+        $this->get('/sitemap.xml')->assertSee('/known-problems');
+    }
+
+    public function test_admin_manages_known_problems(): void
+    {
+        $admin = $this->admin();
+        $this->actingAs(User::factory()->create())->get('/admin/known-problems')->assertForbidden();
+        $this->actingAs($admin)->get('/admin/known-problems')->assertOk();
+
+        Livewire::actingAs($admin)->test(\App\Filament\Resources\KnownIssues\Pages\CreateKnownIssue::class)
+            ->fillForm([
+                'title' => 'Heartbeat returns 409',
+                'product' => 'console',
+                'platforms' => ['linux'],
+                'tags' => ['licence'],
+                'symptom' => 'Console says licence in use elsewhere',
+                'solution' => 'Revoke and create a new licence.',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $issue = \App\Models\KnownIssue::sole();
+        $this->assertSame('heartbeat-returns-409', $issue->slug);
+        $this->assertSame(['linux'], $issue->platforms);
+
+        Livewire::actingAs($admin)->test(\App\Filament\Resources\KnownIssues\Pages\EditKnownIssue::class, ['record' => $issue->getKey()])
+            ->fillForm(['product' => 'cli'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+        $this->assertSame('cli', $issue->fresh()->product);
+
+        $issue->delete();
+        $this->assertSame(0, \App\Models\KnownIssue::count());
+    }
 }

@@ -75,6 +75,24 @@ class DashboardWebTest extends TestCase
         $this->get('/dashboard/install/console/aws')->assertOk()->assertSee('Where do you want to run it?');
     }
 
+    public function test_install_pages_link_to_quick_fixes(): void
+    {
+        $this->actingAs(User::factory()->create());
+
+        // Product cards, the "where" page and the guided steps all link to the product's known problems.
+        $this->get('/dashboard/install')->assertOk()
+            ->assertSee('/known-problems?product=console', false)
+            ->assertSee('/known-problems?product=cli', false)
+            ->assertSee('Quick fixes');
+        $this->get('/dashboard/install/console')->assertOk()
+            ->assertSee('Where do you want to run it?')
+            ->assertSee('/known-problems?product=console', false);
+        $this->get('/dashboard/install/cli/linux')->assertOk()
+            ->assertSee('/known-problems?product=cli', false)
+            ->assertDontSee('How to resolve?');
+        $this->get('/dashboard/install/console/linux')->assertOk()->assertDontSee('How to resolve?');
+    }
+
     public function test_licence_create_confirm_and_show_key(): void
     {
         Notification::fake();

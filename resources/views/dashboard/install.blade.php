@@ -13,13 +13,21 @@
                     'href' => route('dashboard.install', [$id]),
                     'icon' => $p['icon'], 'title' => $p['name'], 'hint' => $p['tagline'],
                     'badge' => $versions[$id] ? 'v'.$versions[$id] : null, 'badgeVariant' => 'success',
+                    'extra' => [
+                        'href' => route('known-problems', ['product' => $id]),
+                        'label' => 'Quick fixes',
+                        'icon' => 'shield-check',
+                    ],
                 ])
             @endforeach
         </div>
     @elseif (! $target)
         {{-- Step 2: target --}}
         <a href="{{ route('dashboard.install') }}" class="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-ag-teal-text"><x-glyph name="arrow-left" :size="14" /> All products</a>
-        <x-page-header :eyebrow="$product['name']" title="Where do you want to run it?" />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <x-page-header :eyebrow="$product['name']" title="Where do you want to run it?" />
+            @include('dashboard.partials.quick-fixes')
+        </div>
         @include('dashboard.partials.stepper', ['steps' => $stepper, 'current' => 1])
         <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             @foreach ($product['targets'] as $id => $t)
@@ -33,8 +41,11 @@
     @else
         {{-- Step 3: guided steps --}}
         <a href="{{ route('dashboard.install', [$productId]) }}" class="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-ag-teal-text"><x-glyph name="arrow-left" :size="14" /> Change platform</a>
-        <x-page-header :eyebrow="$product['name'].($versions[$productId] ? ' · v'.$versions[$productId] : '')"
-            :title="($mode === 'update' ? 'Update on ' : 'Install on ').$target['name']" />
+        <div class="flex flex-wrap items-start justify-between gap-4">
+            <x-page-header :eyebrow="$product['name'].($versions[$productId] ? ' · v'.$versions[$productId] : '')"
+                :title="($mode === 'update' ? 'Update on ' : 'Install on ').$target['name']" />
+            @include('dashboard.partials.quick-fixes')
+        </div>
         @include('dashboard.partials.stepper', ['steps' => $stepper, 'current' => 2])
 
         <nav class="mb-5 inline-flex rounded-full bg-white p-[5px] shadow-ag" aria-label="Install or update">
@@ -95,5 +106,6 @@
                 @endforeach
             </ol>
         @endif
+
     @endif
 </x-layouts.app>

@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\GithubController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SitemapController;
@@ -24,12 +25,17 @@ Route::controller(SiteController::class)->group(function () {
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
     Route::get('/releases', 'releases')->name('releases');
+    Route::get('/known-problems', 'knownProblems')->name('known-problems');
     Route::get('/about', 'page')->defaults('slug', 'about')->name('about');
     Route::get('/terms', 'page')->defaults('slug', 'terms')->name('terms');
     Route::get('/privacy', 'page')->defaults('slug', 'privacy')->name('privacy');
     Route::get('/docs', 'docs')->name('docs');
     Route::get('/docs/{slug}', 'doc')->name('docs.show');
 });
+
+// Contact form: saved for admins and emailed to the support address.
+Route::post('/contact', [ContactController::class, 'store'])
+    ->middleware('throttle:5,10,contact-form')->name('contact.store');
 
 // Search engines: generated from the database (docs, CMS pages).
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');

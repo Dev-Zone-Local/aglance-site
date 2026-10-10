@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Models\Doc;
 use App\Models\Faq;
+use App\Models\KnownIssue;
 use App\Models\Page;
 use App\Models\PricingPlan;
 use App\Models\Setting;
@@ -32,6 +33,12 @@ class ContentSeeder extends Seeder
         if (Doc::count() === 0) {
             foreach ($this->load('docs') as $row) {
                 Doc::create($row);
+            }
+        }
+
+        if (KnownIssue::count() === 0) {
+            foreach ($this->load('known_issues') as $row) {
+                KnownIssue::create($row);
             }
         }
 

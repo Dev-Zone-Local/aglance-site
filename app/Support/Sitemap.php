@@ -26,6 +26,7 @@ class Sitemap
         '/contact' => ['yearly', '0.5'],
         '/docs' => ['weekly', '0.8'],
         '/releases' => ['weekly', '0.7'],
+        '/known-problems' => ['weekly', '0.6'],
         '/register' => ['yearly', '0.4'],
     ];
 

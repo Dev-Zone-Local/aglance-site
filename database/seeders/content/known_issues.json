@@ -1,0 +1,19 @@
+[
+    {
+        "title": "The console works on IP:8000, but on my domain the page loads without styles or logo",
+        "slug": "domain-no-styles",
+        "product": "console",
+        "platforms": [
+            "linux",
+            "windows"
+        ],
+        "tags": [
+            "reverse proxy",
+            "custom domain",
+            "https"
+        ],
+        "symptom": "http://<server-ip>:8000 looks fine. https://<your-domain> shows plain text, no colours, no logo. A reverse proxy on the server (aaPanel, nginx, Apache) forwards the domain to port 8000.",
+        "solution": "**Cause:** the proxy does not pass the real host name and HTTPS to the console, so the page links its styles to `http://localhost` or `http://127.0.0.1:8000`, which the browser cannot load.\n\nCheck which address the page uses.\n\nLinux:\n\n```bash\ncurl -s https://<your-domain>/ | grep -o 'href=\"[^\"]*atglance.css[^\"]*\"'\n```\n\nWindows (PowerShell):\n\n```powershell\n(Invoke-WebRequest https://<your-domain>/ -UseBasicParsing).Content | Select-String 'href=\"[^\"]*atglance.css[^\"]*\"' | ForEach-Object { $_.Matches.Value }\n```\n\nIt should start with `https://<your-domain>/`. If it shows `localhost`, `127.0.0.1` or `http://`, follow these steps.\n\n### 1. Pass the host name and HTTPS through the proxy\n\n**nginx:** use this location block in the site config, then run `nginx -t && nginx -s reload`.\n\n```nginx\nlocation / {\n    proxy_pass http://127.0.0.1:8000;\n    proxy_set_header Host              $host;\n    proxy_set_header X-Forwarded-Host  $host;\n    proxy_set_header X-Forwarded-Proto $scheme;\n    proxy_set_header X-Forwarded-Port  $server_port;\n    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;\n    proxy_set_header X-Real-IP         $remote_addr;\n}\n```\n\n**aaPanel:** open the site, Reverse proxy, then edit the proxy for `/`:\n\n- Reverse proxy tab: keep the target `http://127.0.0.1:8000` and set Send Host to `$host`. Save.\n- Config tab: paste the three lines below and save. Leave out X-Forwarded-For; aaPanel already sets it.\n\n```nginx\nproxy_set_header X-Forwarded-Proto $scheme;\nproxy_set_header X-Forwarded-Host $host;\nproxy_set_header X-Forwarded-Port $server_port;\n```\n\n**Apache:** in the HTTPS virtual host, next to `ProxyPass / http://127.0.0.1:8000/`, add:\n\n```apache\nProxyPreserveHost On\nRequestHeader set X-Forwarded-Proto \"https\"\n```\n\n### 2. Let the console trust the proxy\n\nThe proxy reaches the console from the Docker network, which it does not trust by default. Run on the server.\n\nLinux:\n\n```bash\ndocker exec ce-atglance-app sh -c 'echo \"ATGLANCE_TRUSTED_PROXIES=127.0.0.1,::1,172.16.0.0/12\" >> /app/storage/.env'\ncd /opt/atglance && docker compose restart app worker scheduler\n```\n\nWindows (PowerShell):\n\n```powershell\ndocker exec ce-atglance-app sh -c 'echo \"ATGLANCE_TRUSTED_PROXIES=127.0.0.1,::1,172.16.0.0/12\" >> /app/storage/.env'\ncd C:\\ProgramData\\AtGlance; docker compose restart app worker scheduler\n```\n\n### 3. Set the domain in the console\n\nLog in on `http://<server-ip>:8000` as the super admin:\n\n- Site Settings → Plugins: turn on **Custom Domain & HTTPS**.\n- Site → Access URL: enter your domain, without `http://` and without a port.\n- HTTPS: choose **Handled by my platform**, because your proxy holds the certificate. Save.\n\n### 4. Check again\n\nRun the check command again. It should now show `https://<your-domain>/css/atglance.css`. Reload the page with Ctrl+F5.\n\nServers running the atglance CLI still connect on port 8002 of the same host. Keep that port open; the domain only fronts the web console.\n",
+        "order": 1
+    }
+]

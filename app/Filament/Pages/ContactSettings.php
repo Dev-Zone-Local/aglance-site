@@ -28,6 +28,10 @@ class ContactSettings extends SettingsPage
         'intro' => 'AtGlance is built by a small team. If you reach out, an actual SRE will read your message.',
         'show_address' => true,
         'show_social_in_footer' => true,
+        'show_form' => true,
+        'form_recipient' => 'support@atglance.live',
+        'form_title' => 'Send us a message',
+        'form_intro' => 'Report a problem, ask a question or send feedback. We reply by email.',
     ];
 
     /** Social link keys => [label, glyph icon]. */
@@ -72,6 +76,22 @@ class ContactSettings extends SettingsPage
                         ->placeholder('We reply within 1 business day')
                         ->maxLength(120),
                     Textarea::make('intro')->label('Intro text')->rows(2)->maxLength(500)->columnSpanFull(),
+                ]),
+
+            Section::make('Contact form')
+                ->description('The form on /contact. Messages are saved under Support → Messages and emailed to the address below.')
+                ->icon(Heroicon::OutlinedInboxArrowDown)
+                ->columns(2)
+                ->columnSpanFull()
+                ->schema([
+                    Toggle::make('show_form')->label('Show the form on /contact')->columnSpanFull(),
+                    TextInput::make('form_recipient')
+                        ->label('Form messages go to')
+                        ->email()
+                        ->required()
+                        ->helperText('Every new message is emailed here. Reply-To is the sender, so you can answer directly.'),
+                    TextInput::make('form_title')->label('Form heading')->maxLength(80),
+                    Textarea::make('form_intro')->label('Text above the form')->rows(2)->maxLength(300)->columnSpanFull(),
                 ]),
 
             Section::make('Email addresses')

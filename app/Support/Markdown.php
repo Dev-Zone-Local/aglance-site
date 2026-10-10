@@ -8,9 +8,9 @@ use League\CommonMark\Extension\Table\TableExtension;
 use League\CommonMark\MarkdownConverter;
 
 /**
- * Markdown for CMS content (docs, pages, install steps). Raw HTML in the source is stripped
- * and unsafe links (javascript:, data:) are dropped, so admin-entered text cannot inject
- * scripts into public pages.
+ * Markdown for CMS content (docs, pages, install steps, known problems). Raw HTML in the source
+ * is escaped and shown as text (so placeholders like <server-ip> stay visible), and unsafe links
+ * (javascript:, data:) are dropped, so admin-entered text cannot inject scripts into public pages.
  */
 class Markdown
 {
@@ -29,7 +29,7 @@ class Markdown
     {
         if (self::$converter === null) {
             $environment = new Environment([
-                'html_input' => 'strip',
+                'html_input' => 'escape',
                 'allow_unsafe_links' => false,
             ]);
             $environment->addExtension(new CommonMarkCoreExtension);

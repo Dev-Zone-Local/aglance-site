@@ -23,6 +23,86 @@
             <x-badge variant="info" class="mt-2"><x-glyph name="clock" :size="12" /> {{ $contact['response_time'] }}</x-badge>
         @endif
 
+        @if ($contact['show_form'] ?? true)
+            @php
+                $user = auth()->user();
+                $topic = old('topic', isset(\App\Models\ContactMessage::TOPICS[request()->string('topic')->toString()]) ? request()->string('topic')->toString() : 'support');
+                $productSel = old('product', isset(\App\Models\ContactMessage::PRODUCTS[request()->string('product')->toString()]) ? request()->string('product')->toString() : '');
+            @endphp
+            <section id="contact-form" class="mt-10 grid scroll-mt-24 gap-6 lg:grid-cols-[1fr_300px]">
+                <x-card class="p-6 sm:p-8">
+                    <h2 class="text-[22px] font-medium tracking-heading text-ag-ink">{{ $contact['form_title'] ?? ContactSettings::DEFAULTS['form_title'] }}</h2>
+                    <p class="mt-1 text-sm text-ag-subtle">{{ $contact['form_intro'] ?? ContactSettings::DEFAULTS['form_intro'] }}</p>
+
+                    @if (session('sent_reference'))
+                        <div class="mt-5 flex items-start gap-3 rounded-xl bg-ag-success-soft px-4 py-3 text-sm text-ag-success-text" role="status">
+                            <x-glyph name="check" :size="16" class="mt-0.5" />
+                            <span>Message sent. Your reference is <strong>{{ session('sent_reference') }}</strong>. We also emailed you a copy.</span>
+                        </div>
+                    @endif
+
+                    <form method="POST" action="{{ route('contact.store') }}" class="mt-6 grid gap-4 sm:grid-cols-2" novalidate>
+                        @csrf
+                        {{-- Honeypot for bots; hidden from people and screen readers. --}}
+                        <div class="hidden" aria-hidden="true"><label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label></div>
+
+                        <x-input name="name" label="Your name" :value="$user?->name" required maxlength="100" autocomplete="name" />
+                        <x-input name="email" label="Email" type="email" :value="$user?->email" required maxlength="255" autocomplete="email" />
+
+                        <div>
+                            <label for="field-topic" class="ag-label">What is it about?</label>
+                            <select id="field-topic" name="topic" class="ag-input">
+                                @foreach (\App\Models\ContactMessage::TOPICS as $key => $label)
+                                    <option value="{{ $key }}" @selected($topic === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('topic')<p class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
+                        </div>
+                        <div>
+                            <label for="field-product" class="ag-label">Product <span class="font-normal text-ag-muted">(optional)</span></label>
+                            <select id="field-product" name="product" class="ag-input">
+                                <option value="">Not product specific</option>
+                                @foreach (\App\Models\ContactMessage::PRODUCTS as $key => $label)
+                                    <option value="{{ $key }}" @selected($productSel === $key)>{{ $label }}</option>
+                                @endforeach
+                            </select>
+                            @error('product')<p class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <x-input name="subject" label="Subject" required maxlength="150" placeholder="Console shows no styles on my domain" />
+                        </div>
+                        <div class="sm:col-span-2">
+                            <label for="field-message" class="ag-label">Message</label>
+                            <textarea id="field-message" name="message" rows="7" required minlength="10" maxlength="5000"
+                                placeholder="What happened, what you expected, and any error message. Versions and OS help us a lot."
+                                @error('message') aria-invalid="true" aria-describedby="field-message-error" @enderror
+                                @class(['ag-input resize-y', 'border-ag-danger' => $errors->has('message')])>{{ old('message') }}</textarea>
+                            @error('message')<p id="field-message-error" class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-4 sm:col-span-2">
+                            <x-button type="submit">Send message <x-glyph name="arrow-right" /></x-button>
+                            <span class="text-xs text-ag-muted">We only use your email to reply to this message.</span>
+                        </div>
+                    </form>
+                </x-card>
+
+                <aside class="space-y-4">
+                    <a href="{{ route('known-problems') }}" class="lift block rounded-card bg-white p-5 shadow-ag">
+                        <x-glyph name="shield-check" :size="18" class="mb-3 text-ag-teal" />
+                        <div class="font-medium text-ag-ink">Quick fixes</div>
+                        <div class="mt-1 text-sm text-ag-subtle">Common problems and their solutions, ready right now.</div>
+                    </a>
+                    <a href="{{ route('docs') }}" class="lift block rounded-card bg-white p-5 shadow-ag">
+                        <x-glyph name="book-open" :size="18" class="mb-3 text-ag-teal" />
+                        <div class="font-medium text-ag-ink">Documentation</div>
+                        <div class="mt-1 text-sm text-ag-subtle">Install, configure and run AtGlance.</div>
+                    </a>
+                </aside>
+            </section>
+        @endif
+
         @if ($emails)
             <div class="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach ($emails as [$icon, $label, $value])

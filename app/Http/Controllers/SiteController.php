@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Doc;
 use App\Models\Faq;
+use App\Models\KnownIssue;
 use App\Models\Page;
 use App\Models\PricingPlan;
 use App\Models\Setting;
@@ -70,6 +71,19 @@ class SiteController extends Controller
             'product' => $product,
             'products' => Downloads::PRODUCTS,
             'types' => Downloads::RELEASE_TYPES,
+        ]);
+    }
+
+    public function knownProblems(Request $request): View
+    {
+        $product = $request->string('product')->toString();
+        $product = isset(KnownIssue::PRODUCTS[$product]) ? $product : null;
+
+        return view('site.known-problems', [
+            'issues' => KnownIssue::published()->when($product, fn ($q) => $q->where('product', $product))->get(),
+            'product' => $product,
+            'products' => KnownIssue::PRODUCTS,
+            'counts' => KnownIssue::where('is_published', true)->selectRaw('product, count(*) as n')->groupBy('product')->pluck('n', 'product')->all(),
         ]);
     }
 
