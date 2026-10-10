@@ -31,22 +31,28 @@
                 <details id="{{ $issue->slug }}" class="group scroll-mt-24 px-5 sm:px-6"
                     data-search="{{ \Illuminate\Support\Str::lower($issue->title.' '.$issue->symptom.' '.implode(' ', $issue->tags ?? []).' '.$issue->productLabel()) }}"
                     x-show="match($el)">
-                    <summary class="flex cursor-pointer list-none items-start justify-between gap-4 py-5 text-left [&::-webkit-details-marker]:hidden">
-                        <span>
-                            <span class="mb-2 flex flex-wrap gap-1.5">
-                                <x-badge :variant="$issue->product === 'cli' ? 'info' : 'success'">
-                                    <x-glyph :name="$issue->product === 'cli' ? 'terminal' : 'server'" :size="11" /> {{ $issue->productLabel() }}
-                                </x-badge>
-                                @foreach ($issue->platformLabels() as $p)
-                                    <x-badge>{{ $p }}</x-badge>
-                                @endforeach
+                    <summary class="flex cursor-pointer list-none items-center gap-4 py-5 text-left [&::-webkit-details-marker]:hidden">
+                        <span @class([
+                            'inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
+                            'bg-ag-info-soft text-ag-teal-text' => $issue->product === 'cli',
+                            'bg-ag-success-soft text-ag-success-text' => $issue->product !== 'cli',
+                        ]) aria-hidden="true">
+                            <x-glyph :name="$issue->product === 'cli' ? 'terminal' : 'server'" :size="18" />
+                        </span>
+                        <span class="min-w-0 flex-1">
+                            <span class="block text-[15px] font-medium leading-snug text-ag-ink">{{ $issue->title }}</span>
+                            <span class="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ag-subtle">
+                                <span class="font-medium {{ $issue->product === 'cli' ? 'text-ag-teal-text' : 'text-ag-success-text' }}">{{ $issue->productLabel() }}</span>
+                                @if ($issue->platformLabels())
+                                    <span aria-hidden="true">·</span>
+                                    <span>{{ implode(', ', $issue->platformLabels()) }}</span>
+                                @endif
                                 @foreach ($issue->tags ?? [] as $tag)
-                                    <x-badge class="bg-transparent ring-1 ring-ag-line">#{{ $tag }}</x-badge>
+                                    <span class="rounded-md bg-ag-surface px-1.5 py-0.5 text-[11px] text-ag-subtle">#{{ $tag }}</span>
                                 @endforeach
                             </span>
-                            <span class="block font-medium text-ag-ink">{{ $issue->title }}</span>
                         </span>
-                        <x-glyph name="chevron-down" class="mt-1 shrink-0 text-ag-muted transition-transform group-open:rotate-180" />
+                        <x-glyph name="chevron-down" class="shrink-0 text-ag-muted transition-transform group-open:rotate-180" />
                     </summary>
                     <div class="space-y-4 pb-6 text-sm leading-relaxed text-ag-subtle">
                         @if (filled($issue->symptom))
