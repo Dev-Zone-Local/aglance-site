@@ -78,6 +78,9 @@ class GoogleController extends Controller
                 'auth_method' => 'google',
                 'email_verified_at' => now(),
             ]);
+
+            // Google already verified the address, so welcome them now (no verification email).
+            $user->sendWelcomeSafely();
         }
 
         Auth::login($user);

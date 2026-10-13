@@ -5,7 +5,7 @@
 --}}
 @props(['action'])
 @if (\App\Rules\Recaptcha::enabled())
-    <div>
+    <div {{ $attributes }}>
         <input type="hidden" name="{{ \App\Rules\Recaptcha::FIELD }}" data-recaptcha-action="{{ $action }}">
         @error(\App\Rules\Recaptcha::FIELD)<p class="text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
     </div>

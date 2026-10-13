@@ -11,6 +11,7 @@ use App\Notifications\ContactMessageConfirmation;
 use App\Notifications\ContactMessageReceived;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -134,6 +135,29 @@ class ContactFormTest extends TestCase
         Setting::put(Setting::CONTACT, ['email' => 'hi@x.test', 'show_form' => false]);
         $this->get('/contact')->assertOk()->assertDontSee('name="message"', false);
         $this->post('/contact', $this->valid())->assertNotFound();
+    }
+
+    public function test_captcha_protects_the_form_when_enabled(): void
+    {
+        Notification::fake();
+        $this->signIn();
+        $this->enableCaptcha();
+        $score = 0.9;
+        Http::fake(['www.google.com/recaptcha/api/siteverify' => function ($request) use (&$score) {
+            return Http::response(['success' => true, 'score' => $score, 'action' => explode(':', $request['response'])[0]]);
+        }]);
+
+        $this->get('/contact')->assertOk()->assertSee('data-recaptcha-action="contact"', false);
+
+        $this->post('/contact', $this->valid())->assertSessionHasErrors('g-recaptcha-response');
+        $this->post('/contact', $this->valid(['g-recaptcha-response' => 'login:x']))->assertSessionHasErrors('g-recaptcha-response');
+        $score = 0.1;
+        $this->post('/contact', $this->valid(['g-recaptcha-response' => 'contact:x']))->assertSessionHasErrors('g-recaptcha-response');
+        $this->assertSame(0, ContactMessage::count());
+
+        $score = 0.9;
+        $this->post('/contact', $this->valid(['g-recaptcha-response' => 'contact:x']))->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertSame(1, ContactMessage::count());
     }
 
     public function test_form_is_rate_limited(): void
