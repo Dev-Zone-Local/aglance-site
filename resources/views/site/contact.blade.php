@@ -30,6 +30,16 @@
                 $productSel = old('product', isset(\App\Models\ContactMessage::PRODUCTS[request()->string('product')->toString()]) ? request()->string('product')->toString() : '');
             @endphp
             <section id="contact-form" class="mt-10 grid scroll-mt-24 gap-6 lg:grid-cols-[1fr_300px]">
+                @guest
+                <x-card class="p-6 sm:p-8">
+                    <h2 class="text-[22px] font-medium tracking-heading text-ag-ink">{{ $contact['form_title'] ?? ContactSettings::DEFAULTS['form_title'] }}</h2>
+                    <p class="mt-1 text-sm text-ag-subtle">Sign in to send us a message. We reply to the email on your account.</p>
+                    <div class="mt-6 flex flex-wrap items-center gap-3">
+                        <x-button :href="route('login')">Sign in <x-glyph name="arrow-right" /></x-button>
+                        <x-button :href="route('register')" variant="ghost">Create an account</x-button>
+                    </div>
+                </x-card>
+                @else
                 <x-card class="p-6 sm:p-8">
                     <h2 class="text-[22px] font-medium tracking-heading text-ag-ink">{{ $contact['form_title'] ?? ContactSettings::DEFAULTS['form_title'] }}</h2>
                     <p class="mt-1 text-sm text-ag-subtle">{{ $contact['form_intro'] ?? ContactSettings::DEFAULTS['form_intro'] }}</p>
@@ -87,6 +97,7 @@
                         </div>
                     </form>
                 </x-card>
+                @endguest
 
                 <aside class="space-y-4">
                     <a href="{{ route('known-problems') }}" class="lift block rounded-card bg-white p-5 shadow-ag">

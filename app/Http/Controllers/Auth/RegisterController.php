@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\Recaptcha;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,9 +26,11 @@ class RegisterController extends Controller
             'name' => ['nullable', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6', 'max:128', 'confirmed'],
+            ...Recaptcha::rules(),
         ], [
             'email.unique' => 'Email already registered',
             'password.confirmed' => 'Passwords do not match',
+            ...Recaptcha::messages(),
         ]);
 
         // New accounts are always plain users; admin is only granted by the seeder or the admin panel.

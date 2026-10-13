@@ -28,13 +28,14 @@ class GithubSettingsTest extends TestCase
         $this->withHeaders(['Accept' => 'text/html'])->get('/admin/login')->assertDontSee('Sign in with GitHub');
     }
 
-    public function test_admin_login_page_shows_github_button(): void
+    public function test_admin_login_page_has_no_github_button(): void
     {
+        // Admins sign in with email + password (and CAPTCHA) only.
         $this->withHeaders(['Accept' => 'text/html'])
             ->get('/admin/login')
             ->assertOk()
-            ->assertSee('Sign in with GitHub')
-            ->assertSee(route('admin.auth.github'), false);
+            ->assertDontSee('Sign in with GitHub')
+            ->assertDontSee(route('admin.auth.github'), false);
     }
 
     public function test_admin_github_route_redirects_to_github(): void

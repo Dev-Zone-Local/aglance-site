@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\Login;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -30,7 +31,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            ->login()
+            // Custom page: says why a sign-in failed instead of showing the form again (see the class).
+            ->login(Login::class)
             // Profile page (name, email, password) + links back to the site in the user menu.
             ->profile(isSimple: false)
             ->userMenuItems([
@@ -60,8 +62,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.theme-styles'))
             ->renderHook(
-                PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
-                fn (): View => view('filament.auth.github-login-button'),
+                PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
+                fn (): View => view('filament.auth.login-problem'),
             )
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')

@@ -33,9 +33,9 @@ Route::controller(SiteController::class)->group(function () {
     Route::get('/docs/{slug}', 'doc')->name('docs.show');
 });
 
-// Contact form: saved for admins and emailed to the support address.
+// Contact form: signed-in users only; saved for admins and emailed to the support address.
 Route::post('/contact', [ContactController::class, 'store'])
-    ->middleware('throttle:5,10,contact-form')->name('contact.store');
+    ->middleware(['auth', 'throttle:5,10,contact-form'])->name('contact.store');
 
 // Search engines: generated from the database (docs, CMS pages).
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');

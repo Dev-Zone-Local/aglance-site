@@ -7,6 +7,7 @@
         <x-input name="email" type="email" label="Email" required autocomplete="email" placeholder="you@company.com" />
         <x-input name="password" type="password" label="Password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters" />
         <x-input name="password_confirmation" type="password" label="Confirm password" required minlength="6" autocomplete="new-password" placeholder="Repeat your password" />
+        <x-recaptcha />
         <x-button class="w-full">Create account <x-glyph name="arrow-right" :size="14" /></x-button>
     </form>
 

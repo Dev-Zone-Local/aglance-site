@@ -87,8 +87,13 @@ class SiteController extends Controller
         ]);
     }
 
-    public function contact(): View
+    public function contact(Request $request): View
     {
+        // Guests see a sign-in prompt instead of the form; bring them back here after signing in.
+        if (! $request->user()) {
+            redirect()->setIntendedUrl(route('contact').'#contact-form');
+        }
+
         return view('site.contact', ['contact' => Setting::get(Setting::CONTACT) ?? []]);
     }
 

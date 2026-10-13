@@ -39,12 +39,31 @@ class ContactFormTest extends TestCase
         ];
     }
 
+    private function signIn(): User
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        return $user;
+    }
+
+    public function test_guests_see_sign_in_prompt_instead_of_form(): void
+    {
+        $this->get('/contact')->assertOk()
+            ->assertSee('Sign in to send us a message')
+            ->assertSee('href="'.route('login').'"', false)
+            ->assertDontSee('name="message"', false);
+        $this->assertSame(route('contact').'#contact-form', session('url.intended'));
+
+        $this->post('/contact', $this->valid())->assertRedirect(route('login'));
+        $this->assertSame(0, ContactMessage::count());
+    }
+
     public function test_form_is_shown_and_prefilled_for_signed_in_users(): void
     {
-        $this->get('/contact')->assertOk()->assertSee('Send us a message')->assertSee('name="message"', false);
-
         $user = User::factory()->create(['name' => 'Ravi', 'email' => 'ravi@example.com']);
         $this->actingAs($user)->get('/contact?topic=bug&product=cli')->assertOk()
+            ->assertSee('Send us a message')->assertSee('name="message"', false)
             ->assertSee('value="ravi@example.com"', false)
             ->assertSee('<option value="bug" selected', false)
             ->assertSee('<option value="cli" selected', false);
@@ -52,6 +71,7 @@ class ContactFormTest extends TestCase
 
     public function test_message_is_saved_and_emailed_to_support_and_sender(): void
     {
+        $user = $this->signIn();
         Notification::fake();
 
         $this->post('/contact', $this->valid())
@@ -61,6 +81,7 @@ class ContactFormTest extends TestCase
         $m = ContactMessage::sole();
         $this->assertSame('new', $m->status);
         $this->assertSame('console', $m->product);
+        $this->assertSame($user->id, $m->user_id);
         $this->assertNotNull($m->emailed_at);
 
         Notification::assertSentTo(new AnonymousNotifiable, ContactMessageReceived::class,
@@ -78,6 +99,7 @@ class ContactFormTest extends TestCase
 
     public function test_recipient_comes_from_contact_settings(): void
     {
+        $this->signIn();
         Notification::fake();
         Setting::put(Setting::CONTACT, ['email' => 'hi@x.test', 'form_recipient' => 'help@x.test']);
 
@@ -89,6 +111,7 @@ class ContactFormTest extends TestCase
 
     public function test_message_is_kept_when_email_fails(): void
     {
+        $this->signIn();
         config(['mail.default' => 'failover', 'mail.mailers.failover' => ['transport' => 'failover', 'mailers' => ['nope']], 'mail.mailers.nope' => ['transport' => 'smtp', 'host' => '127.0.0.1', 'port' => 1, 'timeout' => 1]]);
 
         $this->post('/contact', $this->valid())->assertRedirect();
@@ -98,6 +121,7 @@ class ContactFormTest extends TestCase
 
     public function test_validation_honeypot_and_hidden_form(): void
     {
+        $this->signIn();
         Notification::fake();
 
         $this->post('/contact', $this->valid(['email' => 'not-an-email', 'message' => 'short', 'topic' => 'bogus']))
@@ -114,6 +138,7 @@ class ContactFormTest extends TestCase
 
     public function test_form_is_rate_limited(): void
     {
+        $this->signIn();
         Notification::fake();
 
         for ($i = 0; $i < 5; $i++) {
