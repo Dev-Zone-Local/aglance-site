@@ -3,11 +3,9 @@
 return [
 
     /*
-    | Admin account seeded on deploy. The seeder keeps its password in sync
-    | with ADMIN_PASSWORD, so rotating the env value rotates the password.
+    | The admin account is not configured here: create it with `php artisan atglance:make-admin`.
+    | GitHub / Google sign-in and the CAPTCHA are set in the admin panel (Settings).
     */
-    'admin_email' => strtolower((string) env('ADMIN_EMAIL', 'admin@atglance.io')),
-    'admin_password' => env('ADMIN_PASSWORD'),
 
     /*
     | Public address of the website (e.g. https://atglance.live). Used in emails, the

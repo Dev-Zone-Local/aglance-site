@@ -95,37 +95,36 @@ class AdminLoginTest extends TestCase
         $this->assertGuest();
     }
 
-    private function enableCaptcha(bool $googleSays): void
+    private function fakeCaptcha(bool $googleSays): void
     {
-        config(['services.recaptcha.site_key' => 'site-key-123', 'services.recaptcha.secret_key' => 'secret-456']);
-        Http::fake(['www.google.com/recaptcha/api/siteverify' => Http::response(['success' => $googleSays])]);
+        $this->enableCaptcha();
+        Http::fake(['www.google.com/recaptcha/api/siteverify' => Http::response(['success' => $googleSays, 'score' => 0.9, 'action' => 'admin_login'])]);
     }
 
     public function test_captcha_widget_shows_only_when_keys_are_set(): void
     {
-        $this->get('/admin/login')->assertOk()->assertDontSee('g-recaptcha', false);
+        $this->get('/admin/login')->assertOk()->assertDontSee('recaptcha/api.js', false);
 
-        $this->enableCaptcha(true);
+        $this->fakeCaptcha(true);
         $this->get('/admin/login')->assertOk()
-            ->assertSee('data-sitekey="site-key-123"', false)
-            ->assertSee('https://www.google.com/recaptcha/api.js', false);
+            ->assertSee('https://www.google.com/recaptcha/api.js?render=site-key-123', false)
+            ->assertSee("action: 'admin_login'", false);
     }
 
     public function test_captcha_is_required_when_enabled(): void
     {
-        $this->enableCaptcha(true);
+        $this->fakeCaptcha(true);
         User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'secret123']);
 
         $this->login('root@example.com', 'secret123')
             ->assertHasErrors(['captcha'])
-            ->assertSee('Please confirm you are not a robot.')
-            ->assertDispatched('recaptcha-reset');
+            ->assertSee('The security check did not load');
         $this->assertGuest();
     }
 
     public function test_bad_captcha_token_is_rejected(): void
     {
-        $this->enableCaptcha(false);
+        $this->fakeCaptcha(false);
         User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'secret123']);
 
         Livewire::test(Login::class)
@@ -139,7 +138,7 @@ class AdminLoginTest extends TestCase
 
     public function test_good_captcha_token_signs_in(): void
     {
-        $this->enableCaptcha(true);
+        $this->fakeCaptcha(true);
         User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'secret123']);
 
         Livewire::test(Login::class)
@@ -154,17 +153,16 @@ class AdminLoginTest extends TestCase
 
     public function test_wrong_password_resets_the_captcha(): void
     {
-        $this->enableCaptcha(true);
+        $this->fakeCaptcha(true);
         User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'secret123']);
 
-        // Google accepts a token once, so a failed sign-in needs a fresh tick.
+        // Google accepts a token once; the page fetches a new one on the next try.
         Livewire::test(Login::class)
             ->fillForm(['email' => 'root@example.com', 'password' => 'wrong'])
             ->set('captcha', 'good-token')
             ->call('authenticate')
             ->assertHasFormErrors(['email'])
-            ->assertSet('captcha', null)
-            ->assertDispatched('recaptcha-reset');
+            ->assertSet('captcha', null);
     }
 
     public function test_login_page_explains_expired_session_and_broken_scripts(): void

@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Admin sign-in (/admin/login): email + password, plus the reCAPTCHA checkbox when its keys are set
+ * Admin sign-in (/admin/login): email + password, plus invisible reCAPTCHA v3 when its keys are set
  * (no GitHub button here). It always says why a sign-in did not work instead of quietly showing
  * the form again:
  * - a correct password for an account without admin access gets its own message;
@@ -41,7 +41,7 @@ class Login extends BaseLogin
         }
     }
 
-    /** reCAPTCHA v2 token from the checkbox (filament.auth.recaptcha). */
+    /** reCAPTCHA v3 token, set by filament.auth.recaptcha just before each sign-in. */
     public ?string $captcha = null;
 
     public function form(Schema $schema): Schema
@@ -61,8 +61,8 @@ class Login extends BaseLogin
             if (Recaptcha::enabled()) {
                 Validator::make(
                     ['captcha' => $this->captcha],
-                    ['captcha' => ['required', 'string', new Recaptcha]],
-                    ['captcha.required' => 'Please confirm you are not a robot.'],
+                    ['captcha' => ['required', 'string', new Recaptcha('admin_login')]],
+                    Recaptcha::messages('captcha'),
                 )->validate();
             }
 
@@ -74,7 +74,6 @@ class Login extends BaseLogin
         }
 
         if (! $response) {
-            // Throttled: the token was not used, but it expires soon anyway.
             $this->resetCaptcha();
         }
 
@@ -93,13 +92,10 @@ class Login extends BaseLogin
         return $response;
     }
 
-    /** Google accepts a token once: clear it and untick the checkbox after a failed try. */
+    /** Google accepts a token once; the page fetches a new one on the next "Sign in". */
     protected function resetCaptcha(): void
     {
-        if (Recaptcha::enabled()) {
-            $this->captcha = null;
-            $this->dispatch('recaptcha-reset');
-        }
+        $this->captcha = null;
     }
 
     /** Stays on screen: a toast that fades in seconds looks like the form just reloaded. */

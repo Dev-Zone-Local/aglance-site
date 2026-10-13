@@ -61,6 +61,7 @@ class AdminPanelProvider extends PanelProvider
                 'gray' => Color::Slate,
             ])
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.theme-styles'))
+            ->renderHook(PanelsRenderHook::SIDEBAR_FOOTER, fn (): View => view('filament.site-version'))
             ->renderHook(
                 PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
                 fn (): View => view('filament.auth.login-problem'),

@@ -55,6 +55,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'auth_method',
         'github_id',
         'github_login',
+        'google_id',
         'avatar_url',
     ];
 

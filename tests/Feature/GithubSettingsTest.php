@@ -14,15 +14,16 @@ class GithubSettingsTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_env_credentials_enable_github(): void
+    public function test_github_is_off_until_set_in_the_admin_panel(): void
     {
+        $this->getJson('/api/auth/providers')->assertOk()->assertJson(['github' => false]);
+
+        $this->enableGithubLogin();
         $this->getJson('/api/auth/providers')->assertOk()->assertJson(['github' => true]);
     }
 
     public function test_github_disabled_without_credentials(): void
     {
-        config(['services.github.client_id' => null, 'services.github.client_secret' => null]);
-
         $this->getJson('/api/auth/providers')->assertJson(['github' => false]);
         $this->getJson('/api/auth/github/start')->assertStatus(503);
         $this->withHeaders(['Accept' => 'text/html'])->get('/admin/login')->assertDontSee('Sign in with GitHub');
@@ -40,6 +41,7 @@ class GithubSettingsTest extends TestCase
 
     public function test_admin_github_route_redirects_to_github(): void
     {
+        $this->enableGithubLogin();
         $res = $this->withHeaders(['Accept' => 'text/html'])->get('/admin/auth/github')->assertRedirect();
 
         $this->assertStringStartsWith('https://github.com/login/oauth/authorize', $res->headers->get('Location'));
@@ -48,7 +50,6 @@ class GithubSettingsTest extends TestCase
 
     public function test_admin_saves_settings_with_encrypted_secret(): void
     {
-        config(['services.github.client_id' => null, 'services.github.client_secret' => null]);
         $this->actingAs(User::factory()->admin()->create());
 
         Livewire::test(GithubSettings::class)

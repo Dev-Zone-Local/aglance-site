@@ -5,15 +5,19 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Key/value settings store. Known keys: "contact", "downloads", "github", "mail".
+ * Key/value settings store. Known keys: "captcha", "contact", "downloads", "github", "google", "mail".
  */
 class Setting extends Model
 {
+    public const CAPTCHA = 'captcha';
+
     public const CONTACT = 'contact';
 
     public const DOWNLOADS = 'downloads';
 
     public const GITHUB = 'github';
+
+    public const GOOGLE = 'google';
 
     public const MAIL = 'mail';
 

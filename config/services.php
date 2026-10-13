@@ -28,19 +28,6 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
-    'github' => [
-        'client_id' => env('GITHUB_CLIENT_ID'),
-        'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        // Points at the SPA route /auth/sso/github/callback, which POSTs code + state to the API.
-        'redirect' => env('GITHUB_REDIRECT_URI'),
-    ],
-
-    // Google reCAPTCHA v2 checkbox on the sign-in and sign-up forms. Off until both keys are set.
-    'recaptcha' => [
-        'site_key' => env('RECAPTCHA_SITE_KEY'),
-        'secret_key' => env('RECAPTCHA_SECRET_KEY'),
-    ],
-
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

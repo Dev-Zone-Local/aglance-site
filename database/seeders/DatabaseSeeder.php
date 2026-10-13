@@ -8,8 +8,8 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // No admin here: create it with `php artisan atglance:make-admin`.
         $this->call([
-            AdminUserSeeder::class,
             ContentSeeder::class,
             TestUserSeeder::class,
         ]);

@@ -1,4 +1,5 @@
 <x-auth-shell title="Create your free account" subtitle="Get the AtGlance CLI and self-hosted Console downloads." page-title="Sign up">
+    <x-google-button>Sign up with Google</x-google-button>
     <x-github-button>Sign up with GitHub</x-github-button>
 
     <form method="POST" action="{{ route('register') }}" class="space-y-4">
@@ -7,7 +8,7 @@
         <x-input name="email" type="email" label="Email" required autocomplete="email" placeholder="you@company.com" />
         <x-input name="password" type="password" label="Password" required minlength="6" autocomplete="new-password" placeholder="At least 6 characters" />
         <x-input name="password_confirmation" type="password" label="Confirm password" required minlength="6" autocomplete="new-password" placeholder="Repeat your password" />
-        <x-recaptcha />
+        <x-recaptcha action="register" />
         <x-button class="w-full">Create account <x-glyph name="arrow-right" :size="14" /></x-button>
     </form>
 

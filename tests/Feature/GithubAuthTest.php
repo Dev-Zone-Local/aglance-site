@@ -13,6 +13,12 @@ class GithubAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->enableGithubLogin();
+    }
+
     private function fakeGithubUser(array $attrs): void
     {
         $gh = (new SocialiteUser)->map(array_merge([
@@ -75,7 +81,7 @@ class GithubAuthTest extends TestCase
 
     public function test_callback_never_grants_admin(): void
     {
-        $this->fakeGithubUser(['email' => config('atglance.admin_email')]);
+        $this->fakeGithubUser(['email' => 'admin@example.com']);
 
         $this->postCallback()->assertCreated()->assertJsonPath('role', 'user');
     }

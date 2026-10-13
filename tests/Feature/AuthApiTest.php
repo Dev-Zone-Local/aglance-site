@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Database\Seeders\AdminUserSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -54,7 +53,7 @@ class AuthApiTest extends TestCase
     public function test_register_with_admin_email_does_not_grant_admin(): void
     {
         // Admin row not seeded yet: registration must still produce a plain user.
-        $this->postJson('/api/auth/register', ['email' => config('atglance.admin_email'), 'password' => 'password123', 'password_confirmation' => 'password123'])
+        $this->postJson('/api/auth/register', ['email' => 'admin@example.com', 'password' => 'password123', 'password_confirmation' => 'password123'])
             ->assertCreated()
             ->assertJsonPath('role', 'user');
     }
@@ -87,18 +86,4 @@ class AuthApiTest extends TestCase
         $this->getJson('/api/auth/me')->assertUnauthorized();
     }
 
-    public function test_admin_seeder_creates_and_resyncs_admin(): void
-    {
-        $this->seed(AdminUserSeeder::class);
-
-        $admin = User::firstWhere('email', 'admin@atglance.test');
-        $this->assertTrue($admin->isAdmin());
-        $this->assertTrue(Hash::check('secret-admin-pw', $admin->password));
-
-        config(['atglance.admin_password' => 'rotated-pw']);
-        $this->seed(AdminUserSeeder::class);
-
-        $this->assertTrue(Hash::check('rotated-pw', $admin->fresh()->password));
-        $this->assertSame(1, User::count());
-    }
 }

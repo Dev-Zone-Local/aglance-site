@@ -1,4 +1,5 @@
 <x-auth-shell title="Welcome back" subtitle="Sign in to access your downloads and licences." page-title="Sign in">
+    <x-google-button>Continue with Google</x-google-button>
     <x-github-button>Continue with GitHub</x-github-button>
 
     <form method="POST" action="{{ route('login') }}" class="space-y-4">
@@ -12,7 +13,7 @@
         <label class="flex items-center gap-2 text-sm text-ag-subtle">
             <input type="checkbox" name="remember" value="1" class="h-4 w-4 accent-[#2CB7D9]"> Keep me signed in
         </label>
-        <x-recaptcha />
+        <x-recaptcha action="login" />
         <x-button class="w-full">Sign in <x-glyph name="arrow-right" :size="14" /></x-button>
     </form>
 

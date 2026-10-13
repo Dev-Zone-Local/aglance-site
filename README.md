@@ -59,7 +59,7 @@ The website itself does not use these endpoints (it uses the Blade pages and Liv
 | POST | `/api/licenses/activate` | licence key; `{org_name}` required. Marks the licence In Use |
 | POST | `/api/licenses/heartbeat` | licence key; console reports it is alive (records last seen) |
 | PUT | `/api/licenses/org` | licence key; `{org_name}` required. Changes the organization of an activated licence (owning console only) |
-| GET | `/api/auth/providers` | public; `{github: bool}` |
+| GET | `/api/auth/providers` | public; `{github: bool, google: bool}` |
 
 ### Management Console licences
 
@@ -104,8 +104,9 @@ composer install
 yarn install
 cp .env.example .env
 php artisan key:generate
-# Edit .env: DB_* settings, ADMIN_PASSWORD, APP_URL / FRONTEND_URL (e.g. http://localhost:8000)
+# Edit .env: DB_* settings, APP_URL / FRONTEND_URL (e.g. http://localhost:8000)
 php artisan migrate --seed
+php artisan atglance:make-admin    # asks for the admin email and password
 yarn build                         # or `yarn dev` while editing views/CSS (hot reload)
 php artisan serve                  # http://127.0.0.1:8000
 ```
@@ -114,7 +115,7 @@ Node is only needed to compile CSS/JS (Vite + Tailwind into `public/build`); not
 
 For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sqlite` and remove the other `DB_*` lines.
 
-- Admin panel: http://127.0.0.1:8000/admin. Log in with `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Admin panel: http://127.0.0.1:8000/admin. Log in with the account from `atglance:make-admin`. Then set up GitHub / Google sign-in and the CAPTCHA under **Settings**.
 - Local test user: set `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` in `.env` (with `APP_ENV=local`) and run `php artisan db:seed --class=TestUserSeeder`.
 - Tests: `php artisan test`.
 
@@ -122,9 +123,10 @@ For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sql
 
 ```bash
 cp .env.example .env
-# Set at least: APP_KEY (php artisan key:generate --show), DB_PASSWORD, ADMIN_PASSWORD
+# Set at least: APP_KEY (php artisan key:generate --show), DB_PASSWORD
 # Set APP_URL / FRONTEND_URL=http://localhost:8080
 docker compose up -d --build
+docker compose exec app php artisan atglance:make-admin
 ```
 
 - Site: http://localhost:8080
@@ -145,12 +147,20 @@ The image builds the CSS/JS in a Node stage, then serves everything from Laravel
 | `APP_KEY` | Laravel encryption key. Required. |
 | `APP_URL` | Site address. |
 | `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
-| `ADMIN_EMAIL`, `ADMIN_PASSWORD` | Admin account. The seeder creates it and re-syncs the password on every deploy. |
 | `FRONTEND_URL` | Public site address (defaults to `APP_URL`). Used in emails, the sitemap and the GitHub callback. |
 | `CORS_ORIGINS` | Extra allowed origins for the API, comma separated. Wildcards are never used. |
 | `SESSION_SECURE_COOKIE` | Set `true` in production (HTTPS). |
-| `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` | GitHub OAuth app (optional; can also be set in the admin panel) |
-| `GITHUB_REDIRECT_URI` | `<FRONTEND_URL>/auth/sso/github/callback` |
+
+These are **not** in `.env`; set them in the app:
+
+| What | Where |
+|---|---|
+| Admin account (first one, or lost password) | `php artisan atglance:make-admin` (asks for email + password; makes an existing user admin and resets the password). More admins: **Users** in the admin panel. |
+| GitHub sign-in | Admin panel → **Settings → GitHub login** |
+| Google sign-in | Admin panel → **Settings → Google login** |
+| CAPTCHA (Google reCAPTCHA **v3**) | Admin panel → **Settings → CAPTCHA**. Locked out by a wrong key: `php artisan atglance:captcha --off`. |
+
+Secrets are stored encrypted with `APP_KEY`; if `APP_KEY` changes they must be entered again.
 
 ## Adding a feature
 
@@ -159,10 +169,10 @@ The image builds the CSS/JS in a Node stage, then serves everything from Laravel
 - **New content type**: create a migration and model, then run `php artisan make:filament-resource Name --generate`, and read it in the page controller.
 - **New setting group**: subclass `App\Filament\Pages\SettingsPage`, and add a key constant to `App\Models\Setting`.
 
-## GitHub OAuth app
+## GitHub and Google sign-in
 
-In the GitHub OAuth app settings, set:
-- Homepage URL: `FRONTEND_URL`
-- Authorization callback URL: `<FRONTEND_URL>/auth/sso/github/callback`
+Each settings page lists the setup steps. Callback URLs:
+- GitHub OAuth app → Authorization callback URL: `<FRONTEND_URL>/auth/sso/github/callback` (`Auth\GithubController::callback`)
+- Google OAuth client (Web application) → Authorized redirect URI: `<FRONTEND_URL>/auth/sso/google/callback` (`Auth\GoogleController::callback`)
 
-That URL is handled by `Auth\GithubController::callback`, which signs the user in and sends admins to `/admin`.
+Both sign the user in and send admins to `/admin`. They never make anyone an admin. Google accounts are linked to an existing account only when Google says the email is verified.

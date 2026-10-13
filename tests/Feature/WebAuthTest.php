@@ -63,8 +63,6 @@ class WebAuthTest extends TestCase
 
     public function test_registering_with_the_admin_email_does_not_grant_admin(): void
     {
-        config(['atglance.admin_email' => 'boss@example.com']);
-
         $this->post('/register', ['email' => 'boss@example.com', 'password' => 'secret123', 'password_confirmation' => 'secret123']);
 
         $this->assertSame('user', User::firstWhere('email', 'boss@example.com')->role);

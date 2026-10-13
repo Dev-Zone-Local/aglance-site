@@ -51,7 +51,7 @@ echo "Deploy started $(date) — branch $BRANCH"
 
 step "Preflight: nginx must not point at the old React build"
 # The React SPA (frontend/) is gone. A vhost that still serves frontend/build would break the site.
-if grep -n "frontend/build" "$VHOST"; then
+if grep -n "frontend/build" "$VHOST" "$REWRITE" 2>/dev/null; then
     echo "The vhost above still references frontend/build. Remove those lines in aaPanel"
     echo "(Website → $DOMAIN → Config) so only 'root $APP_DIR/public;' remains, then re-run."
     exit 1
@@ -63,6 +63,10 @@ sudo -u "$APP_USER" mkdir -p /tmp/www-home
 step "Fix file ownership"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR" --from=root:root 2>/dev/null || true
 chown -R "$APP_USER:$APP_USER" "$APP_DIR/.git"
+# nginx (not the www user) must be able to enter the app folders and read public/; otherwise 403.
+chmod o+x "$APP_DIR"
+find "$APP_DIR/public" -type d ! -perm -o+rx -exec chmod o+rx {} + 2>/dev/null || true
+find "$APP_DIR/public" -type f ! -perm -o+r -exec chmod o+r {} + 2>/dev/null || true
 
 step "Pull latest code"
 OLD=$(as_app git rev-parse HEAD)
@@ -107,6 +111,11 @@ if artisan migrate:status --pending 2>/dev/null | grep -qE "Pending\s*$"; then
 fi
 artisan migrate --force
 artisan db:seed --force
+# The admin account is no longer seeded from .env; the first one is created by hand.
+ADMINS=$(artisan tinker --execute='echo App\Models\User::where("role", "admin")->count();' 2>/dev/null | tail -n 1 || echo "?")
+if [[ $ADMINS == 0 ]]; then
+    echo "WARNING: no admin account yet. Create one: cd $APP_DIR && sudo -u $APP_USER $PHP artisan atglance:make-admin"
+fi
 
 step "Laravel caches"
 artisan filament:assets
@@ -124,6 +133,11 @@ fi
 if ! grep -qE "^\s*root $APP_DIR/public/?;" "$VHOST"; then
     sed -i -E "s#^(\s*)root [^;]+;#\1root $APP_DIR/public;#" "$VHOST"
     echo "Restored web root to public/"; NGINX_CHANGED=1
+fi
+# Without index.php in the index list nginx answers "/" with 403 Forbidden.
+if ! grep -qE "^\s*index\s+index\.php" "$VHOST"; then
+    sed -i -E "s#^(\s*)index [^;]+;#\1index index.php index.html;#" "$VHOST"
+    echo "Set 'index index.php index.html;' in vhost"; NGINX_CHANGED=1
 fi
 # Laravel front controller: real files are served directly, everything else goes to index.php.
 LARAVEL_REWRITE='location / {
@@ -164,7 +178,15 @@ fi
 local_curl "https://$DOMAIN/sitemap.xml" | grep -q '<urlset' || { echo "sitemap.xml is not the Laravel sitemap"; FAIL=1; }
 local_curl "https://$DOMAIN/robots.txt" | grep -q "^Sitemap: https://$DOMAIN/sitemap.xml" \
     || { echo "robots.txt wrong (check FRONTEND_URL=https://$DOMAIN in .env)"; FAIL=1; }
-[[ $FAIL == 0 ]] || { echo "Health check failed"; exit 1; }
+if [[ $FAIL != 0 ]]; then
+    echo "Health check failed. Details for a 403 / 404 / 500:"
+    echo "--- vhost root/index/include lines ($VHOST)"; grep -nE "^\s*(root|index|include)\b" "$VHOST" || true
+    echo "--- URL rewrite ($REWRITE)"; cat "$REWRITE" 2>/dev/null || echo "(missing)"
+    echo "--- permissions"; namei -l "$APP_DIR/public/index.php" 2>/dev/null || ls -ld "$APP_DIR" "$APP_DIR/public" "$APP_DIR/public/index.php"
+    echo "--- nginx error log"; tail -n 15 "/www/wwwlogs/$DOMAIN.error.log" 2>/dev/null || true
+    echo "--- laravel.log"; tail -n 15 "$APP_DIR/storage/logs/laravel.log" 2>/dev/null || true
+    exit 1
+fi
 
 echo
 echo "🚀 Application deployed! $(as_app git log -1 --format='%h %s')"

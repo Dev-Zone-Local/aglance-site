@@ -1,27 +1,34 @@
 {{--
-    Google reCAPTCHA v2 checkbox inside the admin login form (App\Filament\Pages\Auth\Login).
-    wire:ignore keeps Livewire from wiping the widget on re-render. The token is passed to the
-    component's $captcha property (deferred, sent with "Sign in"); the component dispatches
-    "recaptcha-reset" after a failed try, because Google accepts each token only once.
+    Google reCAPTCHA v3 (invisible) for the admin login form (App\Filament\Pages\Auth\Login).
+    On "Sign in" it holds the submit, asks Google for a fresh token, puts it in the component's
+    $captcha property (deferred), then submits again so Filament's wire:submit runs as usual.
 --}}
 <div
     x-data
     x-init="
-        window.agAdminCaptchaDone = (token) => $wire.set('captcha', token, false);
-        window.agAdminCaptchaExpired = () => $wire.set('captcha', null, false);
-        window.addEventListener('recaptcha-reset', () => window.grecaptcha && window.grecaptcha.reset());
+        const form = $el.closest('form');
+        if (form && !form.dataset.recaptchaBound) {
+            form.dataset.recaptchaBound = '1';
+            form.addEventListener('submit', (event) => {
+                if (form.dataset.recaptchaReady === '1') { form.dataset.recaptchaReady = ''; return; }
+                if (!window.grecaptcha) return; // blocked script: the server says why
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                grecaptcha.ready(() => {
+                    grecaptcha.execute(@js(\App\Support\Captcha::siteKey()), { action: 'admin_login' }).then((token) => {
+                        $wire.set('captcha', token, false);
+                        form.dataset.recaptchaReady = '1';
+                        form.requestSubmit();
+                    });
+                });
+            }, true);
+        }
     "
 >
-    <div wire:ignore>
-        <div class="g-recaptcha"
-            data-sitekey="{{ config('services.recaptcha.site_key') }}"
-            data-callback="agAdminCaptchaDone"
-            data-expired-callback="agAdminCaptchaExpired"></div>
-    </div>
     @error('captcha')
-        <p style="margin-top: .375rem; font-size: .875rem; color: #C53030;">{{ $message }}</p>
+        <p style="font-size: .875rem; color: #C53030;">{{ $message }}</p>
     @enderror
     @once
-        <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+        <script src="https://www.google.com/recaptcha/api.js?render={{ \App\Support\Captcha::siteKey() }}"></script>
     @endonce
 </div>

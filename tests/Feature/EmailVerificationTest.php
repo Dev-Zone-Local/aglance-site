@@ -3,7 +3,6 @@
 namespace Tests\Feature;
 
 use App\Models\User;
-use Database\Seeders\AdminUserSeeder;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -45,6 +44,7 @@ class EmailVerificationTest extends TestCase
 
     public function test_github_signup_sends_verification_to_github_email(): void
     {
+        $this->enableGithubLogin();
         Notification::fake();
         Socialite::shouldReceive('driver->user')->andReturn((new SocialiteUser)->map([
             'id' => 99, 'nickname' => 'octo', 'name' => 'Octo', 'email' => 'Octo@Example.com', 'avatar' => null,
@@ -60,6 +60,7 @@ class EmailVerificationTest extends TestCase
 
     public function test_github_signup_without_email_sends_nothing(): void
     {
+        $this->enableGithubLogin();
         Notification::fake();
         Socialite::shouldReceive('driver->user')->andReturn((new SocialiteUser)->map([
             'id' => 100, 'nickname' => 'ghost', 'name' => null, 'email' => null, 'avatar' => null,
@@ -127,10 +128,4 @@ class EmailVerificationTest extends TestCase
             ->assertJsonPath('message', 'Email already verified');
     }
 
-    public function test_seeded_admin_is_verified(): void
-    {
-        $this->seed(AdminUserSeeder::class);
-
-        $this->assertTrue(User::firstWhere('email', config('atglance.admin_email'))->hasVerifiedEmail());
-    }
 }

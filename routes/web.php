@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\GithubController;
+use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
@@ -59,6 +60,10 @@ Route::get('/auth/github', [GithubController::class, 'redirect'])->name('auth.gi
 Route::get('/admin/auth/github', [GithubController::class, 'redirect'])->name('admin.auth.github');
 Route::get('/auth/sso/github/callback', [GithubController::class, 'callback'])
     ->middleware('throttle:10,1,web-github-callback')->name('auth.github.callback');
+// Google sign-in (website only). The callback path matches the redirect URI registered with Google.
+Route::get('/auth/google', [GoogleController::class, 'redirect'])->name('auth.google');
+Route::get('/auth/sso/google/callback', [GoogleController::class, 'callback'])
+    ->middleware('throttle:10,1,web-google-callback')->name('auth.google.callback');
 
 // Signed-in area.
 Route::middleware('auth')->prefix('dashboard')->group(function () {

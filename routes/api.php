@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ConsoleLicenseController;
 use App\Http\Controllers\Api\GithubAuthController;
 use App\Http\Controllers\Api\LicenseController;
 use App\Support\GithubOAuth;
+use App\Support\GoogleOAuth;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => ['service' => 'AtGlance API', 'ok' => true]);
@@ -25,7 +26,7 @@ Route::prefix('auth')->group(function () {
     Route::post('email/resend', [AuthController::class, 'resendVerification'])
         ->middleware(['auth:sanctum', 'throttle:3,1,resend-email']);
 
-    Route::get('providers', fn () => ['github' => GithubOAuth::enabled()]);
+    Route::get('providers', fn () => ['github' => GithubOAuth::enabled(), 'google' => GoogleOAuth::enabled()]);
     Route::get('github/start', [GithubAuthController::class, 'start']);
     Route::post('github/callback', [GithubAuthController::class, 'callback'])->middleware('throttle:10,1,github-callback');
 });
