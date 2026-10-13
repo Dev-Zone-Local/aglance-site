@@ -1,0 +1,37 @@
+[
+  {
+    "name": "Free",
+    "price": "$0",
+    "period": "forever",
+    "description": "Everything you need to run AtGlance inside your own boundary.",
+    "features": [
+      "Self-hosted Management Console",
+      "Unlimited registered systems",
+      "AtGlance CLI (Ubuntu / systemd)",
+      "RBAC (superadmin / admin / user)",
+      "Configuration backup & versioning",
+      "Database circuit breaker + queue resilience",
+      "PAT token authentication",
+      "Community support"
+    ],
+    "cta": "Sign up free",
+    "highlighted": true,
+    "order": 0
+  },
+  {
+    "name": "Enterprise",
+    "price": "Custom",
+    "period": "",
+    "description": "For organizations that need dedicated support and compliance assistance.",
+    "features": [
+      "Everything in Free",
+      "Priority security advisories",
+      "Compliance & audit assistance",
+      "Architecture review",
+      "SLA-backed support"
+    ],
+    "cta": "Talk to us",
+    "highlighted": false,
+    "order": 1
+  }
+]

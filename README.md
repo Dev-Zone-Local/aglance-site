@@ -1,217 +1,178 @@
-# AtGlance
+# AtGlance site
 
-AtGlance is a full-stack application with a FastAPI backend and React frontend, containerized with Docker and orchestrated using Docker Compose.
+Marketing site, documentation and account area for AtGlance. Everything is one Laravel app.
 
-## Overview
+- **Laravel 12** (PHP 8.2+): public pages, docs, sign-in, the user dashboard, the JSON API for the Management Console, and the admin CMS.
+- **Pages**: Blade views + Tailwind CSS. Interactive dashboard pages (Licences, Profile) are **Livewire** components; small UI bits (menus, copy buttons) use Alpine.js, which ships with Livewire.
+- **Admin CMS**: Filament 4 at `/admin`. Only users with role `admin` can use it.
+- **Database**: MySQL 8 (MariaDB 10.4+ also works). Tests use SQLite in memory.
+- **Auth**: Laravel session login, password reset, email verification, and GitHub SSO through Laravel Socialite.
 
-- **Backend**: FastAPI server with MongoDB integration for data persistence
-- **Frontend**: React application served via Nginx
-- **Database**: MongoDB for data storage
-- **Container Orchestration**: Docker Compose for local development and deployment
+## Layout
 
-## Prerequisites
+```
+app/
+  Http/Controllers/         SiteController (public pages), DashboardController, SitemapController
+  Http/Controllers/Auth/    Login, Register, PasswordReset, Github (web sign-in)
+  Http/Controllers/Api/     JSON API (console licence API, CMS, account)
+  Livewire/                 Licences, Profile (dashboard pages)
+  Support/                  LicenceManager, InstallCatalog, Downloads, Sitemap, Markdown, ...
+  Models/                   User, License, PricingPlan, Faq, Doc, Page, Setting
+  Filament/                 Admin panel resources and settings pages
+resources/
+  views/site/               Public pages (home, product, cli, console, pricing, docs, ...)
+  views/auth/               Sign in, sign up, forgot / reset password
+  views/dashboard/          Overview and install wizard
+  views/livewire/           Licences and Profile
+  views/components/         Layouts and shared Blade components (x-button, x-card, x-hero, x-glyph icons, ...)
+  css/app.css, js/app.js    Tailwind entry and Alpine components (built by Vite into public/build)
+config/atglance.php         Admin account, site URL, plans
+routes/web.php              Website, sign-in and dashboard routes
+routes/api.php              /api routes
+tests/Feature/              Pages, auth, dashboard, licences, API and admin panel tests
+deploy/                     aaPanel deploy scripts and the static download pages for app.atglance.live
+docker/                     Laravel image and boot scripts
+docker-compose.yml          mysql + app (Laravel), exposed on :8080
+```
 
-- Docker and Docker Compose installed on your system
-- Node.js 20+ (for local frontend development)
-- Python 3.10+ (for local backend development)
+## JSON API
 
-## Quick Start
+The website itself does not use these endpoints (it uses the Blade pages and Livewire). The Management Console uses the licence endpoints marked "licence key"; the others are kept for scripts and integrations.
 
-### 1. Set up environment variables
+| Method | Path | Auth |
+|---|---|---|
+| GET | `/api` | public (health) |
+| POST | `/api/auth/register`, `/api/auth/login`, `/api/auth/logout` | public (CSRF) |
+| GET | `/api/auth/me` | logged in |
+| POST | `/api/auth/forgot-password`, `/api/auth/reset-password` | public; the reset email links to the page `/reset-password?token=&email=` (valid 60 min, single use) |
+| GET | `/api/auth/github/start` | public; returns `{auth_url}` |
+| POST | `/api/auth/github/callback?code=&state=` | public; state is verified against the session |
+| GET | `/api/cms/pricing`, `/api/cms/faqs`, `/api/cms/docs`, `/api/cms/docs/{slug}`, `/api/cms/contact`, `/api/cms/pages/{slug}` | public |
+| GET | `/api/downloads` | logged in |
+| GET / POST | `/api/licenses` | logged in; list (with plan + limit) / request a licence. The request is saved as under review, the key is returned, and a 5-digit verification code is emailed. |
+| POST | `/api/licenses/{id}/confirm` | logged in; `{code}`. Confirms the request and verifies the email |
+| POST | `/api/licenses/{id}/confirm-code` | logged in; resends the confirmation code |
+| GET | `/api/licenses/{id}/key` | logged in; shows the key again, for 30 minutes after creation |
+| POST | `/api/licenses/{id}/revoke-code` | logged in; emails a 5-digit code to confirm revoking |
+| DELETE | `/api/licenses/{id}` | logged in; revoke. Body: `{password}` or `{code}` |
+| POST | `/api/licenses/verify` | licence key; read-only check. With `org_name` in the body it also marks the licence **In Use** for that organization |
+| POST | `/api/licenses/activate` | licence key; `{org_name}` required. Marks the licence In Use |
+| POST | `/api/licenses/heartbeat` | licence key; console reports it is alive (records last seen) |
+| PUT | `/api/licenses/org` | licence key; `{org_name}` required. Changes the organization of an activated licence (owning console only) |
+| GET | `/api/auth/providers` | public; `{github: bool, google: bool}` |
 
-Copy the example environment file and update with your values:
+### Management Console licences
+
+Users create licences on the dashboard (`/dashboard/licences`). The key is shown right away and can be viewed again for **30 minutes** after creation. A 5-digit code is emailed; the licence works once the user enters that code (status `unverified`, then `ready`). If a user cannot receive the code (e.g. a test mailbox), an admin can **Approve** the licence under **Admin → Licences** to skip the code step. **Admin approval is otherwise optional.** It applies only to users flagged with **"Licences need admin approval"** on their admin edit page, e.g. test accounts. Their verified licences stay `under_review` until an admin approves or declines them under **Admin → Licences**, and the user is emailed either way. Each licence works on **exactly one** Management Console instance. On the Free plan, that means one licence and one console.
+
+The Management Console calls three endpoints, each with `Authorization: Bearer <licence key>` and `Accept: application/json`. `activate` and `heartbeat` also take a JSON body `{"org_name": "...", "instance_id": "...", "hostname": "...", "version": "..."}`. `org_name` is required to activate: the licence is marked In Use only once the console reports its organization, and users see that organization name on the dashboard.
+
+- `instance_id` is recommended (if omitted, the console is identified by `hostname`, else by its IP address): 8–100 characters from `A-Z a-z 0-9 . _ : -`. The console must generate it once, store it permanently (for example a UUID in its database), and send the same value on every call.
+- `hostname` and `version` are optional. They are shown on the user's dashboard.
+
+| Call | When the console makes it | Results |
+|---|---|---|
+| `POST /api/licenses/verify` | Optional pre-check during install | `200` with `status` `available` or `in_use` (plus `console` details); `403` with `status` `unverified` (code not entered) or `under_review` (approval required); `401` for a bad key |
+| `POST /api/licenses/activate` | Once, when the licence key is entered during install | `201` on first activation (the licence becomes **In Use**); `200` when the same `instance_id` activates again, for example after a reinstall; `403` with `status` `unverified` or `under_review` when the licence is not usable yet; `409` with `status: in_use_elsewhere` when another console owns the licence; `401` for a bad or revoked key |
+| `POST /api/licenses/heartbeat` | Periodically, for example hourly, and on startup | `200` records **last seen**; `409` with `status` `not_activated` or `in_use_elsewhere`; `401` once the licence is revoked. On `401` or `409` the console should stop and ask for a new licence. |
 
 ```bash
-cp .env.docker.example .env
+curl -X POST https://<site>/api/licenses/activate   -H "Accept: application/json" -H "Content-Type: application/json"   -H "Authorization: Bearer <licence key>"   -d '{"instance_id":"8f1c2d9e-...","hostname":"ops-01","version":"1.2.0"}'
 ```
 
-Edit `.env` and configure:
-- `JWT_SECRET` - Secure secret for JWT token signing (required)
-- `ADMIN_PASSWORD` - Password for admin account (required)
-- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_REDIRECT_URI` - Optional, for GitHub OAuth
-- Other optional settings (see `.env` file for defaults)
+A successful response looks like `{"valid": true, "status": "in_use", "user": {id, email, name}, "license": {name}, "plan": "free", "console": {instance_id, hostname, version, activated_at, last_seen_at}}`.
 
-### 2. Build and run with Docker Compose
+- The dashboard shows each licence as **Pending**, **Under review** (flagged users only), **Ready** or **In Use**, with the console hostname and version, and "Last seen" from the latest heartbeat.
+- A licence can't be moved to another console. Revoke it (password or emailed code), then create a new one. Revoking also deletes the activation, so the old console gets `401` on its next heartbeat.
+- Licences expire **one year** after creation (`expires_at`); expired keys get `403` with `status: expired`. Licences created before expiry was added have no `expires_at` and never expire. Keys are Sanctum personal access tokens with the `console:license` ability. They are stored hashed and shown to users as `atg_...` (without Sanctum's `<id>|` prefix; both forms authenticate). Activations are stored in the `license_activations` table.
+- **Plan limits:** each user has a `plan` (default `free`). The limits are set in `config/atglance.php` (`plans`): Free allows 1 licence and Enterprise is unlimited. Admins change a user's plan in Filament, under Users. When a user is at the limit, creating another licence returns `403`.
+
+## Admin content
+
+- **Downloads** (Settings → Downloads): publish CLI / Console releases. Each release has a version, an optional title, a type (Major, Feature, Bug fix, Security, Beta), a release date, a short summary and Markdown release notes. The last 20 releases per product are kept and shown on the public **/releases** page (filter with `?product=cli` or `?product=console`). Product pages and the dashboard link to the latest release notes, and the optional release email includes the summary and a link to them.
+- **Product pages** (Content → Product pages, `/admin/product-pages`): edit the public `/console` and `/cli` pages. Each product has tabs for the **Hero** (badge, title, subtitle, buttons, check marks, hero screenshot), **Feature sections** (icon, heading, text, bullets, screenshot and caption; drag to reorder, duplicate or hide), **More features** (cards without screenshots), **Gallery** (extra screenshots) and **Page blocks** (show or hide the built-in architecture, install and other blocks). Uploads go to `storage/app/public/showcase`; replaced or removed images are deleted on save. **Reset to defaults** restores the built-in text from `App\Support\ProductShowcase`. Sections without a screenshot show an empty window frame; signed-in admins also see what to capture.
+- **Known problems** (Content → Known problems, `/admin/known-problems`): add, edit, duplicate, reorder or delete known problems. Each has a product tag (CLI or Management Console), optional platforms (Linux, Windows, ...) and free tags, a "What you see" text and a Markdown solution. Published ones appear as an FAQ on the public **/known-problems** page (filter with `?product=cli` or `?product=console`, link to one with `#slug`), behind the **Quick fixes** button on each product card in `/dashboard/install`, and on the right side of the "Where do you want to run it?" and install steps pages.
+- **Contact form / Support inbox**: the form on `/contact` saves every message under **Support → Messages** (`/admin/messages`; tabs Open / New / In progress / Resolved / Spam, status and internal notes, Reply by email) and emails it to the address in **Settings → Contact → Form messages go to** (default `support@atglance.live`), with Reply-To set to the sender. The sender gets a confirmation email with a reference like `#00042`. Emails need working SMTP (**Settings → Mail**); if sending fails the message is still saved. The form has a honeypot field and is limited to 5 messages per 10 minutes per IP. Link to it with `/contact?topic=bug&product=cli#contact-form`.
+- **Contact** (Settings → Contact): page heading and intro, response time, general / sales / support / security / billing / press emails, phone, support hours, company name, address and map link, and social links (GitHub, X, LinkedIn, YouTube, Discord, Slack, status page). Empty fields are hidden. Toggles control whether the address is shown and whether social icons appear in the site footer.
+
+## Local development (no Docker)
+
+You need PHP 8.2+ with `intl`, `pdo_mysql` and `pdo_sqlite`, Composer 2, Node 20+ with Yarn, and MySQL. XAMPP works.
 
 ```bash
-docker compose up -d --build
-```
-
-The application will be available at `http://localhost:8080`
-
-### 3. Stop the application
-
-```bash
-docker compose down
-```
-
-## Project Structure
-
-```
-.
-├── backend/              # FastAPI application
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   ├── server.py
-│   └── tests/
-├── frontend/             # React application
-│   ├── Dockerfile
-│   ├── nginx.conf
-│   ├── package.json
-│   ├── public/
-│   ├── src/
-│   │   ├── components/   # React components
-│   │   ├── pages/        # Page components
-│   │   ├── lib/          # Utilities and API client
-│   │   └── hooks/        # Custom React hooks
-│   └── plugins/          # Webpack plugins (health checks)
-├── docker-compose.yml    # Docker Compose configuration
-├── .env                  # Environment variables (create from .env.docker.example)
-└── design_guidelines.json # Design system configuration
-```
-
-## Environment Variables
-
-### Backend Configuration
-
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `MONGO_URL` | No | `mongodb://mongo:27017` | MongoDB connection string |
-| `DB_NAME` | No | `atglance_db` | Database name |
-| `JWT_SECRET` | **Yes** | - | Secret key for JWT signing |
-| `ADMIN_EMAIL` | No | `admin@atglance.io` | Default admin email |
-| `ADMIN_PASSWORD` | **Yes** | - | Default admin password |
-| `GITHUB_CLIENT_ID` | No | - | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | No | - | GitHub OAuth client secret |
-| `GITHUB_REDIRECT_URI` | No | - | GitHub OAuth redirect URI |
-| `FRONTEND_URL` | No | `http://localhost:8080` | Frontend URL for redirects |
-| `CORS_ORIGINS` | No | - | CORS allowed origins |
-
-### Frontend Configuration
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `REACT_APP_BACKEND_URL` | `/api` | Backend API URL (empty = same-origin proxy) |
-
-## Service Details
-
-### MongoDB
-- **Image**: mongo:7
-- **Port**: 27017 (internal)
-- **Health Check**: Ping command every 15 seconds
-- **Volume**: `mongo_data` persists database across restarts
-
-### Backend
-- **Build**: From `./backend/Dockerfile`
-- **Port**: 8000 (internal, proxied through Nginx)
-- **Dependencies**: Requires MongoDB to be healthy
-- **Environment**: All variables from `.env` are passed to the container
-
-### Frontend
-- **Build**: From `./frontend/Dockerfile`
-- **Port**: 80 (Nginx)
-- **External Port**: Configurable via `FRONTEND_PORT` env variable (default: 8080)
-- **Dependencies**: Requires backend to be running
-
-## Local Development
-
-### Backend Development
-
-```bash
-cd backend
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Run the server
-python server.py
-```
-
-### Frontend Development
-
-```bash
-cd frontend
-
-# Install dependencies
+composer install
 yarn install
-
-# Start development server
-yarn start
+cp .env.example .env
+php artisan key:generate
+# Edit .env: DB_* settings, APP_URL / FRONTEND_URL (e.g. http://localhost:8000)
+php artisan migrate --seed
+php artisan atglance:make-admin    # asks for the admin email and password
+yarn build                         # or `yarn dev` while editing views/CSS (hot reload)
+php artisan serve                  # http://127.0.0.1:8000
 ```
 
-## Docker Build
+Node is only needed to compile CSS/JS (Vite + Tailwind into `public/build`); nothing JavaScript runs on the server.
 
-### Building the Backend
+For quick local work you can use SQLite instead of MySQL. Set `DB_CONNECTION=sqlite` and remove the other `DB_*` lines.
+
+- Admin panel: http://127.0.0.1:8000/admin. Log in with the account from `atglance:make-admin`. Then set up GitHub / Google sign-in and the CAPTCHA under **Settings**.
+- Local test user: set `TEST_USER_EMAIL` / `TEST_USER_PASSWORD` in `.env` (with `APP_ENV=local`) and run `php artisan db:seed --class=TestUserSeeder`.
+- Tests: `php artisan test`.
+
+## Docker
+
 ```bash
-docker build -f backend/Dockerfile -t atglance-backend:latest ./backend
+cp .env.example .env
+# Set at least: APP_KEY (php artisan key:generate --show), DB_PASSWORD
+# Set APP_URL / FRONTEND_URL=http://localhost:8080
+docker compose up -d --build
+docker compose exec app php artisan atglance:make-admin
 ```
 
-### Building the Frontend
-```bash
-docker build -f frontend/Dockerfile -t atglance-frontend:latest ./frontend
-```
+- Site: http://localhost:8080
+- Admin: http://localhost:8080/admin
 
-## Troubleshooting
+The image builds the CSS/JS in a Node stage, then serves everything from Laravel (php-fpm + nginx). On boot the `app` container:
+- runs migrations and caches config, routes and views (serversideup `AUTORUN_ENABLED`);
+- runs `db:seed` (`docker/entrypoint.d/60-atglance-seed.sh`).
 
-### Port Already in Use
-If port 8080 is already in use, change it:
-```bash
-FRONTEND_PORT=3000 docker compose up -d
-```
+## Deploying on aaPanel
 
-### Database Connection Issues
-Check MongoDB is running:
-```bash
-docker logs atglance-mongo
-```
+`deploy/atglance.live.sh` and `deploy/dev.atglance.live.sh` pull the branch, run composer, build CSS/JS (`yarn build`), migrate, cache, and make sure nginx sends every path to `public/index.php` (the aaPanel URL-rewrite file gets `try_files $uri $uri/ /index.php?$query_string;`). They finish with a health check.
 
-### Backend Startup Issues
-View backend logs:
-```bash
-docker logs atglance-backend
-```
+## Environment variables
 
-### Frontend Build Failures
-Check Node.js version requirements:
-```bash
-node --version  # Should be 20+
-yarn --version
-```
+| Variable | Purpose |
+|---|---|
+| `APP_KEY` | Laravel encryption key. Required. |
+| `APP_URL` | Site address. |
+| `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` | MySQL connection |
+| `FRONTEND_URL` | Public site address (defaults to `APP_URL`). Used in emails, the sitemap and the GitHub callback. |
+| `CORS_ORIGINS` | Extra allowed origins for the API, comma separated. Wildcards are never used. |
+| `SESSION_SECURE_COOKIE` | Set `true` in production (HTTPS). |
 
-## Testing
+These are **not** in `.env`; set them in the app:
 
-### Backend Tests
-```bash
-cd backend
-pytest
-```
+| What | Where |
+|---|---|
+| Admin account (first one, or lost password) | `php artisan atglance:make-admin` (asks for email + password; makes an existing user admin and resets the password). More admins: **Users** in the admin panel. |
+| GitHub sign-in | Admin panel → **Settings → GitHub login** |
+| Google sign-in | Admin panel → **Settings → Google login** |
+| CAPTCHA (Google reCAPTCHA **v3**) | Admin panel → **Settings → CAPTCHA**. Locked out by a wrong key: `php artisan atglance:captcha --off`. |
 
-### Running Tests in Docker
-```bash
-docker compose run backend pytest
-```
+Secrets are stored encrypted with `APP_KEY`; if `APP_KEY` changes they must be entered again.
 
-## Health Checks
+## Adding a feature
 
-- **MongoDB**: Responds to mongosh ping command every 15 seconds
-- **Frontend**: Exposed via `/health` endpoint from Nginx
-- **Backend**: Check logs for startup confirmation
+- **New public page**: add a Blade view in `resources/views/site`, a method in `SiteController`, a route in `routes/web.php`, and (if it should be indexed) a line in `App\Support\Sitemap`.
+- **New dashboard page**: a controller + view, or a Livewire component in `app/Livewire` for interactive forms. Put it under the `auth` route group.
+- **New content type**: create a migration and model, then run `php artisan make:filament-resource Name --generate`, and read it in the page controller.
+- **New setting group**: subclass `App\Filament\Pages\SettingsPage`, and add a key constant to `App\Models\Setting`.
 
-## Networking
+## GitHub and Google sign-in
 
-All services communicate through the `atglance` Docker network:
-- Frontend connects to backend via `http://atglance-backend:8000`
-- Backend connects to MongoDB via `mongodb://mongo:27017`
+Each settings page lists the setup steps. Callback URLs:
+- GitHub OAuth app → Authorization callback URL: `<FRONTEND_URL>/auth/sso/github/callback` (`Auth\GithubController::callback`)
+- Google OAuth client (Web application) → Authorized redirect URI: `<FRONTEND_URL>/auth/sso/google/callback` (`Auth\GoogleController::callback`)
 
-## Additional Notes
-
-- All containers automatically restart unless stopped (`restart: unless-stopped`)
-- MongoDB data is persisted in the `mongo_data` volume
-- Nginx acts as a reverse proxy, proxying `/api` requests to the backend
-- The frontend is built as a static React app and served via Nginx
-
-## Documentation
-
-- See `design_guidelines.json` for design system specifications
-- See `frontend/README.md` for frontend-specific documentation
-- See `DOCKER.md` for detailed Docker configuration notes
+Both sign the user in and send admins to `/admin`. They never make anyone an admin. Google accounts are linked to an existing account only when Google says the email is verified.

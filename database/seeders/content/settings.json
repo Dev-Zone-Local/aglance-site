@@ -1,0 +1,19 @@
+{
+  "contact": {
+    "email": "info@atglance.live",
+    "sales_email": "sales@atglance.live",
+    "support_email": "support@atglance.live",
+    "address": "Everything inside your boundaries.",
+    "github": "https://github.com/atglance-app",
+    "twitter": "#"
+  },
+  "downloads": {
+    "cli_url": "http://app.atglance.live/cli/",
+    "cli_version": "1.0.0",
+    "cli_checksum": "",
+    "console_url": "http://app.atglance.live/console/",
+    "console_version": "1.0.0",
+    "console_checksum": "",
+    "cli_install_command": "curl -sSL https://app.atglance.live/cli/install.sh | sudo bash"
+  }
+}

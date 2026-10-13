@@ -1,0 +1,180 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * AtGlance design system (design-doc.md). Same tokens as the Management Console
+ * (atGlance-managementGUI/composer/public/css/atglance.css) so both look like one product.
+ */
+:root {
+    --ag-sky: #4cc9ff;
+    --ag-teal: #2cb7d9;
+    --ag-mint: #71f7d4;
+    --ag-ink: #14171b;
+    --ag-bg: #eef1f4;
+    --ag-frame: rgba(255, 255, 255, 0.55);
+    --ag-surface: #f4f6f8;
+    --ag-line: #e6e9ee;
+    --ag-muted: #8a9099;
+    --ag-subtle: #5b626b;
+    --ag-shadow: 0 8px 30px rgba(17, 20, 24, 0.06);
+    --ag-shadow-strong: 0 12px 40px rgba(17, 20, 24, 0.12);
+    --ag-font: "Neue Haas Grotesk Text", "Inter", "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
+@layer base {
+    html {
+        color-scheme: light;
+    }
+    body {
+        margin: 0;
+        font-family: var(--ag-font);
+        font-size: 14px;
+        color: var(--ag-ink);
+        /* Sky glow top-right, mint glow bottom-left, pale background; fixed while scrolling. */
+        background:
+            radial-gradient(900px 520px at 100% 0%, rgba(76, 201, 255, 0.22) 0%, rgba(76, 201, 255, 0) 65%),
+            radial-gradient(900px 600px at 0% 100%, rgba(113, 247, 212, 0.35) 0%, rgba(113, 247, 212, 0) 60%),
+            var(--ag-bg);
+        background-attachment: fixed;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    h1, h2, h3, h4 {
+        font-weight: 500;
+        letter-spacing: -0.02em;
+    }
+    code, pre, .font-mono {
+        font-family: "JetBrains Mono", ui-monospace, "Menlo", monospace;
+    }
+    ::selection {
+        background: var(--ag-mint);
+        color: var(--ag-ink);
+    }
+    [x-cloak] {
+        display: none !important;
+    }
+}
+
+/* ---- Layout: frosted frame around all page content ---- */
+.ag-frame {
+    max-width: 1680px;
+    margin: 24px auto;
+    padding: 20px 24px 8px;
+    background: var(--ag-frame);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 28px;
+    box-shadow: var(--ag-shadow);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    min-height: calc(100vh - 48px);
+}
+@media (max-width: 900px) {
+    .ag-frame {
+        margin: 0;
+        border-radius: 0;
+        padding: 14px;
+        min-height: 100vh;
+    }
+}
+
+/* ---- Dark ink hero / banner with mint + sky corner glows ---- */
+.ag-hero {
+    position: relative;
+    overflow: hidden;
+    background: var(--ag-ink);
+    color: #fff;
+    border-radius: 20px;
+}
+.ag-hero::after {
+    content: "";
+    position: absolute;
+    right: -120px;
+    top: -120px;
+    width: 360px;
+    height: 360px;
+    background: radial-gradient(circle, rgba(76, 201, 255, 0.35) 0%, rgba(76, 201, 255, 0) 70%);
+    pointer-events: none;
+}
+.ag-hero::before {
+    content: "";
+    position: absolute;
+    left: -140px;
+    bottom: -160px;
+    width: 420px;
+    height: 420px;
+    background: radial-gradient(circle, rgba(113, 247, 212, 0.35) 0%, rgba(113, 247, 212, 0) 70%);
+    pointer-events: none;
+}
+.ag-hero > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ---- Shared form control ---- */
+@layer components {
+    .ag-input {
+        @apply w-full rounded-input border border-transparent bg-ag-surface px-3.5 py-[11px] text-sm text-ag-ink placeholder:text-ag-muted transition focus:border-ag-mint focus:bg-white focus:shadow-ag-focus focus:outline-none;
+    }
+    .ag-label {
+        @apply mb-1.5 block text-[13px] font-medium text-ag-subtle;
+    }
+    .ag-link {
+        @apply font-medium text-ag-teal-text hover:underline underline-offset-4;
+    }
+}
+
+/* ---- Terminal cursor ---- */
+.cursor::after {
+    content: "▋";
+    display: inline-block;
+    margin-left: 2px;
+    color: var(--ag-mint);
+    animation: blink 1s steps(1) infinite;
+}
+@keyframes blink {
+    50% { opacity: 0; }
+}
+
+/* ---- Card hover lift ---- */
+.lift {
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+.lift:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--ag-shadow-strong);
+}
+
+/* ---- Markdown content (docs / static pages / install steps) ---- */
+.prose-atg h1 { @apply text-[30px] font-medium tracking-heading text-ag-ink mt-2 mb-6; }
+.prose-atg h2 { @apply text-[22px] font-medium tracking-heading text-ag-ink mt-10 mb-4; }
+.prose-atg h3 { @apply text-[17px] font-medium text-ag-ink mt-8 mb-3; }
+.prose-atg p { @apply text-ag-subtle leading-relaxed my-3 text-[15px]; }
+.prose-atg ul { @apply list-disc pl-6 space-y-1 text-ag-subtle my-3; }
+.prose-atg ol { @apply list-decimal pl-6 space-y-1 text-ag-subtle my-3; }
+.prose-atg a { @apply text-ag-teal-text underline-offset-4 hover:underline; }
+.prose-atg code { @apply bg-ag-surface px-1.5 py-0.5 rounded-md text-ag-ink text-[13px]; }
+.prose-atg pre { @apply bg-ag-ink rounded-input p-4 overflow-x-auto text-[13px] my-4; }
+.prose-atg pre code { @apply bg-transparent p-0 text-[#e6e9ee]; }
+.prose-atg table { @apply w-full my-4 text-sm; }
+.prose-atg th { @apply text-left px-4 py-2.5 bg-ag-surface text-ag-muted text-xs font-medium; }
+.prose-atg td { @apply px-4 py-3 border-b border-ag-line text-ag-subtle; }
+.prose-atg blockquote { @apply border-l-2 border-ag-mint pl-4 italic text-ag-subtle my-4; }
+.prose-atg hr { @apply border-ag-line my-6; }
+.prose-atg strong { @apply text-ag-ink font-medium; }
+.prose-atg > :first-child { margin-top: 0; }
+
+/* ---- Motion: fade + 6px rise, max 0.3s ---- */
+@keyframes ag-fade {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.rise {
+    animation: ag-fade 0.25s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+    .rise, .cursor::after { animation: none; }
+    .lift, .lift:hover { transition: none; transform: none; }
+}

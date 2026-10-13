@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtGlance Downloads</title>
+    <meta name="description" content="Download the AtGlance Management Console and CLI agent: installers, updaters and packages.">
+    <meta name="theme-color" content="#EEF1F4">
+    <link rel="icon" href="https://atglance.live/branding/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://atglance.live/branding/favicon-32.png">
+    <link rel="apple-touch-icon" href="https://atglance.live/branding/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #14171b;
+            --text: #14171b;
+            --muted: #6b7280;
+            --subtle: #4b5563;
+            --bg: #eef1f4;
+            --card: #ffffff;
+            --surface: #f4f6f8;
+            --teal: #0f9b8e;
+            --mint: #71f7d4;
+            --shadow: 0 8px 30px rgba(17, 20, 24, 0.06);
+            --shadow-hover: 0 14px 40px rgba(17, 20, 24, 0.10);
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #eef1f4;
+                --muted: #9aa3ad;
+                --subtle: #c4cad1;
+                --bg: #0e1013;
+                --card: #171a1f;
+                --surface: #1f232a;
+                --teal: #5ff0c9;
+                --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+                --shadow-hover: 0 14px 40px rgba(0, 0, 0, 0.5);
+            }
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(60% 50% at 100% 0%, rgba(76, 201, 255, 0.16), transparent 70%),
+                radial-gradient(50% 40% at 0% 100%, rgba(113, 247, 212, 0.16), transparent 70%),
+                var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; }
+        .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+        header { padding: 24px 0; }
+        header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .brand { display: inline-flex; align-items: center; }
+        .brand img { height: 34px; width: auto; display: block; }
+        .nav-link {
+            font-size: 14px; font-weight: 500; text-decoration: none; color: var(--subtle);
+            padding: 9px 16px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow);
+        }
+        .nav-link:hover { color: var(--text); }
+        .nav-link:focus-visible, .product:focus-visible { outline: 2px solid var(--teal); outline-offset: 3px; }
+
+        .hero { padding: 32px 0 28px; }
+        .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+        h1 { font-size: clamp(28px, 4.5vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
+        .lead { font-size: 16px; line-height: 1.6; color: var(--subtle); max-width: 660px; margin: 0; }
+
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+        .card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); min-width: 0; }
+
+        .product { display: flex; flex-direction: column; text-decoration: none; transition: transform .15s ease, box-shadow .15s ease; }
+        .product:hover { transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+        .icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 48px; height: 48px; border-radius: 14px; margin-bottom: 16px;
+            background: var(--ink); color: var(--mint);
+        }
+        .product h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+        .product p { font-size: 14px; line-height: 1.6; color: var(--subtle); margin: 6px 0 16px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; padding: 0; list-style: none; }
+        .chips li { font-size: 12px; font-weight: 500; color: var(--subtle); background: var(--surface); padding: 4px 10px; border-radius: 999px; }
+        .go { margin-top: auto; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: var(--teal); }
+        .product:hover .go svg { transform: translateX(2px); }
+        .go svg { transition: transform .15s ease; }
+
+        .info { margin-top: 20px; }
+        .info h2 { font-size: 16px; font-weight: 600; margin: 0 0 16px; }
+        .flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 0; padding: 0; list-style: none; counter-reset: s; }
+        .flow li { counter-increment: s; font-size: 14px; line-height: 1.6; color: var(--subtle); }
+        .flow li::before {
+            content: counter(s); display: flex; align-items: center; justify-content: center;
+            width: 26px; height: 26px; margin-bottom: 8px; border-radius: 999px;
+            background: var(--ink); color: var(--mint); font-size: 13px; font-weight: 600;
+        }
+        .flow b { display: block; color: var(--text); font-weight: 600; margin-bottom: 2px; }
+        .flow a { color: var(--teal); }
+
+        footer { padding: 36px 0 40px; font-size: 13px; color: var(--muted); }
+        footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+        footer a { color: var(--muted); text-decoration: none; }
+        footer a:hover { color: var(--text); }
+
+        @media (max-width: 760px) {
+            .grid, .flow { grid-template-columns: 1fr; }
+            .hero { padding-top: 16px; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .product, .go svg { transition: none; }
+            .product:hover { transform: none; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <a class="brand" href="https://atglance.live/" aria-label="AtGlance home">
+            <img src="https://atglance.live/branding/atglance-logo.png" alt="AtGlance" height="34">
+        </a>
+        <a class="nav-link" href="https://atglance.live/">atglance.live</a>
+    </div>
+</header>
+
+<main class="wrap">
+    <section class="hero">
+        <p class="eyebrow">Downloads</p>
+        <h1>Get AtGlance running</h1>
+        <p class="lead">AtGlance has two parts: the Management Console you host for your organization, and the CLI agent on each Linux server you want to watch. Pick what you need to install or update.</p>
+    </section>
+
+    <div class="grid">
+        <a class="card product" href="https://app.atglance.live/console/">
+            <span class="icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2"/><rect x="2" y="14" width="20" height="8" rx="2"/><path d="M6 6h.01"/><path d="M6 18h.01"/></svg>
+            </span>
+            <h2>Management Console</h2>
+            <p>Self-hosted web console and API, running in Docker. Install it once per organization.</p>
+            <ul class="chips"><li>Linux</li><li>Windows</li><li>Installer</li><li>Updater</li></ul>
+            <span class="go">Console downloads
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+        </a>
+
+        <a class="card product" href="https://app.atglance.live/cli/">
+            <span class="icon" aria-hidden="true">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 17 6-6-6-6"/><path d="M12 19h8"/></svg>
+            </span>
+            <h2>CLI agent</h2>
+            <p>Lightweight agent for Ubuntu and Debian hosts. Backs up service configs and reports to your console.</p>
+            <ul class="chips"><li>Linux</li><li>.deb package</li><li>Installer</li><li>Updater</li></ul>
+            <span class="go">CLI downloads
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+            </span>
+        </a>
+    </div>
+
+    <section class="card info">
+        <h2>How it fits together</h2>
+        <ol class="flow">
+            <li><b>Get a licence</b>Create one on your <a href="https://atglance.live/dashboard/licences">AtGlance dashboard</a> and enter the emailed code.</li>
+            <li><b>Install the console</b>Run the <a href="https://app.atglance.live/console/">console installer</a> and paste the licence key.</li>
+            <li><b>Add your servers</b>Install the <a href="https://app.atglance.live/cli/">CLI agent</a> on each host and register it with the console.</li>
+        </ol>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>&copy; <span id="year">2026</span> AtGlance</span>
+        <span>
+            <a href="https://atglance.live/docs">Docs</a> &nbsp;·&nbsp;
+            <a href="https://atglance.live/dashboard/install">Guided install</a> &nbsp;·&nbsp;
+            <a href="https://atglance.live/contact">Contact</a>
+        </span>
+    </div>
+</footer>
+
+<script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>

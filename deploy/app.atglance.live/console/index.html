@@ -1,0 +1,294 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AtGlance Management Console Downloads</title>
+    <meta name="description" content="Install or update the AtGlance Management Console on Linux or Windows.">
+    <meta name="theme-color" content="#EEF1F4">
+    <link rel="icon" href="https://atglance.live/branding/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="https://atglance.live/branding/favicon-32.png">
+    <link rel="apple-touch-icon" href="https://atglance.live/branding/apple-touch-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --ink: #14171b;
+            --text: #14171b;
+            --muted: #6b7280;
+            --subtle: #4b5563;
+            --bg: #eef1f4;
+            --card: #ffffff;
+            --surface: #f4f6f8;
+            --line: #e6e9ee;
+            --teal: #0f9b8e;
+            --mint: #71f7d4;
+            --gradient: linear-gradient(135deg, #71f7d4 0%, #4cc9ff 100%);
+            --gradient-hover: linear-gradient(135deg, #5ff0c9 0%, #2fbaf2 100%);
+            --shadow: 0 8px 30px rgba(17, 20, 24, 0.06);
+            --code-bg: #14171b;
+            --code-text: #e6e9ee;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --text: #eef1f4;
+                --muted: #9aa3ad;
+                --subtle: #c4cad1;
+                --bg: #0e1013;
+                --card: #171a1f;
+                --surface: #1f232a;
+                --line: #2a2f37;
+                --teal: #5ff0c9;
+                --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+                --code-bg: #0a0c0e;
+            }
+        }
+        * { box-sizing: border-box; }
+        html, body { margin: 0; }
+        body {
+            min-height: 100vh;
+            font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(60% 50% at 100% 0%, rgba(76, 201, 255, 0.16), transparent 70%),
+                radial-gradient(50% 40% at 0% 100%, rgba(113, 247, 212, 0.16), transparent 70%),
+                var(--bg);
+            -webkit-font-smoothing: antialiased;
+        }
+        a { color: inherit; }
+        .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+
+        header { padding: 24px 0; }
+        header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        .brand { display: inline-flex; align-items: center; }
+        .brand img { height: 34px; width: auto; display: block; }
+        .nav { display: inline-flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .nav-link {
+            font-size: 14px; font-weight: 500; text-decoration: none; color: var(--subtle);
+            padding: 9px 16px; border-radius: 999px; background: var(--card); box-shadow: var(--shadow);
+        }
+        .nav-link:hover { color: var(--text); }
+
+        .hero { padding: 32px 0 28px; }
+        .eyebrow { font-size: 13px; font-weight: 500; letter-spacing: .04em; text-transform: uppercase; color: var(--teal); margin: 0 0 10px; }
+        h1 { font-size: clamp(28px, 4.5vw, 40px); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
+        .lead { font-size: 16px; line-height: 1.6; color: var(--subtle); max-width: 640px; margin: 0; }
+
+        .tabs { display: inline-flex; gap: 4px; padding: 5px; margin: 8px 0 20px; background: var(--card); border-radius: 999px; box-shadow: var(--shadow); }
+        .tab {
+            border: 0; background: transparent; font: inherit; font-size: 14px; font-weight: 500; color: var(--muted);
+            padding: 9px 18px; border-radius: 999px; cursor: pointer;
+        }
+        .tab:hover { color: var(--text); }
+        .tab[aria-selected="true"] { background: var(--gradient); color: var(--ink); box-shadow: 0 6px 18px rgba(76, 201, 255, 0.28); }
+        .tab:focus-visible, .btn:focus-visible, .copy:focus-visible, .nav-link:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px; }
+
+        .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+        .card { background: var(--card); border-radius: 20px; padding: 24px; box-shadow: var(--shadow); min-width: 0; }
+        .card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+        .icon {
+            display: inline-flex; align-items: center; justify-content: center; flex: none;
+            width: 40px; height: 40px; border-radius: 12px; background: var(--ink); color: var(--mint);
+        }
+        .card h2 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+        .card p { font-size: 14px; line-height: 1.6; color: var(--subtle); margin: 6px 0 16px; }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+            font-size: 14px; font-weight: 500; padding: 11px 20px; border-radius: 999px;
+            background: var(--gradient); color: var(--ink);
+        }
+        .btn:hover { background: var(--gradient-hover); }
+        .file { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12px; color: var(--muted); margin-left: 10px; }
+
+        .label { font-size: 12px; font-weight: 500; color: var(--muted); margin: 18px 0 6px; }
+        .code {
+            position: relative; display: flex; align-items: flex-start; gap: 8px;
+            background: var(--code-bg); color: var(--code-text); border-radius: 12px; padding: 12px 12px 12px 14px;
+        }
+        .code code {
+            flex: 1; min-width: 0; font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; line-height: 1.6;
+            white-space: pre-wrap; word-break: break-all;
+        }
+        .copy {
+            flex: none; border: 0; cursor: pointer; font: inherit; font-size: 12px; font-weight: 500;
+            color: var(--code-text); background: rgba(255, 255, 255, 0.08); padding: 5px 10px; border-radius: 8px;
+        }
+        .copy:hover { background: rgba(255, 255, 255, 0.16); }
+        .copy.done { color: var(--ink); background: var(--mint); }
+
+        .panel[hidden] { display: none; }
+
+        .info { margin-top: 20px; }
+        .info h2 { font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+        .info ul { margin: 0; padding-left: 18px; color: var(--subtle); font-size: 14px; line-height: 1.8; }
+        .info code { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: 12.5px; background: var(--surface); padding: 1px 6px; border-radius: 6px; }
+
+        footer { padding: 36px 0 40px; font-size: 13px; color: var(--muted); }
+        footer .wrap { display: flex; flex-wrap: wrap; gap: 8px 20px; justify-content: space-between; }
+        footer a { color: var(--muted); text-decoration: none; }
+        footer a:hover { color: var(--text); }
+
+        @media (max-width: 760px) {
+            .grid { grid-template-columns: 1fr; }
+            .hero { padding-top: 16px; }
+        }
+    </style>
+</head>
+<body>
+<header>
+    <div class="wrap">
+        <a class="brand" href="https://atglance.live/" aria-label="AtGlance home">
+            <img src="https://atglance.live/branding/atglance-logo.png" alt="AtGlance" height="34">
+        </a>
+        <nav class="nav" aria-label="Downloads">
+            <a class="nav-link" href="https://app.atglance.live/">All downloads</a>
+            <a class="nav-link" href="https://app.atglance.live/cli/">CLI agent</a>
+            <a class="nav-link" href="https://atglance.live/dashboard/licences">Get a licence</a>
+        </nav>
+    </div>
+</header>
+
+<main class="wrap">
+    <section class="hero">
+        <p class="eyebrow">Management Console</p>
+        <h1>Install or update the Management Console</h1>
+        <p class="lead">Download the installer to set up a new Management Console, or the updater to move an existing one to the latest release. The installer asks for a licence key from your AtGlance dashboard.</p>
+    </section>
+
+    <div class="tabs" role="tablist" aria-label="Operating system">
+        <button class="tab" role="tab" id="tab-linux" aria-controls="panel-linux" aria-selected="true">Linux</button>
+        <button class="tab" role="tab" id="tab-windows" aria-controls="panel-windows" aria-selected="false" tabindex="-1">Windows</button>
+    </div>
+
+    <!-- Linux -->
+    <section class="panel" id="panel-linux" role="tabpanel" aria-labelledby="tab-linux">
+        <div class="grid">
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                    </span>
+                    <h2>Installer</h2>
+                </div>
+                <p>New installation on Ubuntu, Debian, RHEL/Rocky/Alma, Amazon Linux or Fedora. Installs Docker if it is missing.</p>
+                <a class="btn" href="https://app.atglance.live/console/atglance-installer.sh" download>Download installer</a>
+                <span class="file">atglance-installer.sh</span>
+
+                <div class="label">Or run it in one command</div>
+                <div class="code"><code>curl -fsSL https://app.atglance.live/console/atglance-installer.sh | sudo bash</code><button class="copy" type="button">Copy</button></div>
+            </article>
+
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>
+                    </span>
+                    <h2>Updater</h2>
+                </div>
+                <p>Update an existing Management Console to the latest release. Your data and settings are kept.</p>
+                <a class="btn" href="https://app.atglance.live/console/atglance-updater.sh" download>Download updater</a>
+                <span class="file">atglance-updater.sh</span>
+
+                <div class="label">Or run it in one command</div>
+                <div class="code"><code>curl -fsSL https://app.atglance.live/console/atglance-updater.sh | sudo bash</code><button class="copy" type="button">Copy</button></div>
+            </article>
+        </div>
+    </section>
+
+    <!-- Windows -->
+    <section class="panel" id="panel-windows" role="tabpanel" aria-labelledby="tab-windows" hidden>
+        <div class="grid">
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+                    </span>
+                    <h2>Installer</h2>
+                </div>
+                <p>New installation on Windows 10/11 or Windows Server with Docker Desktop. Run PowerShell as Administrator.</p>
+                <a class="btn" href="https://app.atglance.live/console/atglance-installer.ps1" download>Download installer</a>
+                <span class="file">atglance-installer.ps1</span>
+
+                <div class="label">Or run it in one command (PowerShell)</div>
+                <div class="code"><code>irm https://app.atglance.live/console/atglance-installer.ps1 | iex</code><button class="copy" type="button">Copy</button></div>
+            </article>
+
+            <article class="card">
+                <div class="card-head">
+                    <span class="icon" aria-hidden="true">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 4v5h-5"/></svg>
+                    </span>
+                    <h2>Updater</h2>
+                </div>
+                <p>Update an existing Management Console on Windows to the latest release. Your data and settings are kept.</p>
+                <a class="btn" href="https://app.atglance.live/console/atglance-updater.ps1" download>Download updater</a>
+                <span class="file">atglance-updater.ps1</span>
+
+                <div class="label">Or run it in one command (PowerShell)</div>
+                <div class="code"><code>irm https://app.atglance.live/console/atglance-updater.ps1 | iex</code><button class="copy" type="button">Copy</button></div>
+            </article>
+        </div>
+    </section>
+
+    <section class="card info">
+        <h2>Before you start</h2>
+        <ul>
+            <li>2 vCPU, 2 GB RAM and 5 GB free disk.</li>
+            <li>Root or sudo (Linux) or Administrator (Windows), and internet access to Docker Hub and GitHub.</li>
+            <li>After install, open <code>http://&lt;server-ip&gt;:8000</code> and finish the setup wizard.</li>
+            <li>Open port <code>8000</code> (console) and <code>8002</code> (CLI gateway). Keep <code>3306</code> and <code>6379</code> closed.</li>
+        </ul>
+    </section>
+</main>
+
+<footer>
+    <div class="wrap">
+        <span>&copy; <span id="year">2026</span> AtGlance</span>
+        <span>
+            <a href="https://atglance.live/docs">Docs</a> &nbsp;·&nbsp;
+            <a href="https://atglance.live/dashboard/install/console">Guided install</a> &nbsp;·&nbsp;
+            <a href="https://atglance.live/contact">Contact</a>
+        </span>
+    </div>
+</footer>
+
+<script>
+    // OS tabs (pick Windows automatically for Windows visitors).
+    const tabs = [...document.querySelectorAll('.tab')];
+    function select(tab) {
+        tabs.forEach(t => {
+            const on = t === tab;
+            t.setAttribute('aria-selected', on);
+            t.tabIndex = on ? 0 : -1;
+            document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+        });
+    }
+    tabs.forEach((t, i) => {
+        t.addEventListener('click', () => select(t));
+        t.addEventListener('keydown', e => {
+            if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+            const next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+            select(next); next.focus();
+        });
+    });
+    const hash = location.hash.replace('#', '');
+    if (hash === 'windows' || (!hash && /Windows/i.test(navigator.userAgent))) select(tabs[1]);
+
+    // Copy buttons.
+    document.querySelectorAll('.copy').forEach(btn => btn.addEventListener('click', async () => {
+        const code = btn.previousElementSibling;
+        try { await navigator.clipboard.writeText(code.textContent); }
+        catch {
+            const r = document.createRange(); r.selectNodeContents(code);
+            const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand('copy'); s.removeAllRanges();
+        }
+        btn.textContent = 'Copied'; btn.classList.add('done');
+        setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1500);
+    }));
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+</script>
+</body>
+</html>

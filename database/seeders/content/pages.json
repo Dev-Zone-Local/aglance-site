@@ -1,0 +1,17 @@
+[
+  {
+    "slug": "about",
+    "title": "About AtGlance",
+    "content": "# About AtGlance\n\nAtGlance was built by SREs frustrated with the choice between heavy enterprise monitoring suites and a swarm of brittle scripts.\n\nWe believe operations teams deserve a calm, auditable, **self-hosted** platform that respects organisational boundaries.\n\n## What we ship\n\n- A focused CLI that knows systemd.\n- A Application console you can deploy inside your VPC.\n- A resilient backend (Cache queues, DB circuit breaker) that doesn't lose your writes during an outage.\n"
+  },
+  {
+    "slug": "terms",
+    "title": "Terms of Use",
+    "content": "# Terms of Use\n\nLast updated: 2026.\n\nBy using AtGlance, you agree to use the software within your own infrastructure and in accordance with applicable laws.\n\n## License\n\nAtGlance binaries and Console images are provided under the AtGlance Source-Available License unless otherwise stated.\n\n## No warranty\n\nThe software is provided \"as is\" without warranty of any kind.\n"
+  },
+  {
+    "slug": "privacy",
+    "title": "Privacy Policy",
+    "content": "# Privacy Policy\n\nLast updated: 2026.\n\nAtGlance is self-hosted. We do not collect or transmit telemetry from your CLI or Console deployments by default.\n\n## Account data\n\nFor accounts on atglance.live we store: email, name, avatar (if GitHub SSO), and a hashed password.\n\n## Cookies\n\nWe use httpOnly cookies for session management.\n"
+  }
+]

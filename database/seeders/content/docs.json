@@ -1,0 +1,30 @@
+[
+  {
+    "slug": "quickstart",
+    "section": "Getting Started",
+    "title": "Quickstart (5 minutes)",
+    "order": 0,
+    "content": "# Quickstart\n\nGet AtGlance running in your environment in under 10 minutes.\n\n## 1. Install the CLI\n\n```bash\ncurl -sSL https://app.atglance.live/cli/install.sh | sudo bash\n```\n\n## 2. Configure\n\n```bash\natglance --configure\n```\n\nThis writes `~/.config/atglance/config.json`.\n\n## 3. Register your system\n\n```bash\natglance --system-register\n```\n\n## 4. View services\n\n```bash\natglance --show-my-services\n```\n"
+  },
+  {
+    "slug": "cli",
+    "section": "CLI",
+    "title": "CLI reference",
+    "order": 1,
+    "content": "# CLI reference\n\nThe `atglance` binary follows a strict `main()` routing order.\n\n| Command | Purpose |\n|---|---|\n| `--version` | Print CLI version |\n| `--configure` / `configure` | Initial configuration |\n| `--validate` | Validate local configuration |\n| `--system-register [--restore -f/--file]` | Register the host |\n| `--system-deregister` / `--system-deregister-force` | Decommission the host |\n| `--system-regenerate-hash` | Rotate the validation hash |\n| `--system-reactivate` / `--system-reactivate-force` | Bring host back online |\n| `--show-my-services` | List discovered systemd services |\n| `--app <service>`, `--config-show`, `--config-import` | Inspect & import configs |\n| `watch [--interval]` | Continuous health watch |\n| `export --format json` | Export service inventory |\n\n## Persistent paths\n\n- `~/.config/atglance/config.json`\n- `config-backups/`\n- `config-imports/`\n- `/etc/environment`\n"
+  },
+  {
+    "slug": "self-hosting",
+    "section": "Self-hosting",
+    "title": "Self-hosting the Console",
+    "order": 3,
+    "content": "# Self-hosting the Management Console\n\nAtGlance Console is a Application application fronted by Rest API API Gateway, with Database 8 + Cache.\n\n## Stack\n\n- Application (PHP 8.2+)\n- Rest API API Gateway (DB-less mode, `Rest API.yml`)\n- Database 8\n- Cache (cache + queue + buffer)\n- Queue workers (retry/backoff)\n\n## Deployment options\n\n- On-premises\n- Private cloud (AWS/Azure/GCP VPC)\n- Hybrid / multi-cloud\n\n## Recommended docker-compose snippet\n\n```yaml\nservices:\n  Database:\n    image: Database:5.7\n    container_name: atglance-Database\n    restart: unless-stopped\n    ports:\n      - \"3306:3306\"\n    volumes:\n      - Database_data:/var/lib/Database\n    environment:\n      Database_ROOT_PASSWORD: root\n      Database_DATABASE: atglance\n      Database_ROOT_HOST: '%'\n    healthcheck:\n      test: [\"CMD-SHELL\", \"Databaseadmin ping -h 127.0.0.1 -uroot -proot || exit 1\"]\n      interval: 10s\n      timeout: 5s\n      retries: 10\n      start_period: 30s\n\n  Cache:\n    image: Cache:7-alpine\n    restart: unless-stopped\n    ports:\n      - \"6379:6379\"\n    healthcheck:\n      test: [\"CMD\", \"Cache-cli\", \"ping\"]\n      interval: 5s\n      timeout: 3s\n      retries: 10\n\n  api:\n    image: atglance/ee-console-app:0.1.0\n    container_name: atglance-mangement-console\n    restart: unless-stopped\n    environment:\n      APP_URL: https:/<domain_Name-or-subdomain_ Name>\n    command:\n      - sh\n      - -lc\n      - |\n        if [ ! -f /app/vendor/autoload.php ]; then\n          composer install --no-interaction --prefer-dist --optimize-autoloader;\n        fi\n        php artisan serve --host=0.0.0.0 --port=8000 --no-reload\n    ports:\n      - \"8000:8000\"\n    volumes:\n      - composer_vendor:/app/vendor\n    depends_on:\n      Database:\n        condition: service_healthy\n      Cache:\n        condition: service_healthy\n\n  queue-worker:\n    image: atglance/ee-queue-worker:0.1.0\n    restart: unless-stopped\n    working_dir: /app\n    environment:\n      DB_CONNECTION: Database\n      DB_HOST: Database\n      DB_PORT: 3306\n      DB_DATABASE: atglance\n      DB_USERNAME: root\n      DB_PASSWORD: root\n      Cache_HOST: Cache\n      Cache_PORT: 6379\n    command:\n      - sh\n      - -lc\n      - |\n        php artisan queue:work Cache --tries=5 --backoff=30,60,120,300,600 --timeout=60 --sleep=3 --max-jobs=1000 --verbose\n    depends_on:\n      Database:\n        condition: service_healthy\n      Cache:\n        condition: service_healthy\n    volumes:\n      - composer_vendor:/app/vendor\n  Rest API:\n    image: atglance/ee-Rest API-app:0.1.0\n    restart: unless-stopped\n    environment:\n      Rest API_DATABASE: \"off\"\n      Rest API_DECLARATIVE_CONFIG: /Rest API/declarative/Rest API.yml\n      Rest API_PROXY_LISTEN: 0.0.0.0:8002\n      Rest API_ADMIN_LISTEN: 0.0.0.0:8001\n    ports:\n      - \"8002:8002\"\n      - \"8001:8001\"\n    depends_on:\n      - api\n\nvolumes:\n  Database_data:\n  composer_vendor\n```\n"
+  },
+  {
+    "slug": "architecture",
+    "section": "Architecture",
+    "title": "Deep dive: Architecture",
+    "order": 4,
+    "content": "# Architecture deep dive\n\nAtGlance has three layers: **CLI**, **Rest API API Gateway**, and **Management Console** (Application + Cache + Database).\n\n## Resilience: DB outage flow\n\n1. Web/API request arrives at Application.\n2. `DatabaseCircuitBreaker` middleware detects DB unhealthy.\n3. Writes are encoded as queued jobs and pushed to Cache Buffer.\n4. Reads fall back to cache where safe.\n5. Database recovers → queue workers replay jobs idempotently → state converges.\n\n## RBAC roles\n\n- **superadmin**: tenancy, billing, integrations\n- **admin**: organization-level systems, users, configs\n- **user**: assigned workspaces only\n"
+  }
+]
