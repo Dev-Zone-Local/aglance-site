@@ -6,6 +6,7 @@ use App\Models\ContactMessage;
 use App\Models\Setting;
 use App\Notifications\ContactMessageConfirmation;
 use App\Notifications\ContactMessageReceived;
+use App\Rules\Recaptcha;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -37,7 +38,9 @@ class ContactController extends Controller
             'product' => ['nullable', Rule::in(array_keys(ContactMessage::PRODUCTS))],
             'subject' => ['required', 'string', 'max:150'],
             'message' => ['required', 'string', 'min:10', 'max:5000'],
-        ]);
+            ...Recaptcha::rules('contact'),
+        ], Recaptcha::messages());
+        unset($data[Recaptcha::FIELD]);
 
         $message = ContactMessage::create([
             ...$data,

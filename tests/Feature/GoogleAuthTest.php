@@ -5,7 +5,9 @@ namespace Tests\Feature;
 use App\Filament\Pages\GoogleSettings;
 use App\Models\Setting;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use App\Support\GoogleOAuth;
+use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Schema;
@@ -73,8 +75,9 @@ class GoogleAuthTest extends TestCase
         $this->assertTrue($user->hasVerifiedEmail());
         $this->assertAuthenticatedAs($user);
 
-        // Google already verified the address: no verification email.
-        Notification::assertNothingSent();
+        // Google already verified the address: only the welcome email, no verification email.
+        Notification::assertSentToTimes($user, WelcomeNotification::class, 1);
+        Notification::assertNotSentTo($user, VerifyEmail::class);
     }
 
     public function test_long_google_avatar_url_is_stored(): void

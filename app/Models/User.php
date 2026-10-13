@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Notifications\WelcomeNotification;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
@@ -70,10 +71,21 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     /**
      * @return array<string, string>
      */
+    protected static function booted(): void
+    {
+        // Email just became verified (link, password reset, licence code, admin activation): welcome.
+        static::updated(function (User $user) {
+            if ($user->wasChanged('email_verified_at') && $user->email_verified_at && ! $user->getOriginal('email_verified_at')) {
+                $user->sendWelcomeSafely();
+            }
+        });
+    }
+
     protected function casts(): array
     {
         return [
             'email_verified_at' => 'datetime',
+            'welcomed_at' => 'datetime',
             'password' => 'hashed',
             'github_id' => 'integer',
             'license_requires_approval' => 'boolean',
@@ -117,6 +129,29 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     /**
      * Send the verification link, but never fail the caller (signup) if mail is misconfigured.
      */
+    /**
+     * The one welcome email, sent when the account's email becomes verified. Never twice
+     * (welcomed_at), never to GitHub no-reply addresses, and never fails the caller.
+     */
+    public function sendWelcomeSafely(): bool
+    {
+        if ($this->welcomed_at || ! $this->hasVerifiedEmail() || ! $this->hasDeliverableEmail()) {
+            return false;
+        }
+
+        try {
+            $this->notify(new WelcomeNotification);
+        } catch (Throwable $e) {
+            Log::error('Could not send welcome email', ['user' => $this->id, 'error' => $e->getMessage()]);
+
+            return false;
+        }
+
+        $this->forceFill(['welcomed_at' => now()])->saveQuietly();
+
+        return true;
+    }
+
     public function sendVerificationSafely(): bool
     {
         if ($this->hasVerifiedEmail() || ! $this->hasDeliverableEmail()) {

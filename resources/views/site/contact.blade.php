@@ -91,6 +91,8 @@
                             @error('message')<p id="field-message-error" class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
                         </div>
 
+                        <x-recaptcha action="contact" class="sm:col-span-2" />
+
                         <div class="flex flex-wrap items-center gap-4 sm:col-span-2">
                             <x-button type="submit">Send message <x-glyph name="arrow-right" /></x-button>
                             <span class="text-xs text-ag-muted">We only use your email to reply to this message.</span>

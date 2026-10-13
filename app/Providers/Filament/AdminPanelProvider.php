@@ -66,6 +66,8 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
                 fn (): View => view('filament.auth.login-problem'),
             )
+            // Sidebar group order: inbox first, settings last.
+            ->navigationGroups(['Support', 'Access', 'Content', 'Settings'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

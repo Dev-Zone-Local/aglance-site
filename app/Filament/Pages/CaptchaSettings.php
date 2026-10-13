@@ -13,7 +13,7 @@ use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Support\Icons\Heroicon;
 
-/** Google reCAPTCHA v3 on website sign-in / sign-up and the admin login (App\Support\Captcha). */
+/** Google reCAPTCHA v3 on website sign-in / sign-up, the contact form and the admin login (App\Support\Captcha). */
 class CaptchaSettings extends SettingsPage
 {
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShieldCheck;
@@ -52,7 +52,7 @@ class CaptchaSettings extends SettingsPage
                     Text::make('1. Open https://www.google.com/recaptcha/admin and create a key. Choose reCAPTCHA v3 (score based) — a v2 key gives "Invalid key type".'),
                     Text::make("2. Domains: add {$host} (and localhost if you test locally)."),
                     Text::make('3. Paste the site key and secret key here, turn it on and save.'),
-                    Text::make('It protects the website sign-in and sign-up forms and this admin login. Visitors see no puzzle; Google scores each sign-in from 0.0 (bot) to 1.0 (human).'),
+                    Text::make('It protects the website sign-in, sign-up and contact forms and this admin login. Visitors see no puzzle; Google scores each request from 0.0 (bot) to 1.0 (human).'),
                     Text::make('Locked out because of a wrong key? Run `php artisan atglance:captcha --off` on the server.'),
                 ]),
             Toggle::make('enabled')

@@ -64,6 +64,16 @@ class SiteVersionTest extends TestCase
         $this->assertSame('dev', SiteVersion::label($v));
     }
 
+    public function test_admin_sidebar_groups_are_in_order(): void
+    {
+        $html = $this->actingAs(User::factory()->admin()->create())->get('/admin')->assertOk()->getContent();
+
+        $positions = array_map(fn ($g) => strpos($html, '>'.$g.'<') ?: strpos($html, $g), ['Support', 'Access', 'Content', 'Settings']);
+        $sorted = $positions;
+        sort($sorted);
+        $this->assertSame($sorted, $positions, 'Sidebar order: Support, Access, Content, Settings');
+    }
+
     public function test_admin_sidebar_shows_the_site_version_on_every_page(): void
     {
         $this->actingAs(User::factory()->admin()->create());
