@@ -25,7 +25,8 @@ class ReleaseNotifier
             $release['notes'] ?? null,
             $release['summary'] ?? null,
             $release['title'] ?? null,
-            rtrim(config('atglance.frontend_url'), '/').'/releases?product='.$product.'#'.Downloads::anchor($product, $release['version']),
+            // Emails go out from the admin panel, so build the public URL from FRONTEND_URL.
+            rtrim(config('atglance.frontend_url'), '/').'/releases/'.$product.'/'.rawurlencode($release['version']),
         );
 
         User::query()

@@ -18,11 +18,13 @@
 
         <div class="mt-10 space-y-6">
             @forelse ($releases as $r)
-                <article id="{{ \App\Support\Downloads::anchor($r['product'], $r['version']) }}" class="scroll-mt-24 rounded-card bg-white p-6 shadow-ag">
+                @php($url = \App\Support\Downloads::releaseUrl($r['product'], $r['version']))
+                {{-- The id keeps old /releases#cli-2-1-0 links working. --}}
+                <article id="{{ \App\Support\Downloads::anchor($r['product'], $r['version']) }}" class="relative scroll-mt-24 rounded-card bg-white p-6 shadow-ag transition-shadow hover:shadow-ag-strong">
                     <header class="flex flex-wrap items-center gap-2">
                         <x-glyph :name="$r['product'] === 'cli' ? 'terminal' : 'server'" :size="16" class="text-ag-teal" />
                         <span class="text-sm text-ag-subtle">{{ $r['product_name'] }}</span>
-                        <a href="#{{ \App\Support\Downloads::anchor($r['product'], $r['version']) }}" class="text-lg font-medium text-ag-ink hover:text-ag-teal-text">v{{ $r['version'] }}</a>
+                        <a href="{{ $url }}" class="text-lg font-medium text-ag-ink after:absolute after:inset-0 after:rounded-card hover:text-ag-teal-text">v{{ $r['version'] }}</a>
                         @if ($r['latest'])
                             <x-badge variant="success">Latest</x-badge>
                         @endif
@@ -41,18 +43,13 @@
                         <p class="mt-2 text-[15px] leading-relaxed text-ag-subtle">{{ $r['summary'] }}</p>
                     @endif
 
-                    @if ($r['notes'])
-                        <x-markdown :source="$r['notes']" class="mt-4" />
-                    @elseif (! $r['summary'])
+                    @if (! $r['summary'] && ! $r['notes'])
                         <p class="mt-3 text-sm text-ag-subtle">Maintenance release.</p>
                     @endif
 
-                    @if (! empty($r['checksum']))
-                        <details class="mt-4 text-sm">
-                            <summary class="cursor-pointer text-ag-teal-text">SHA-256 checksum</summary>
-                            <code class="mt-2 block break-all rounded-lg bg-ag-surface px-3 py-2 font-mono text-xs text-ag-ink">{{ $r['checksum'] }}</code>
-                        </details>
-                    @endif
+                    <span class="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-ag-teal-text">
+                        Full release notes <x-glyph name="arrow-right" :size="14" />
+                    </span>
                 </article>
             @empty
                 <x-card flat class="text-center text-sm text-ag-subtle">No releases published yet.</x-card>

@@ -74,6 +74,15 @@ class SiteController extends Controller
         ]);
     }
 
+    /** One release in full: notes, checksum, install link, newer / older versions. */
+    public function release(string $product, string $version): View
+    {
+        $found = Downloads::find($product, $version);
+        abort_unless($found, 404);
+
+        return view('site.release', [...$found, 'types' => Downloads::RELEASE_TYPES]);
+    }
+
     public function knownProblems(Request $request): View
     {
         $product = $request->string('product')->toString();

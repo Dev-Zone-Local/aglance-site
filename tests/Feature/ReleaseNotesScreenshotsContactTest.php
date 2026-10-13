@@ -60,7 +60,7 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
 
         Notification::assertSentTo($subscriber, ReleasePublishedNotification::class,
             fn ($n) => $n->summary === 'Install the console on Windows Server.'
-                && str_contains($n->releaseNotesUrl, '/releases?product=console#console-2-3-0'));
+                && str_ends_with($n->releaseNotesUrl, '/releases/console/2.3.0'));
     }
 
     public function test_untouched_template_is_not_saved_as_notes(): void
@@ -95,10 +95,12 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
             ->assertOk()
             ->assertSee('v2.1.0')
             ->assertSee('v3.0.0')
-            ->assertSee('<strong>Faster</strong>', false)
             ->assertSee('Bug fix')
-            ->assertSee('id="cli-2-1-0"', false)
-            ->assertDontSee('<script>alert(1)</script>', false);
+            ->assertSee('id="cli-2-1-0"', false);
+
+        // Full notes are on each release's own page; raw HTML is never rendered.
+        $this->get('/releases/cli/2.1.0')->assertOk()->assertSee('<strong>Faster</strong>', false);
+        $this->get('/releases/console/3.0.0')->assertOk()->assertSee('Console thing')->assertDontSee('<script>alert(1)</script>', false);
 
         $this->get('/releases?product=cli')->assertOk()->assertSee('v2.1.0')->assertDontSee('v3.0.0');
         $this->get('/releases?product=bogus')->assertOk()->assertSee('v3.0.0');
@@ -109,7 +111,7 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
         Downloads::publish('console', '3.1.0', null, null, ['title' => 'Dark mode']);
 
         $this->get('/console')->assertOk()->assertSee('v3.1.0')->assertSee('Dark mode')
-            ->assertSee('/releases?product=console#console-3-1-0', false);
+            ->assertSee('/releases/console/3.1.0', false);
     }
 
     public function test_contact_settings_new_fields_show_on_contact_page_and_footer(): void

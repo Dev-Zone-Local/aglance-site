@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Doc;
 use App\Models\Page;
+use Illuminate\Support\Carbon;
 
 /**
  * sitemap.xml and robots.txt, served by the /sitemap.xml and /robots.txt routes. Docs and CMS
@@ -48,6 +49,15 @@ class Sitemap
 
         foreach (Doc::orderBy('order')->get(['slug', 'updated_at']) as $doc) {
             $urls[] = ['loc' => "{$base}/docs/".rawurlencode($doc->slug), 'changefreq' => 'monthly', 'priority' => '0.6', 'lastmod' => $doc->updated_at];
+        }
+
+        foreach (Downloads::changelog() as $r) {
+            $urls[] = [
+                'loc' => "{$base}/releases/{$r['product']}/".rawurlencode($r['version']),
+                'changefreq' => 'yearly',
+                'priority' => $r['latest'] ? '0.7' : '0.5',
+                'lastmod' => $r['released_at'] ? Carbon::parse($r['released_at']) : null,
+            ];
         }
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"

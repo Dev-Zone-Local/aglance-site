@@ -26,6 +26,7 @@ Route::controller(SiteController::class)->group(function () {
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
     Route::get('/releases', 'releases')->name('releases');
+    Route::get('/releases/{product}/{version}', 'release')->where('version', '[A-Za-z0-9._+-]+')->name('releases.show');
     Route::get('/known-problems', 'knownProblems')->name('known-problems');
     Route::get('/about', 'page')->defaults('slug', 'about')->name('about');
     Route::get('/terms', 'page')->defaults('slug', 'terms')->name('terms');

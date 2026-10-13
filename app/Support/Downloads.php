@@ -139,6 +139,39 @@ class Downloads
         return $out;
     }
 
+    /** Public page of one release, e.g. /releases/cli/2.1.0. */
+    public static function releaseUrl(string $product, string $version): string
+    {
+        return route('releases.show', [$product, $version]);
+    }
+
+    /**
+     * One release with its product context and neighbours (same product), or null.
+     *
+     * @return array{release: array, product: array, latest: bool, newer: ?array, older: ?array}|null
+     */
+    public static function find(string $product, string $version): ?array
+    {
+        $data = self::all()[$product] ?? null;
+        if (! $data) {
+            return null;
+        }
+
+        foreach ($data['releases'] as $i => $r) {
+            if ($r['version'] === $version) {
+                return [
+                    'release' => [...self::presentRelease($product, $data, $r), 'product' => $product, 'product_name' => self::PRODUCTS[$product]],
+                    'product' => $data,
+                    'latest' => $i === 0,
+                    'newer' => $data['releases'][$i - 1] ?? null,
+                    'older' => $data['releases'][$i + 1] ?? null,
+                ];
+            }
+        }
+
+        return null;
+    }
+
     /** Anchor id of a release on the /releases page, e.g. "cli-2.1.0". */
     public static function anchor(string $product, string $version): string
     {

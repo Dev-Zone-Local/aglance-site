@@ -1,7 +1,7 @@
 @php
     $links = [
-        'about' => 'About', 'contact' => 'Contact', 'faq' => 'FAQ', 'docs' => 'Docs', 'releases' => 'Release notes',
-        'security' => 'Security', 'terms' => 'Terms', 'privacy' => 'Privacy',
+        'about' => 'About', 'faq' => 'FAQ', 'pricing' => 'Pricing', 'security' => 'Security',
+        'terms' => 'Terms', 'privacy' => 'Privacy', 'contact' => 'Contact',
     ];
     $contact = once(fn () => \App\Models\Setting::get(\App\Models\Setting::CONTACT));
     $socials = ($contact['show_social_in_footer'] ?? true)

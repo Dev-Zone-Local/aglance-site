@@ -38,6 +38,29 @@ class AdminLoginTest extends TestCase
         $this->assertAuthenticated();
     }
 
+    public function test_credentials_come_from_the_database_not_env(): void
+    {
+        User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'db-password']);
+
+        // Old installs still have these in .env; they must not matter any more, even after a re-seed.
+        putenv('ADMIN_EMAIL=root@example.com');
+        putenv('ADMIN_PASSWORD=env-password');
+        $_ENV['ADMIN_PASSWORD'] = $_SERVER['ADMIN_PASSWORD'] = 'env-password';
+        $this->seed();
+
+        try {
+            $this->login('root@example.com', 'env-password')->assertHasFormErrors(['email']);
+            $this->assertGuest();
+
+            $this->login('root@example.com', 'db-password')->assertHasNoFormErrors()->assertRedirect('/admin');
+            $this->assertAuthenticated();
+        } finally {
+            putenv('ADMIN_EMAIL');
+            putenv('ADMIN_PASSWORD');
+            unset($_ENV['ADMIN_PASSWORD'], $_SERVER['ADMIN_PASSWORD']);
+        }
+    }
+
     public function test_wrong_password_says_so(): void
     {
         User::factory()->admin()->create(['email' => 'root@example.com', 'password' => 'secret123']);

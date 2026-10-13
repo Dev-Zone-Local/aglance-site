@@ -1,7 +1,7 @@
 @php
     $nav = [
         'product' => 'Product', 'cli' => 'CLI', 'console' => 'Console', 'architecture' => 'Architecture',
-        'use-cases' => 'Use cases', 'security' => 'Security', 'pricing' => 'Pricing', 'docs' => 'Docs',
+        'use-cases' => 'Use cases', 'security' => 'Security', 'releases' => 'Releases', 'docs' => 'Docs',
     ];
     $isActive = fn (string $route) => request()->routeIs($route) || request()->routeIs($route.'.*');
 @endphp

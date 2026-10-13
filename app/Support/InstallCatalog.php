@@ -66,7 +66,7 @@ class InstallCatalog
                     ? "The latest {$what} is v{$latest['version']}.".(! empty($latest['summary']) ? ' '.$latest['summary'] : '')
                     : "No {$what} release is published yet.",
                 'link' => $latest ? [
-                    'href' => route('releases', ['product' => $productId]).'#'.Downloads::anchor($productId, $latest['version']),
+                    'href' => Downloads::releaseUrl($productId, $latest['version']),
                     'label' => 'Read the release notes',
                 ] : null,
             ];
