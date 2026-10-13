@@ -7,6 +7,8 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Support\GoogleOAuth;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\User as SocialiteUser;
@@ -57,6 +59,7 @@ class GoogleAuthTest extends TestCase
 
     public function test_callback_creates_a_verified_user(): void
     {
+        Notification::fake();
         $this->enableGoogleLogin();
         $this->fakeGoogleUser();
 
@@ -69,6 +72,22 @@ class GoogleAuthTest extends TestCase
         $this->assertSame('user', $user->role);
         $this->assertTrue($user->hasVerifiedEmail());
         $this->assertAuthenticatedAs($user);
+
+        // Google already verified the address: no verification email.
+        Notification::assertNothingSent();
+    }
+
+    public function test_long_google_avatar_url_is_stored(): void
+    {
+        // Google profile picture URLs can be ~1,500 characters; a VARCHAR(255) column made MySQL fail with a 500.
+        $this->assertSame('text', Schema::getColumnType('users', 'avatar_url'));
+
+        $this->enableGoogleLogin();
+        $avatar = 'https://lh3.googleusercontent.com/a-/'.str_repeat('A', 1500).'=s96-c';
+        $this->fakeGoogleUser(['avatar' => $avatar]);
+
+        $this->get('/auth/sso/google/callback?code=abc&state=xyz')->assertRedirect(route('dashboard'));
+        $this->assertSame($avatar, User::sole()->avatar_url);
     }
 
     public function test_callback_links_an_existing_account_by_verified_email(): void
