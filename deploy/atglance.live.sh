@@ -72,6 +72,12 @@ step "Pull latest code"
 OLD=$(as_app git rev-parse HEAD)
 as_app git fetch --prune origin "$BRANCH"
 as_app git checkout -q "$BRANCH"
+# Tracked files missing on disk (e.g. public/index.php -> nginx 403): restore them. Edits are left alone.
+MISSING=$(as_app git ls-files --deleted)
+if [[ -n $MISSING ]]; then
+    echo "Restoring $(wc -l <<<"$MISSING") deleted tracked file(s):"; head -5 <<<"$MISSING"
+    as_app git ls-files -z --deleted | as_app xargs -0 git checkout --
+fi
 if ! as_app git merge --ff-only "origin/$BRANCH"; then
     echo "Local commits or edits block a fast-forward. Fix manually:"
     as_app git status --short
@@ -119,6 +125,9 @@ fi
 
 step "Laravel caches"
 artisan filament:assets
+# Livewire JS as a real file: aaPanel's static *.js rule 404s the /livewire/livewire.min.js route,
+# which stops the admin login ("Sign-in cannot start").
+artisan vendor:publish --tag=livewire:assets --force
 [[ -L public/storage ]] || artisan storage:link
 artisan optimize:clear
 artisan optimize
@@ -172,6 +181,11 @@ grep -q 'Operations at a glance' <<<"$HOME_HTML" || { echo "Homepage is not the 
 CSS=$(grep -oE '/build/assets/app-[^"]+\.css' <<<"$HOME_HTML" | head -1)
 [[ -n $CSS && $(local_curl -o /dev/null -w '%{http_code}' "https://$DOMAIN$CSS") == 200 ]] \
     || { echo "Built CSS not served ($CSS)"; FAIL=1; }
+# Admin login needs Livewire's script (status 200, or the browser will not run it).
+LW=$(local_curl "https://$DOMAIN/admin/login" | grep -oE 'src="[^"]*livewire[^"]*\.js[^"]*"' | head -1 | sed -E 's/^src="//; s/"$//; s#^https?://[^/]+##')
+LW_CODE=$([[ -n $LW ]] && local_curl -o /dev/null -w '%{http_code}' "https://$DOMAIN$LW" || echo none)
+echo "livewire script $LW $LW_CODE"
+[[ $LW_CODE == 200 ]] || { echo "Livewire script not served: admin login will not work"; FAIL=1; }
 if local_curl "https://$DOMAIN/api" | grep -q '<b>Warning'; then
     echo "PHP warnings in API output"; FAIL=1
 fi
