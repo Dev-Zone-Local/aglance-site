@@ -4,7 +4,10 @@ namespace App\Filament\Resources\ContactMessages;
 
 use App\Filament\Resources\ContactMessages\Pages\ListContactMessages;
 use App\Filament\Resources\ContactMessages\Pages\ViewContactMessage;
+use App\Mail\ContactReplyMail;
 use App\Models\ContactMessage;
+use App\Models\ContactMessageReply;
+use App\Support\MailSettings;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\BulkAction;
@@ -12,9 +15,13 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\ViewAction;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -24,6 +31,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Mail;
+use Throwable;
 
 /** Inbox for messages sent with the /contact form. */
 class ContactMessageResource extends Resource
@@ -98,6 +107,31 @@ class ContactMessageResource extends Resource
                     TextEntry::make('ip')->label('IP address')->placeholder('—'),
                     TextEntry::make('user_agent')->label('Browser')->placeholder('—')->columnSpan(2),
                 ]),
+            Section::make('Replies')
+                ->description('Emails sent to the sender with the Reply button, newest first.')
+                ->columnSpanFull()
+                ->visible(fn (ContactMessage $record) => $record->replies()->exists())
+                ->schema([
+                    RepeatableEntry::make('replies')
+                        ->hiddenLabel()
+                        ->schema([
+                            TextEntry::make('sent_at')
+                                ->hiddenLabel()
+                                ->badge()
+                                ->color(fn (ContactMessageReply $r) => $r->sent_at ? 'success' : 'danger')
+                                ->state(fn (ContactMessageReply $r) => $r->sent_at
+                                    ? 'Sent '.$r->sent_at->format('d M Y, H:i').($r->user ? ' by '.$r->user->name : '')
+                                    : 'Not sent: '.\Illuminate\Support\Str::limit((string) $r->error, 150)),
+                            TextEntry::make('body')
+                                ->hiddenLabel()
+                                ->extraAttributes(['style' => 'white-space: pre-wrap; line-height: 1.6;']),
+                            ImageEntry::make('images')
+                                ->hiddenLabel()
+                                ->disk('public')
+                                ->imageHeight(120)
+                                ->visible(fn (ContactMessageReply $r) => filled($r->images)),
+                        ]),
+                ]),
         ]);
     }
 
@@ -116,12 +150,66 @@ class ContactMessageResource extends Resource
             ->action(fn (ContactMessage $record, array $data) => $record->update($data));
     }
 
+    /**
+     * "Reply" action: text + optional images, emailed to the sender in the branded template
+     * from the From address in Email (SMTP) settings. Every attempt is kept under "Replies".
+     */
     public static function replyAction(): Action
     {
         return Action::make('reply')
-            ->label('Reply by email')
+            ->label('Reply')
             ->icon(Heroicon::OutlinedArrowUturnLeft)
-            ->url(fn (ContactMessage $r) => 'mailto:'.$r->email.'?subject='.rawurlencode('Re: '.$r->subject.' '.$r->reference()));
+            ->color('primary')
+            ->modalHeading(fn (ContactMessage $r) => "Reply to {$r->name}")
+            ->modalDescription(fn (ContactMessage $r) => "To {$r->email} · Subject: Re: {$r->subject} {$r->reference()}")
+            ->modalSubmitActionLabel('Send reply')
+            ->modalWidth('2xl')
+            ->schema([
+                Textarea::make('body')
+                    ->label('Message')
+                    ->required()
+                    ->rows(10)
+                    ->maxLength(20000)
+                    ->helperText('Sent as written. "Hi {name}," and the AtGlance header and footer are added for you.'),
+                FileUpload::make('images')
+                    ->label('Images')
+                    ->image()
+                    ->multiple()
+                    ->maxFiles(5)
+                    ->disk('public')
+                    ->directory(ContactMessageReply::IMAGE_DIR)
+                    ->visibility('public')
+                    ->acceptedFileTypes(['image/png', 'image/jpeg', 'image/webp', 'image/gif'])
+                    ->maxSize(5120)
+                    ->reorderable()
+                    ->helperText('Optional. Up to 5 images (PNG, JPG, WebP or GIF, 5 MB each), shown below your text.'),
+            ])
+            ->action(function (ContactMessage $record, array $data): void {
+                $reply = $record->replies()->create([
+                    'user_id' => auth()->id(),
+                    'body' => $data['body'],
+                    'images' => array_values($data['images'] ?? []) ?: null,
+                ]);
+
+                try {
+                    // Use the saved SMTP settings even if the mailer was built earlier in this request.
+                    app('mail.manager')->forgetMailers();
+                    MailSettings::apply();
+
+                    Mail::to($record->email, $record->name)->send(new ContactReplyMail($reply));
+                } catch (Throwable $e) {
+                    $reply->update(['error' => $e->getMessage()]);
+                    Notification::make()->title('Reply not sent')->body($e->getMessage())->danger()->persistent()->send();
+
+                    return;
+                }
+
+                $reply->update(['sent_at' => now()]);
+                if ($record->status === 'new') {
+                    $record->update(['status' => 'in_progress']);
+                }
+                Notification::make()->title("Reply sent to {$record->email}")->success()->send();
+            });
     }
 
     public static function table(Table $table): Table
@@ -157,6 +245,7 @@ class ContactMessageResource extends Resource
             ])
             ->recordActions([
                 ViewAction::make(),
+                self::replyAction(),
                 self::updateAction(),
                 DeleteAction::make(),
             ])
