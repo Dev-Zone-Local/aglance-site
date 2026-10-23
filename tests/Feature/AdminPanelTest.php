@@ -40,6 +40,7 @@ class AdminPanelTest extends TestCase
             '/admin/faqs',
             '/admin/pages',
             '/admin/users',
+            '/admin/licence-files',
             '/admin/contact-settings',
             '/admin/download-settings',
         ] as $url) {
