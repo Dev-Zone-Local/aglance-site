@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\License;
 use App\Models\User;
 use App\Support\Captcha;
 use App\Support\LicenseFile\Packer;
@@ -55,6 +56,13 @@ Artisan::command('atglance:captcha {--off : Turn the CAPTCHA off}', function () 
     return 0;
 })->purpose('Show the CAPTCHA status or turn it off');
 
+// Wipe stored plain licence keys once their 30-minute viewing window has passed.
+// Also runs lazily on the dashboard, so it is safe even without a scheduler.
+Artisan::command('licenses:forget-expired-keys', function () {
+    $this->info('Forgot '.License::forgetExpiredKeys().' expired licence key(s).');
+})->purpose('Remove plain licence keys whose viewing window has passed');
+
+Schedule::command('licenses:forget-expired-keys')->everyFiveMinutes();
 
 // New signing and encryption keys for offline licence files (.atgl). Prints them only:
 // nothing is written to disk. See docs/LICENSING.md, "Keys".

@@ -3,43 +3,35 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\LicenceManager;
 use App\Support\LicenseFile\Issuer;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * Licence files (.atgl) for the signed-in user. Licences are files only.
+ * POST /api/licenses/{id}/file (Sanctum) and POST /dashboard/licences/{id}/file (web session):
+ * downloads the licence file (.atgl) of one of the user's licences, for a Management Console
+ * without internet access. The Installation ID is required or optional per policy; with one, the
+ * file works on that console only.
  *
- * - POST /api/license-files/code: emails the 5-digit code (when the policy requires it).
- * - POST /api/license-files and POST /dashboard/licences/file: downloads a new file. The body may
- *   carry only `install_id` (required or optional per policy) and `code`; limits, features and
- *   validity come from the user's policy.
+ * Limits, features and validity come from the user's policy; the request may only carry the
+ * Installation ID.
  */
 class LicenseFileController extends Controller
 {
-    public function code(Request $request): JsonResponse
+    public function generate(Request $request, int $id): Response|RedirectResponse
     {
-        Issuer::sendCode($request->user());
-
-        return response()->json(['message' => "We sent a 5-digit code to {$request->user()->email}. It expires in 10 minutes."]);
-    }
-
-    public function generate(Request $request): Response|RedirectResponse
-    {
-        $request->validate([
-            'install_id' => ['nullable', 'string', 'max:64'],
-            'code' => ['nullable', 'string', 'max:10'],
-        ]);
+        $request->validate(['install_id' => ['nullable', 'string', 'max:64']]);
 
         try {
-            $issued = Issuer::fromConfig()->issue($request->user(), $request->input('install_id'), $request->input('code'));
+            $licence = LicenceManager::for($request->user())->find($id);
+            $issued = Issuer::fromConfig()->issue($licence, $request->input('install_id'));
         } catch (HttpExceptionInterface $e) {
             // The dashboard form gets its error back on the page instead of an error page.
             if (! $request->is('api/*') && ! $request->expectsJson()) {
-                return back()->withInput()->withErrors(['license_file' => $e->getMessage()]);
+                return back()->withInput()->withErrors(['license_file' => $e->getMessage(), 'file_licence_id' => (string) $id]);
             }
             throw $e;
         }

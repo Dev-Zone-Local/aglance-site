@@ -18,6 +18,7 @@ class ContactMessage extends Model
         'bug' => 'Bug report',
         'sales' => 'Sales / pricing',
         'licence' => 'Licence',
+        'more_licences' => 'Need more licences',
         'security' => 'Security report',
         'feedback' => 'Feedback / idea',
         'other' => 'Something else',

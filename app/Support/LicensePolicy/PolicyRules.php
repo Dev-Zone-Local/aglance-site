@@ -2,7 +2,6 @@
 
 namespace App\Support\LicensePolicy;
 
-use App\Models\FeatureCatalog;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -19,8 +18,8 @@ class PolicyRules
 
     public const MAX_VALIDITY_MONTHS = 120;
 
-    /** Highest licence file limit an admin may set; users contact AtGlance Support to get more. */
-    public const MAX_FILES = 1000;
+    /** Highest licence limit an admin may set; users contact AtGlance Support to get more than their limit. */
+    public const MAX_LICENCES = 1000;
 
     /**
      * @return array<string, mixed>
@@ -28,16 +27,14 @@ class PolicyRules
     public static function rules(bool $custom = false): array
     {
         return [
-            'max_files' => ['required', 'integer', 'min:1', 'max:'.self::MAX_FILES],
-            'require_email_code' => ['required', 'boolean'],
-            'install_id_mode' => ['required', Rule::in(['required', 'optional'])],
+            'max_licences' => ['required', 'integer', 'min:1', 'max:'.self::MAX_LICENCES],
             'max_nodes' => ['required', 'integer', 'min:0', 'max:1000000'],
             'max_users' => ['required', 'integer', 'min:0', 'max:1000000'],
             'validity_value' => [$custom ? 'required_without:expires_on' : 'required', 'nullable', 'integer', 'min:1', 'max:120'],
             'validity_unit' => ['required', Rule::in(['months', 'years'])],
             'activation_window_minutes' => ['required', 'integer', 'min:'.self::MIN_WINDOW_MINUTES, 'max:'.self::MAX_WINDOW_MINUTES],
-            'features' => ['present', 'array'],
-            'features.*' => ['string', Rule::in(FeatureCatalog::keys())],
+            'install_id_mode' => ['required', Rule::in(['required', 'optional'])],
+            'premium_features' => ['required', 'boolean'],
         ] + ($custom ? [
             'expires_on' => ['nullable', 'date', 'after:today', 'before_or_equal:'.now()->addMonths(self::MAX_VALIDITY_MONTHS)->toDateString()],
             'install_id' => ['nullable', 'uuid'],
@@ -78,8 +75,6 @@ class PolicyRules
             }
             throw \Illuminate\Validation\ValidationException::withMessages($errors);
         }
-
-        $validated['features'] = array_values(array_unique($validated['features'] ?? []));
 
         return $validated;
     }

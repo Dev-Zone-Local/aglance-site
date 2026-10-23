@@ -41,10 +41,14 @@ class UsersTable
                     ->label('Verified')
                     ->boolean()
                     ->state(fn (User $record) => $record->hasVerifiedEmail()),
-                TextColumn::make('license_files_count')
-                    ->label('Licence files')
-                    ->counts('licenseFiles')
-                    ->description(fn (User $record) => \App\Support\LicenseFile\Issuer::activeCount($record).' active'),
+                TextColumn::make('licenses_count')
+                    ->label('Licences')
+                    ->counts('licenses')
+                    ->description(function (User $record) {
+                        $pending = $record->licenses()->awaitingApproval()->count();
+
+                        return $pending ? "{$pending} awaiting approval" : null;
+                    }),
                 TextColumn::make('license_policy')
                     ->label('Licence policy')
                     ->badge()

@@ -4,8 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\Licences;
 use App\Livewire\Profile;
-use App\Models\LicenseFile;
-use App\Models\LicensePolicy;
+use App\Models\License;
 use App\Models\User;
 use App\Notifications\LicenseCodeNotification;
 use App\Support\Downloads;
@@ -94,36 +93,104 @@ class DashboardWebTest extends TestCase
         $this->get('/dashboard/install/console/linux')->assertOk()->assertDontSee('How to resolve?');
     }
 
-    public function test_licence_page_emails_the_code_for_a_licence_file(): void
+    public function test_licence_create_confirm_and_show_key(): void
+    {
+        Notification::fake();
+        $user = User::factory()->unverified()->create();
+        $this->actingAs($user);
+
+        $component = Livewire::test(Licences::class)
+            ->set('name', 'prod-console')
+            ->call('create')
+            ->assertHasNoErrors()
+            ->assertSee('Copy the licence key for')
+            ->assertSee('Activate licence');
+
+        $licence = License::firstOrFail();
+        $this->assertSame('unverified', $licence->status());
+        $this->assertNotNull($component->get('shownKey')['key']);
+
+        $component->set('code', '00000')->call('confirm')->assertHasErrors('code');
+
+        $component->set('code', $this->sentCode($user))->call('confirm')
+            ->assertHasNoErrors()
+            ->assertDispatched('toast')
+            ->assertSet('pendingId', null);
+
+        $this->assertSame('ready', $licence->fresh()->status());
+        $this->assertTrue($user->fresh()->hasVerifiedEmail());
+
+        // Key can be shown again within 30 minutes.
+        $component->call('dismissKey')->assertSet('shownKey', null)
+            ->call('showKey', $licence->id)
+            ->assertSet('shownKey.id', $licence->id);
+    }
+
+    public function test_licence_limit_on_free_plan(): void
     {
         Notification::fake();
         $user = User::factory()->create();
         $this->actingAs($user);
 
-        Livewire::test(Licences::class)
-            ->assertSee('Generate licence file')
-            ->assertSee('Email verification code')
-            ->call('sendCode')
-            ->assertSet('codeMessage', "We sent a 5-digit code to {$user->email}. It expires in 10 minutes.")
-            ->assertDispatched('toast');
+        Livewire::test(Licences::class)->set('name', 'one')->call('create')->assertHasNoErrors();
 
-        Notification::assertSentTo($user, LicenseCodeNotification::class);
+        Livewire::test(Licences::class)
+            ->assertSee('To increase the limit, contact the AtGlance Support team')
+            ->assertSee('Contact AtGlance Support')
+            ->set('name', 'two')->call('create')
+            ->assertDispatched('toast', type: 'error');
+
+        $this->assertSame(1, License::count());
     }
 
-    public function test_licence_file_limit_on_the_dashboard(): void
+    public function test_revoke_with_password_or_code(): void
     {
-        LicensePolicy::global()->update(['max_files' => 1]);
-        $user = User::factory()->create();
-        LicenseFile::create([
-            'license_id' => 'LIC-00000000-0000-4000-8000-000000000001', 'user_id' => $user->id, 'org' => 'x', 'plan' => 'free',
-            'issued_at' => now(), 'activate_before' => now()->addHours(3), 'expires_at' => now()->addYear(), 'key_id' => 'test-2026',
-        ]);
+        Notification::fake();
+        $user = User::factory()->create(['password' => 'secret123']);
         $this->actingAs($user);
 
+        $component = Livewire::test(Licences::class)->set('name', 'a')->call('create');
+        $licence = License::firstOrFail();
+
+        $component->call('startRevoke', $licence->id)
+            ->assertSee('Revoke licence')
+            ->set('revokePassword', 'wrong')->call('revoke')
+            ->assertHasErrors('revokePassword');
+        $this->assertSame(1, License::count());
+
+        $component->set('revokePassword', 'secret123')->call('revoke')->assertHasNoErrors();
+        $this->assertSame(0, License::count());
+
+        // Revoke with an emailed code.
+        Notification::fake();
+        $component->set('name', 'b')->call('create');
+        $licence = License::firstOrFail();
+        $this->sentCode($user); // the activation code
+        Notification::fake();
+
+        $component->call('startRevoke', $licence->id)->call('sendRevokeCode')
+            ->assertSet('revokeMode', 'code')
+            ->set('revokeCode', $this->sentCode($user))->call('revoke')
+            ->assertHasNoErrors();
+        $this->assertSame(0, License::count());
+    }
+
+    public function test_cannot_touch_other_users_licences(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $owner->createToken('theirs', [License::ABILITY]);
+        $licence = License::firstOrFail();
+
+        $this->actingAs(User::factory()->create());
         Livewire::test(Licences::class)
-            ->assertSee('1 / 1 active files')
-            ->assertSee('To increase the limit, contact the AtGlance Support team')
-            ->assertDontSee('Generate licence file');
+            ->call('startRevoke', $licence->id)
+            ->assertSet('revokingId', null)
+            ->assertDispatched('toast', type: 'error')
+            ->call('showKey', $licence->id)
+            ->assertSet('shownKey', null);
+
+        $this->assertSame(1, License::count());
     }
 
     public function test_profile_name_password_and_notifications(): void

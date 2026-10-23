@@ -7,7 +7,8 @@ use App\Models\FeatureCatalog;
 /**
  * Adds the feature keys of the shared contract (resources/licensing/features.json, a copy of
  * the workspace contracts/fixtures/features.json) to the feature_catalog table. Existing rows
- * keep the name and description an admin may have edited; nothing is ever removed.
+ * keep the name and description an admin may have edited. Keys no longer in the contract (the
+ * module became core, controlled in the console's Plugins) are removed.
  */
 class FeatureCatalogSync
 {
@@ -42,6 +43,11 @@ class FeatureCatalogSync
             }
             $row->sort = $sort;
             $row->save();
+        }
+
+        $keys = array_column(self::contract(), 'key');
+        if ($keys !== []) {
+            FeatureCatalog::query()->whereNotIn('key', $keys)->delete();
         }
 
         return $added;

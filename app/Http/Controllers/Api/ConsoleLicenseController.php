@@ -1,0 +1,304 @@
+<?php
+
+namespace App\Http\Controllers\Api;
+
+use App\Http\Controllers\Controller;
+use App\Models\License;
+use App\Models\LicenseActivation;
+use App\Support\LicenseFile\Issuer;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
+
+/**
+ * Endpoints called by the self-hosted AtGlance Management Console, authenticated with
+ * "Authorization: Bearer <licence key>". A licence works once the owner has entered the
+ * emailed code (and, for flagged users, an admin approved it), on exactly one console
+ * instance: the first console to activate it owns it until the licence is revoked.
+ */
+class ConsoleLicenseController extends Controller
+{
+    /**
+     * Check the key. Read-only: nothing is written unless the console also sends
+     * `org_name`, in which case this marks the licence "In Use" (same as activate()).
+     */
+    public function verify(Request $request): JsonResponse
+    {
+        if (filled($request->input('org_name'))) {
+            return $this->activate($request);
+        }
+
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
+        }
+        if (! $token->isUsable()) {
+            return $this->notUsable($token);
+        }
+
+        return response()->json($this->payload($request, $token, $this->activation($token)));
+    }
+
+    /**
+     * Bind the licence to this console and record its organization ("In Use").
+     * Idempotent for the same console identity; 409 when another console uses it.
+     */
+    public function activate(Request $request): JsonResponse
+    {
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
+        }
+        if (! $token->isUsable()) {
+            return $this->notUsable($token);
+        }
+
+        $data = $this->validateConsole($request, orgRequired: true);
+        $activation = $this->activation($token);
+
+        if (! $activation) {
+            try {
+                $activation = LicenseActivation::create([
+                    'token_id' => $token->id,
+                    'instance_id' => $data['instance_id'],
+                    'org_name' => $data['org_name'],
+                    'hostname' => $data['hostname'] ?? null,
+                    'console_version' => $data['version'] ?? null,
+                    'ip_address' => $request->ip(),
+                    'activated_at' => now(),
+                    'last_seen_at' => now(),
+                ]);
+
+                return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)), 201);
+            } catch (UniqueConstraintViolationException) {
+                // Another console activated the same licence at the same moment.
+                $activation = $this->activation($token);
+            }
+        }
+
+        if ($activation->instance_id !== $data['instance_id']) {
+            return $this->inUseElsewhere($activation);
+        }
+
+        $this->touch($request, $activation, $data);
+
+        return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)));
+    }
+
+    /**
+     * Consoles from 2.3 ask for the licence file with "license_file": true. They get the same
+     * signed .atgl a user downloads for an offline console (base64), bound to this console's
+     * instance_id, so limits, features and expiry work the same with a key or a file.
+     */
+    private function withLicenseFile(Request $request, License $token, LicenseActivation $activation, array $payload): array
+    {
+        if (! $request->boolean('license_file')) {
+            return $payload;
+        }
+
+        try {
+            $issued = Issuer::fromConfig()->issue($token, $activation->instance_id, 'console');
+            $payload['license_file'] = base64_encode($issued['bytes']);
+            $payload['license_file_id'] = $issued['license']->license_id;
+        } catch (HttpExceptionInterface $e) {
+            $payload['license_file'] = null;
+            $payload['license_file_error'] = $e->getMessage();
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Change the organization name of an activated licence (e.g. after a company rename).
+     * Only the console that activated the licence may do this.
+     */
+    public function updateOrg(Request $request): JsonResponse
+    {
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
+        }
+        if ($token->isExpired()) {
+            return $this->notUsable($token);
+        }
+
+        $data = $this->validateConsole($request, orgRequired: true);
+        $activation = $this->activation($token);
+
+        if (! $activation) {
+            return $this->notActivated();
+        }
+        if ($activation->instance_id !== $data['instance_id']) {
+            return $this->inUseElsewhere($activation);
+        }
+
+        $previous = $activation->org_name;
+        $this->touch($request, $activation, $data);
+
+        return response()->json([
+            ...$this->payload($request, $token, $activation),
+            'previous_org_name' => $previous,
+        ]);
+    }
+
+    /**
+     * Periodic "still alive" call from the activated console. Records last seen.
+     */
+    public function heartbeat(Request $request): JsonResponse
+    {
+        $token = $this->licenseToken($request);
+        if (! $token) {
+            return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
+        }
+        if ($token->isExpired()) {
+            return $this->notUsable($token);
+        }
+
+        $data = $this->validateConsole($request);
+        $activation = $this->activation($token);
+
+        if (! $activation) {
+            return $this->notActivated();
+        }
+
+        if ($activation->instance_id !== $data['instance_id']) {
+            return $this->inUseElsewhere($activation);
+        }
+
+        $this->touch($request, $activation, $data);
+
+        return response()->json([
+            'valid' => true,
+            'status' => 'in_use',
+            'last_seen_at' => $activation->last_seen_at->toIso8601String(),
+        ]);
+    }
+
+    private function licenseToken(Request $request): ?License
+    {
+        $token = $request->user()?->currentAccessToken();
+
+        // Browser sessions (TransientToken) and tokens without the licence ability are rejected.
+        return $token instanceof License && $token->can(License::ABILITY) ? $token : null;
+    }
+
+    private function activation(License $token): ?LicenseActivation
+    {
+        return LicenseActivation::where('token_id', $token->id)->first();
+    }
+
+    /**
+     * Validate the console details and resolve its identity: instance_id when sent
+     * (recommended), otherwise the hostname, otherwise the caller's IP address.
+     */
+    private function validateConsole(Request $request, bool $orgRequired = false): array
+    {
+        $data = $request->validate([
+            'org_name' => [$orgRequired ? 'required' : 'nullable', 'string', 'max:255'],
+            'instance_id' => ['nullable', 'string', 'min:8', 'max:100', 'regex:/^[A-Za-z0-9._:-]+$/'],
+            'hostname' => ['nullable', 'string', 'max:255'],
+            'version' => ['nullable', 'string', 'max:50'],
+        ], [
+            'org_name.required' => 'Send the organization name (org_name) to activate this licence.',
+        ]);
+
+        if (isset($data['org_name'])) {
+            $data['org_name'] = trim($data['org_name']);
+        }
+
+        $data['instance_id'] = $data['instance_id']
+            ?? (filled($data['hostname'] ?? null) ? 'host:'.mb_substr($data['hostname'], 0, 95) : 'ip:'.$request->ip());
+
+        return $data;
+    }
+
+    private function touch(Request $request, LicenseActivation $activation, array $data): void
+    {
+        $activation->fill(array_filter([
+            'org_name' => $data['org_name'] ?? null,
+            'hostname' => $data['hostname'] ?? null,
+            'console_version' => $data['version'] ?? null,
+        ]))->fill([
+            'ip_address' => $request->ip(),
+            'last_seen_at' => now(),
+        ])->save();
+    }
+
+    private function payload(Request $request, License $token, ?LicenseActivation $activation): array
+    {
+        $user = $request->user();
+
+        return [
+            'valid' => true,
+            'status' => $activation ? 'in_use' : 'available',
+            'user' => ['id' => (string) $user->id, 'email' => $user->email, 'name' => $user->name],
+            'license' => ['name' => $token->name, 'expires_at' => $token->expires_at?->toIso8601String()],
+            'plan' => $user->plan,
+            'console' => $activation?->toConsoleArray(),
+        ];
+    }
+
+    /** 403 for a licence that is not verified with the emailed code, or still awaits an admin. */
+    private function notUsable(License $license): JsonResponse
+    {
+        $status = $license->status();
+
+        return response()->json([
+            'valid' => false,
+            'status' => $status,
+            'message' => match ($status) {
+                License::UNVERIFIED => 'This licence is not verified yet. Enter the 5-digit code we emailed you on your AtGlance dashboard.',
+                License::EXPIRED => 'This licence expired on '.$license->expires_at->toDateString().'. Create a new licence on your AtGlance dashboard.',
+                default => 'This licence is under review. It can be used once an AtGlance admin approves it.',
+            },
+        ], 403);
+    }
+
+    private function notActivated(): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'not_activated',
+            'message' => 'This licence is not activated. Activate it first.',
+        ], 409);
+    }
+
+    private function invalid(): JsonResponse
+    {
+        return response()->json(['valid' => false, 'message' => 'Invalid licence'], 401);
+    }
+
+    /** A licence file was generated from this licence: its key no longer validates. */
+    private function usedByFile(): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'in_use_file',
+            'message' => 'This licence is in use with a licence file, so its licence key cannot be used. Upload the licence file, or create a new licence.',
+        ], 409);
+    }
+
+    private function inUseElsewhere(LicenseActivation $activation): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'in_use_elsewhere',
+            'message' => 'This licence is already in use by another Management Console'
+                .($activation->org_name ? " (organization: {$activation->org_name})" : '')
+                .' until it expires. Create a new licence for this console.',
+        ], 409);
+    }
+}
