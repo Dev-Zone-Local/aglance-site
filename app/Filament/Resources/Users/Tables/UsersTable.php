@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Users\Tables;
 
+use App\Filament\Support\CustomLicenseActions;
 use App\Models\User;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -48,6 +49,11 @@ class UsersTable
 
                         return $pending ? "{$pending} awaiting approval" : null;
                     }),
+                TextColumn::make('license_policy')
+                    ->label('Licence policy')
+                    ->badge()
+                    ->state(fn (User $record) => CustomLicenseActions::active($record) ? 'Custom' : 'Standard')
+                    ->color(fn (string $state) => $state === 'Custom' ? 'info' : 'gray'),
                 TextColumn::make('auth_method')
                     ->badge(),
                 TextColumn::make('github_login')
@@ -82,6 +88,8 @@ class UsersTable
                         $record->markEmailAsVerified();
                         Notification::make()->title("{$record->email} activated")->success()->send();
                     }),
+                CustomLicenseActions::edit(),
+                CustomLicenseActions::revoke(),
                 EditAction::make(),
             ]);
     }

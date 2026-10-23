@@ -20,9 +20,9 @@ return [
     'default_plan' => 'free',
 
     'plans' => [
-        // seats, features and valid_days go into licence files (.atgl).
-        'free' => ['label' => 'Free', 'licenses' => 1, 'seats' => 5, 'features' => [], 'valid_days' => 365],
-        'enterprise' => ['label' => 'Enterprise', 'licenses' => null, 'seats' => 1000, 'features' => ['sso', 'mcp', 'ai'], 'valid_days' => 365],
+        // Limits and features of licence files (.atgl) come from Admin → License Policy, per plan.
+        'free' => ['label' => 'Free', 'licenses' => 1],
+        'enterprise' => ['label' => 'Enterprise', 'licenses' => null],
     ],
 
     /*

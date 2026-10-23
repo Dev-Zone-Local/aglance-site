@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Models\FeatureCatalog;
 use App\Models\License;
 use App\Models\User;
 use App\Support\LicenceManager;
+use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -212,6 +214,8 @@ class Licences extends Component
             'pending' => $this->pendingId ? $licences->firstWhere('id', $this->pendingId) : null,
             'revoking' => $this->revokingId ? $licences->firstWhere('id', $this->revokingId) : null,
             'licenceFiles' => $user->licenseFiles()->latest('issued_at')->limit(20)->get(),
+            'policy' => PolicyResolver::for($user),
+            'featureNames' => FeatureCatalog::options(),
         ]);
     }
 

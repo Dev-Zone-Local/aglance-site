@@ -172,11 +172,32 @@
         <h2 class="mb-1 text-2xl font-medium text-ag-ink">Licence file (.atgl)</h2>
         <p class="mb-4 max-w-2xl text-sm text-ag-subtle">
             Management Console 2.3 and later is licensed with a file instead of a key. The console checks the file on its own server and never
-            contacts atglance.live, so it also works without internet access. The file carries your {{ $user->planLabel() }} plan and is valid for one year.
+            contacts atglance.live, so it also works without internet access. The file carries your {{ $user->planLabel() }} plan and the policy below.
         </p>
+
+        <div class="mb-5 rounded-input bg-ag-surface p-5" data-testid="licence-policy">
+            <div class="mb-3 flex items-center gap-2 text-sm text-ag-ink">
+                Policy: <span @class(['rounded-full px-2.5 py-0.5 text-xs font-medium', 'bg-white text-ag-teal-text' => $policy['policy_type'] === 'custom', 'bg-white text-ag-subtle' => $policy['policy_type'] !== 'custom'])>{{ $policy['label'] }}</span>
+            </div>
+            <dl class="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">
+                <div><dt class="text-xs text-ag-muted">Node limit</dt><dd class="text-ag-ink">{{ $policy['max_nodes'] === 0 ? 'Unlimited' : $policy['max_nodes'] }}</dd></div>
+                <div><dt class="text-xs text-ag-muted">User limit</dt><dd class="text-ag-ink">{{ $policy['max_users'] === 0 ? 'Unlimited' : $policy['max_users'] }}</dd></div>
+                <div><dt class="text-xs text-ag-muted">Valid for</dt><dd class="text-ag-ink">{{ $policy['expires_on'] ? 'until '.$policy['expires_on']->format('M j, Y') : $policy['validity_months'].' '.($policy['validity_months'] === 1 ? 'month' : 'months') }}</dd></div>
+                <div><dt class="text-xs text-ag-muted">Install within</dt><dd class="text-ag-ink">{{ $policy['activation_window_minutes'] }} minutes</dd></div>
+            </dl>
+            <div class="mt-3 text-sm">
+                <span class="text-xs text-ag-muted">Features:</span>
+                @forelse ($policy['features'] as $feature)
+                    <span class="mr-1 inline-block rounded-full bg-white px-2.5 py-0.5 text-xs text-ag-ink">{{ $featureNames[$feature] ?? $feature }}</span>
+                @empty
+                    <span class="text-ag-subtle">None</span>
+                @endforelse
+            </div>
+        </div>
+
         <div class="mb-5 flex items-start gap-2 rounded-input bg-ag-warning-soft px-4 py-3 text-sm text-ag-warning-text">
             <x-glyph name="alert-triangle" class="mt-0.5 shrink-0" />
-            <span>Upload the file in the console installer, or in Admin Settings &rsaquo; Licence, <b>within 3 hours</b> of generating it. After that, generate a new one.</span>
+            <span>Upload the file in the console installer, or in Admin Settings &rsaquo; Licence, <b>within {{ $policy['activation_window_minutes'] >= 60 && $policy['activation_window_minutes'] % 60 === 0 ? ($policy['activation_window_minutes'] / 60).' '.($policy['activation_window_minutes'] === 60 ? 'hour' : 'hours') : $policy['activation_window_minutes'].' minutes' }}</b> of generating it. After that, generate a new one.</span>
         </div>
 
         @if (! $user->hasVerifiedEmail())

@@ -9,7 +9,9 @@ use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Offline licence files (.atgl) issued to users. Read-only: a file cannot be revoked once
@@ -40,7 +42,17 @@ class LicenseFileResource extends Resource
                 TextColumn::make('user.email')->label('User')->searchable(),
                 TextColumn::make('org')->label('Customer')->searchable()->toggleable(),
                 TextColumn::make('plan')->badge()->color('gray'),
-                TextColumn::make('seats')->numeric()->toggleable(),
+                TextColumn::make('policy_type')->label('Policy')->badge()
+                    ->formatStateUsing(fn (?string $state) => $state === 'custom' ? 'Custom' : 'Standard')
+                    ->color(fn (?string $state) => $state === 'custom' ? 'info' : 'gray')
+                    ->description(fn (LicenseFile $r) => $r->policy_id),
+                TextColumn::make('max_nodes')->label('Nodes')
+                    ->state(fn (LicenseFile $r) => $r->max_nodes === null ? '—' : ($r->max_nodes === 0 ? 'Unlimited' : $r->max_nodes)),
+                TextColumn::make('max_users')->label('Users')
+                    ->state(fn (LicenseFile $r) => $r->max_users ?? $r->seats)
+                    ->formatStateUsing(fn ($state) => $state === 0 ? 'Unlimited' : $state),
+                TextColumn::make('features')->label('Features')->badge()->color('gray')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('issued_by')->label('Issued by')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('issued_at')->label('Issued')->dateTime()->sortable(),
                 TextColumn::make('expires_at')->label('Expires')->date()->sortable()
                     ->color(fn (LicenseFile $r) => $r->isExpired() ? 'danger' : null),
@@ -48,8 +60,23 @@ class LicenseFileResource extends Resource
                 TextColumn::make('key_id')->label('Key ID')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                SelectFilter::make('user')->relationship('user', 'email')->searchable()->preload(),
+                SelectFilter::make('policy_type')->label('Policy')->options(['default' => 'Standard', 'custom' => 'Custom']),
                 SelectFilter::make('plan')->options(collect(config('atglance.plans'))->mapWithKeys(fn ($p, $code) => [$code => $p['label']])->all()),
+                TernaryFilter::make('expired')
+                    ->label('Expiry')
+                    ->trueLabel('Expired')
+                    ->falseLabel('Valid')
+                    ->queries(
+                        true: fn (Builder $q) => $q->where('expires_at', '<=', now()),
+                        false: fn (Builder $q) => $q->where('expires_at', '>', now()),
+                    ),
             ]);
+    }
+
+    public static function canAccess(): bool
+    {
+        return (bool) auth()->user()?->isAdmin();
     }
 
     public static function canCreate(): bool

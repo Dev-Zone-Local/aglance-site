@@ -4,6 +4,7 @@ namespace App\Support\LicenseFile;
 
 use App\Models\LicenseFile;
 use App\Models\User;
+use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -11,15 +12,17 @@ use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 /**
- * Issues an offline licence file (.atgl) for a signed-in user. Every value in the file
- * comes from the user's account and plan; the only input is the optional Installation ID.
+ * Issues an offline licence file (.atgl, payload v2) for a signed-in user. Limits, validity,
+ * activation window and features come from the resolved policy (custom, then plan default, then
+ * global default) and the account; the only input is the optional Installation ID.
  *
  * Failures: HttpException via abort() (not allowed / not configured) or
  * ValidationException (bad Installation ID).
  */
 class Issuer
 {
-    public function __construct(private readonly Packer $packer) {}
+    /** @param  string  $issuedBy  who triggered the generation: user (dashboard, API) or admin */
+    public function __construct(private readonly Packer $packer, private readonly string $issuedBy = 'user') {}
 
     /** Packer from config('atglance.license_file'); 503 when the keys are missing or malformed. */
     public static function fromConfig(): self
@@ -52,32 +55,45 @@ class Issuer
 
         $plans = (array) config('atglance.plans');
         $planCode = array_key_exists($user->plan, $plans) ? $user->plan : config('atglance.default_plan');
-        $plan = $plans[$planCode];
+        $policy = PolicyResolver::for($user);
+        // A custom policy's Installation ID wins over the one typed on the dashboard.
+        $installId = $policy['install_id'] ?: ($installId !== '' ? $installId : null);
         $now = now();
 
-        $payload = PayloadBuilder::build(
+        $payload = PayloadBuilder::buildV2(
             licenseId: 'LIC-'.Str::uuid(),
             keyId: $this->packer->keyId(),
             customer: $user->name !== '' ? $user->name : $user->email,
             email: $user->email,
             plan: $planCode,
-            seats: (int) ($plan['seats'] ?? 1),
-            features: (array) ($plan['features'] ?? []),
-            validDays: (int) ($plan['valid_days'] ?? 365),
+            features: $policy['features'],
+            maxNodes: $policy['max_nodes'],
+            maxUsers: $policy['max_users'],
+            policyId: $policy['policy_id'],
+            policyType: $policy['policy_type'],
+            validityMonths: $policy['validity_months'],
+            activationWindowMinutes: $policy['activation_window_minutes'],
             minVersion: (string) config('atglance.license_file.min_version', '2.3.0'),
-            installId: $installId !== '' ? $installId : null,
+            installId: $installId,
             now: $now,
+            expiresAt: $policy['expires_on'],
         );
 
         $bytes = $this->packer->pack(PayloadBuilder::encode($payload));
 
         $license = DB::transaction(fn () => LicenseFile::create([
+            'format_version' => 2,
             'license_id' => $payload['license_id'],
             'user_id' => $user->id,
             'org' => $payload['customer'],
             'plan' => $payload['plan'],
-            'seats' => $payload['seats'],
+            'max_nodes' => $payload['max_nodes'],
+            'max_users' => $payload['max_users'],
             'features' => $payload['features'],
+            'policy_id' => $payload['policy_id'],
+            'policy_type' => $payload['policy_type'],
+            'validity_months' => $payload['validity_months'],
+            'issued_by' => $this->issuedBy,
             'issued_at' => self::localTime($payload['issued_at']),
             'activate_before' => self::localTime($payload['activate_before']),
             'expires_at' => self::localTime($payload['expires_at']),

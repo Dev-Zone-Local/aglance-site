@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\FeatureCatalog;
 use App\Models\LicenseFile;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -49,15 +50,23 @@ class LicenseFileTest extends TestCase
         $this->assertSame('Acme Corp', $p['customer']);
         $this->assertSame('ops@acme.test', $p['email']);
         $this->assertSame('enterprise', $p['plan']);
-        $this->assertSame(config('atglance.plans.enterprise.seats'), $p['seats']);
-        $this->assertSame(config('atglance.plans.enterprise.features'), $p['features']);
         $this->assertNull($p['install_id']);
-        $this->assertSame(1, $p['format_version']);
+        $this->assertSame(2, $p['format_version']);
+        $this->assertArrayNotHasKey('seats', $p);
+        // The seeded global default (plan defaults inherit it): unlimited, 12 months, 3 hours, every feature.
+        $this->assertSame(0, $p['max_nodes']);
+        $this->assertSame(0, $p['max_users']);
+        $this->assertSame('global', $p['policy_id']);
+        $this->assertSame('default', $p['policy_type']);
+        $this->assertSame(12, $p['validity_months']);
+        $this->assertSame(FeatureCatalog::defaultKeys(), $p['features']);
 
         $issued = strtotime($p['issued_at']);
         $this->assertSame($issued + 3 * 3600, strtotime($p['activate_before']));
-        $this->assertSame($issued + 365 * 86400, strtotime($p['expires_at']));
+        $this->assertSame(gmdate('Y-m-d\TH:i:s\Z', strtotime('+12 months', $issued)), $p['expires_at']);
         $this->assertSame($p['activate_before'], $file->activate_before->utc()->format('Y-m-d\TH:i:s\Z'));
+        $this->assertSame(['max_nodes' => 0, 'max_users' => 0, 'policy_type' => 'default', 'issued_by' => 'user'],
+            $file->only(['max_nodes', 'max_users', 'policy_type', 'issued_by']));
     }
 
     public function test_client_input_cannot_change_the_licence(): void
@@ -65,12 +74,15 @@ class LicenseFileTest extends TestCase
         $user = User::factory()->create(['plan' => 'free']);
 
         $res = $this->actingAs($user)->postJson('/api/license/generate', [
-            'plan' => 'enterprise', 'seats' => 9999, 'customer' => 'Someone else', 'expires_at' => '2099-01-01T00:00:00Z',
+            'plan' => 'enterprise', 'max_nodes' => 9999, 'max_users' => 9999, 'features' => ['everything'],
+            'policy_type' => 'custom', 'customer' => 'Someone else', 'expires_at' => '2099-01-01T00:00:00Z',
         ])->assertOk();
 
         $p = LicenseFixtures::decode($res->getContent())['payload'];
         $this->assertSame('free', $p['plan']);
-        $this->assertSame(config('atglance.plans.free.seats'), $p['seats']);
+        $this->assertSame(0, $p['max_nodes']);
+        $this->assertSame('default', $p['policy_type']);
+        $this->assertNotContains('everything', $p['features']);
         $this->assertSame($user->name, $p['customer']);
     }
 
