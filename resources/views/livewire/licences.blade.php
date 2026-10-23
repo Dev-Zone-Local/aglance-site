@@ -167,4 +167,60 @@
             </div>
         @endif
     </x-card>
+    <x-card class="mt-6 p-7">
+        <div class="mb-4 flex items-center gap-2 text-xs font-medium text-ag-teal-text"><x-glyph name="key-round" :size="14" /> Offline licence files</div>
+        <h2 class="mb-1 text-2xl font-medium text-ag-ink">Licence file (.atgl)</h2>
+        <p class="mb-4 max-w-2xl text-sm text-ag-subtle">
+            Management Console 2.3 and later is licensed with a file instead of a key. The console checks the file on its own server and never
+            contacts atglance.live, so it also works without internet access. The file carries your {{ $user->planLabel() }} plan and is valid for one year.
+        </p>
+        <div class="mb-5 flex items-start gap-2 rounded-input bg-ag-warning-soft px-4 py-3 text-sm text-ag-warning-text">
+            <x-glyph name="alert-triangle" class="mt-0.5 shrink-0" />
+            <span>Upload the file in the console installer, or in Admin Settings &rsaquo; Licence, <b>within 3 hours</b> of generating it. After that, generate a new one.</span>
+        </div>
+
+        @if (! $user->hasVerifiedEmail())
+            <p class="rounded-input bg-ag-surface px-4 py-3 text-sm text-ag-subtle">Verify your email address to generate licence files.</p>
+        @else
+            <form method="POST" action="{{ route('dashboard.licences.file') }}" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+                @csrf
+                <div class="sm:w-96">
+                    <label for="install-id" class="mb-1.5 block text-sm font-medium text-ag-ink">Installation ID <span class="font-normal text-ag-muted">(optional)</span></label>
+                    <input id="install-id" name="install_id" value="{{ old('install_id') }}" maxlength="64" autocomplete="off" spellcheck="false"
+                        placeholder="e.g. 3f2b8c1e-…" class="ag-input bg-white font-mono text-sm" @error('install_id') aria-invalid="true" @enderror>
+                    <p class="mt-1.5 text-[13px] text-ag-muted">Shown in the console installer. With it, the file works on that console only.</p>
+                </div>
+                <x-button>Generate licence file</x-button>
+            </form>
+            @error('install_id') <p class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p> @enderror
+            @error('license_file') <p class="mt-3 text-[13px] text-ag-danger-text">{{ $message }}</p> @enderror
+        @endif
+
+        @if ($licenceFiles->isNotEmpty())
+            <div class="mt-6 overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead>
+                        <tr class="border-b border-ag-line text-left text-[11px] uppercase tracking-[0.14em] text-ag-subtle">
+                            <th scope="col" class="py-2 pr-4 font-medium">Licence ID</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Issued</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Expires</th>
+                            <th scope="col" class="py-2 pr-4 font-medium">Activation</th>
+                            <th scope="col" class="py-2 font-medium">Installation</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach ($licenceFiles as $file)
+                            <tr class="border-b border-ag-line last:border-0" wire:key="file-{{ $file->id }}">
+                                <td class="py-2.5 pr-4 font-mono text-xs text-ag-ink">{{ $file->license_id }}</td>
+                                <td class="py-2.5 pr-4">{{ $file->issued_at->format('M j, Y H:i') }}</td>
+                                <td @class(['py-2.5 pr-4', 'text-ag-danger-text' => $file->isExpired()])>{{ $file->expires_at->format('M j, Y') }}</td>
+                                <td @class(['py-2.5 pr-4', 'text-ag-subtle' => $file->activationMinutesLeft() === 0, 'text-ag-teal-text' => $file->activationMinutesLeft() > 0])>{{ $file->activationWindowLabel() }}</td>
+                                <td class="py-2.5 font-mono text-xs text-ag-subtle">{{ $file->install_id ?? 'Any' }}</td>
+                            </tr>
+                        @endforeach
+                    </tbody>
+                </table>
+            </div>
+        @endif
+    </x-card>
 </div>

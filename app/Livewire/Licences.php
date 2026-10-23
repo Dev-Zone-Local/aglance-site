@@ -211,6 +211,7 @@ class Licences extends Component
             'atLimit' => $this->manager()->atLimit(),
             'pending' => $this->pendingId ? $licences->firstWhere('id', $this->pendingId) : null,
             'revoking' => $this->revokingId ? $licences->firstWhere('id', $this->revokingId) : null,
+            'licenceFiles' => $user->licenseFiles()->latest('issued_at')->limit(20)->get(),
         ]);
     }
 

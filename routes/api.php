@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\CmsController;
 use App\Http\Controllers\Api\ConsoleLicenseController;
 use App\Http\Controllers\Api\GithubAuthController;
 use App\Http\Controllers\Api\LicenseController;
+use App\Http\Controllers\Api\LicenseFileController;
 use App\Support\GithubOAuth;
 use App\Support\GoogleOAuth;
 use Illuminate\Support\Facades\Route;
@@ -58,6 +59,10 @@ Route::middleware('auth:sanctum')->prefix('licenses')->controller(ConsoleLicense
     Route::post('heartbeat', 'heartbeat')->middleware('throttle:60,1,license-heartbeat');
     Route::put('org', 'updateOrg')->middleware('throttle:10,1,license-org');
 });
+
+// Offline licence file (.atgl) for the signed-in user; values come from the account, not the request.
+Route::post('license/generate', [LicenseFileController::class, 'generate'])
+    ->middleware(['auth:sanctum', 'throttle:5,1,license-file']);
 
 // Management Console licences managed from the dashboard
 Route::middleware('auth:sanctum')->prefix('licenses')->controller(LicenseController::class)->group(function () {
