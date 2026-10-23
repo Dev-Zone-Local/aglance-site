@@ -9,6 +9,7 @@ use App\Notifications\LicenseCodeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Tests\Support\LicenseFixtures;
 use Tests\TestCase;
 
 class ConsoleLicenseTest extends TestCase
@@ -371,5 +372,42 @@ class ConsoleLicenseTest extends TestCase
             ->assertJsonPath('licenses.0.in_use', true)
             ->assertJsonPath('licenses.0.console.org_name', 'Acme Corp')
             ->assertJsonStructure(['licenses' => [['console' => ['instance_id', 'hostname', 'version', 'activated_at', 'last_seen_at']]]]);
+    }
+
+    public function test_activation_returns_the_licence_file_when_asked(): void
+    {
+        LicenseFixtures::configure();
+        $key = $this->newKey(User::factory()->create(['name' => 'Acme Corp']));
+        $instance = (string) Str::uuid();
+
+        $res = $this->console($key)->postJson('/api/licenses/activate', [
+            'org_name' => 'Acme Corp', 'instance_id' => $instance, 'license_file' => true,
+        ])->assertCreated();
+
+        $bytes = base64_decode((string) $res->json('license_file'), true);
+        $this->assertNotFalse($bytes);
+        $payload = LicenseFixtures::decode($bytes)['payload'];
+        $this->assertSame($instance, $payload['install_id']);
+        $this->assertSame('Acme Corp', $payload['customer']);
+        $this->assertSame(2, $payload['format_version']);
+        $this->assertSame($res->json('license_file_id'), $payload['license_id']);
+        $this->assertDatabaseHas('licenses', ['license_id' => $payload['license_id'], 'issued_by' => 'console']);
+
+        // Activating again from the same console gives a fresh file; old consoles (no flag) get none.
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => $instance, 'license_file' => true])
+            ->assertOk()->assertJsonStructure(['license_file']);
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => $instance])
+            ->assertOk()->assertJsonMissingPath('license_file');
+    }
+
+    public function test_activation_without_signing_keys_reports_the_missing_file(): void
+    {
+        config(['atglance.license_file.signing_key' => null]);
+        $key = $this->newKey();
+
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => self::CONSOLE_A, 'license_file' => true])
+            ->assertCreated()
+            ->assertJsonPath('license_file', null)
+            ->assertJsonStructure(['license_file_error']);
     }
 }

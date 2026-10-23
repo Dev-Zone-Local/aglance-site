@@ -6,6 +6,7 @@ use App\Filament\Pages\LicensePolicyPage;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Models\CustomLicensePolicy;
 use App\Models\FeatureCatalog;
+use App\Models\License;
 use App\Models\LicenseFile;
 use App\Models\LicensePolicy;
 use App\Models\PolicyAuditLog;
@@ -14,6 +15,7 @@ use App\Models\User;
 use App\Support\LicensePolicy\PolicyResolver;
 use App\Support\LicensePolicy\PolicyRules;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 use Tests\Support\LicenseFixtures;
@@ -45,14 +47,22 @@ class LicensePolicyTest extends TestCase
     private function policy(array $overrides = []): array
     {
         return array_merge([
-            'max_nodes' => 10, 'max_users' => 5, 'validity_value' => 6, 'validity_unit' => 'months',
+            'max_licences' => 2, 'max_nodes' => 10, 'max_users' => 5, 'validity_value' => 6, 'validity_unit' => 'months',
             'activation_window_minutes' => 60, 'features' => ['sso', 'notifications'],
         ], $overrides);
     }
 
+    /** A new confirmed licence of $user, and the payload of its licence file. */
     private function generate(User $user): array
     {
-        return LicenseFixtures::decode($this->actingAs($user)->postJson('/api/license/generate')->assertOk()->getContent())['payload'];
+        // Expiry from the policy, as LicenceManager::create() sets it.
+        $policy = PolicyResolver::for($user);
+        $expires = $policy['expires_on'] ?? now()->addMonthsNoOverflow($policy['validity_months']);
+        $licence = License::findOrFail($user->createToken('console', [License::ABILITY], $expires)->accessToken->id);
+        $licence->confirm();
+        $res = $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => (string) Str::uuid()])->assertOk();
+
+        return LicenseFixtures::decode($res->getContent())['payload'];
     }
 
     public function test_migration_seeds_the_catalog_and_the_default_policies(): void
@@ -64,7 +74,7 @@ class LicensePolicyTest extends TestCase
         }
     }
 
-    public function test_policy_tabs_follow_the_pricing_plans_and_global_holds_the_daily_cap(): void
+    public function test_policy_tabs_follow_the_pricing_plans_and_set_the_licence_limit(): void
     {
         PricingPlan::create(['name' => 'Pro Team', 'price' => '49', 'description' => '', 'features' => [], 'order' => 3]);
         $this->actingAs($this->admin());
@@ -74,16 +84,17 @@ class LicensePolicyTest extends TestCase
         Livewire::test(LicensePolicyPage::class)
             ->assertSee('Global default')
             ->assertSee('Pro Team plan')
-            ->assertSee('Licence files per account per day')
-            ->set('data.global.max_files_per_day', 0)
+            ->assertSee('Licence limit')
+            ->set('data.global.max_licences', 0)
             ->call('save')
-            ->assertHasErrors(['data.global.max_files_per_day'])
-            ->set('data.global.max_files_per_day', 3)
+            ->assertHasErrors(['data.global.max_licences'])
+            ->set('data.global.max_licences', 3)
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame(3, LicensePolicy::global()->fresh()->max_files_per_day);
-        $this->assertDatabaseHas('policy_audit_log', ['field' => 'max_files_per_day', 'old_value' => '20', 'new_value' => '3']);
+        $this->assertSame(3, LicensePolicy::global()->fresh()->max_licences);
+        $this->assertDatabaseHas('policy_audit_log', ['field' => 'max_licences', 'old_value' => '1', 'new_value' => '3']);
+        $this->assertSame(3, User::factory()->create(['plan' => 'free'])->licenseLimit());
 
         PricingPlan::query()->where('name', 'Pro Team')->delete();
         $this->assertNotContains('plan:pro_team', LicensePolicyPage::policies()->pluck('scope')->all());

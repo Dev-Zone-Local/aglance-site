@@ -40,6 +40,8 @@ class LicenseFileResource extends Resource
             ->columns([
                 TextColumn::make('license_id')->label('Licence ID')->searchable()->fontFamily('mono')->copyable(),
                 TextColumn::make('user.email')->label('User')->searchable(),
+                TextColumn::make('licence.name')->label('Licence')->fontFamily('mono')
+                    ->description(fn (LicenseFile $r) => $r->issued_by === 'console' ? 'online activation' : 'download'),
                 TextColumn::make('org')->label('Customer')->searchable()->toggleable(),
                 TextColumn::make('plan')->badge()->color('gray'),
                 TextColumn::make('policy_type')->label('Policy')->badge()

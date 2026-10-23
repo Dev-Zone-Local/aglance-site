@@ -105,6 +105,7 @@ class LicenseRevokeTest extends TestCase
     public function test_revoke_and_confirm_codes_do_not_clash(): void
     {
         Notification::fake();
+        \App\Models\LicensePolicy::global()->update(['max_licences' => 10]);
         $user = User::factory()->create(['plan' => 'enterprise']);
         $existing = $user->createToken('old', [self::ABILITY])->accessToken;
         $this->actingAs($user);

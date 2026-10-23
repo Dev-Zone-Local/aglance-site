@@ -82,7 +82,7 @@ class LicensePolicyPage extends Page
         $state = [];
         foreach (self::policies() as $policy) {
             $state[self::formKey($policy->scope)] = $policy->only([
-                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_files_per_day', 'features',
+                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_licences', 'features',
             ]);
         }
         $this->form->fill($state);
@@ -101,10 +101,6 @@ class LicensePolicyPage extends Page
                 Grid::make(2)
                     ->visible(fn (Get $get) => ! $isPlan || ! $get("{$key}.inherit_global"))
                     ->schema(self::policyFields($key)),
-                $isPlan ? null : TextInput::make("{$key}.max_files_per_day")
-                    ->label('Licence files per account per day')
-                    ->integer()->minValue(1)->maxValue(PolicyRules::MAX_FILES_PER_DAY)->required()
-                    ->helperText('How many licence files one account may generate in 24 hours, for every plan and custom license.'),
             ]));
         }
 
@@ -117,6 +113,9 @@ class LicensePolicyPage extends Page
         $p = $key === '' ? '' : $key.'.';
 
         return [
+            TextInput::make("{$p}max_licences")->label('Licence limit')->integer()
+                ->minValue(1)->maxValue(PolicyRules::MAX_LICENCES)->required()
+                ->helperText('Total licences a user may hold (keys and their files), at least 1. To get more, users contact AtGlance Support.'),
             TextInput::make("{$p}max_nodes")->label('Node limit')->integer()->minValue(0)->required()
                 ->helperText('0 = unlimited. Active nodes (registered systems) a console may have.'),
             TextInput::make("{$p}max_users")->label('User limit')->integer()->minValue(0)->required()
@@ -144,14 +143,11 @@ class LicensePolicyPage extends Page
             $input = (array) ($this->data[$key] ?? $state[$key] ?? []);
             $inherit = $policy->scope !== LicensePolicy::GLOBAL && (bool) ($input['inherit_global'] ?? false);
             $values = $inherit
-                ? $policy->only(['max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features'])
+                ? $policy->only(['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features'])
                 : PolicyRules::validate($input, false, "data.{$key}.");
             $validated[$policy->scope] = ['inherit_global' => $inherit] + array_intersect_key($values, array_flip([
-                'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
+                'max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
             ]));
-            if ($policy->scope === LicensePolicy::GLOBAL) {
-                $validated[$policy->scope]['max_files_per_day'] = PolicyRules::validateFilesPerDay($input['max_files_per_day'] ?? null, "data.{$key}.");
-            }
         }
 
         DB::transaction(function () use ($validated, $adminId) {

@@ -14,15 +14,15 @@ return [
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
     /*
-    | Subscription plans. `licenses` is the max number of Management Console
-    | licences a user on the plan may hold (null = unlimited). New users get `free`.
+    | Subscription plans (labels). How many licences a user on a plan may hold is the
+    | plan's "Licence limit" in Admin → License Policy. New users get `free`.
     */
     'default_plan' => 'free',
 
     'plans' => [
-        // Limits and features of licence files (.atgl) come from Admin → License Policy, per plan.
-        'free' => ['label' => 'Free', 'licenses' => 1],
-        'enterprise' => ['label' => 'Enterprise', 'licenses' => null],
+        // Licence limits, validity and features come from Admin → License Policy (per plan).
+        'free' => ['label' => 'Free'],
+        'enterprise' => ['label' => 'Enterprise'],
     ],
 
     /*

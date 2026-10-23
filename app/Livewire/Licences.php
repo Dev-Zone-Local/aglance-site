@@ -134,6 +134,21 @@ class Licences extends Component
         });
     }
 
+    /** Licence whose "Download licence file" form is open. */
+    public ?int $fileForId = null;
+
+    public function startFile(int $id): void
+    {
+        $this->attempt(function () use ($id) {
+            $this->fileForId = $this->manager()->find($id)->id;
+        });
+    }
+
+    public function cancelFile(): void
+    {
+        $this->reset('fileForId');
+    }
+
     public function cancelRevoke(): void
     {
         $this->reset('revokingId', 'revokePassword', 'revokeCode', 'revokeCodeSent');
@@ -213,7 +228,10 @@ class Licences extends Component
             'atLimit' => $this->manager()->atLimit(),
             'pending' => $this->pendingId ? $licences->firstWhere('id', $this->pendingId) : null,
             'revoking' => $this->revokingId ? $licences->firstWhere('id', $this->revokingId) : null,
-            'licenceFiles' => $user->licenseFiles()->latest('issued_at')->limit(20)->get(),
+            'licenceFiles' => $user->licenseFiles()->with('licence')->latest('issued_at')->limit(20)->get(),
+            // After a refused download the page comes back with the licence id in the error bag.
+            'fileFor' => $licences->firstWhere('id', $this->fileForId ?? (int) (session('errors')?->first('file_licence_id') ?: 0)),
+            'limitMessage' => LicenceManager::limitMessage($user->licenseLimit()),
             'policy' => PolicyResolver::for($user),
             'featureNames' => FeatureCatalog::options(),
         ]);

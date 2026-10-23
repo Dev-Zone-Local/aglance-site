@@ -8,8 +8,6 @@ use Illuminate\Database\Eloquent\Model;
  * A default licence policy: scope "global", or "plan:<code>" for one plan of Admin → Pricing
  * plans (code = the plan name as a slug, the value users carry in users.plan). A plan row with
  * inherit_global uses the global policy. Changes apply only to licences generated afterwards.
- *
- * max_files_per_day is read from the global row only.
  */
 class LicensePolicy extends Model
 {
@@ -17,7 +15,7 @@ class LicensePolicy extends Model
 
     protected $fillable = [
         'scope', 'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit',
-        'activation_window_minutes', 'max_files_per_day', 'features',
+        'activation_window_minutes', 'max_licences', 'features',
     ];
 
     protected function casts(): array
@@ -28,7 +26,7 @@ class LicensePolicy extends Model
             'max_users' => 'integer',
             'validity_value' => 'integer',
             'activation_window_minutes' => 'integer',
-            'max_files_per_day' => 'integer',
+            'max_licences' => 'integer',
             'features' => 'array',
         ];
     }

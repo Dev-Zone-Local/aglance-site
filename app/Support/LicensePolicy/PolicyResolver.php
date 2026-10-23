@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
 class PolicyResolver
 {
     /**
-     * @return array{policy_id: string, policy_type: string, label: string, max_nodes: int, max_users: int,
+     * @return array{policy_id: string, policy_type: string, label: string, max_licences: int, max_nodes: int, max_users: int,
      *     validity_months: int, expires_on: ?Carbon, activation_window_minutes: int, features: list<string>,
      *     install_id: ?string, custom: ?CustomLicensePolicy}
      */
@@ -27,6 +27,7 @@ class PolicyResolver
                 'policy_id' => $custom->policyId(),
                 'policy_type' => 'custom',
                 'label' => 'Custom',
+                'max_licences' => max(1, (int) $custom->max_licences),
                 'max_nodes' => $custom->max_nodes,
                 'max_users' => $custom->max_users,
                 'validity_months' => $custom->expires_on
@@ -47,6 +48,7 @@ class PolicyResolver
             'policy_id' => $policy->scope,
             'policy_type' => 'default',
             'label' => 'Standard',
+            'max_licences' => max(1, (int) $policy->max_licences),
             'max_nodes' => $policy->max_nodes,
             'max_users' => $policy->max_users,
             'validity_months' => $policy->validityMonths(),

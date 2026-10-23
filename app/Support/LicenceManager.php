@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\License;
 use App\Models\User;
 use App\Notifications\LicenseCodeNotification;
+use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -46,8 +47,10 @@ class LicenceManager
         $this->ensureWithinLimit();
         $this->ensureDeliverable();
 
-        // Valid for one year from creation (or until the user revokes it).
-        $new = $this->user->createToken(trim($name), [License::ABILITY], now()->addYears(License::VALID_YEARS));
+        // Valid for the policy's validity (custom license, plan or global default), or until revoked.
+        $policy = PolicyResolver::for($this->user);
+        $expires = $policy['expires_on'] ?? now()->addMonthsNoOverflow($policy['validity_months']);
+        $new = $this->user->createToken(trim($name), [License::ABILITY], $expires);
         $licence = License::findOrFail($new->accessToken->id);
         // Hide Sanctum's "<id>|" prefix: users only see "atg_...". Sanctum finds such keys by hash.
         $key = Str::after($new->plainTextToken, '|');
@@ -120,9 +123,14 @@ class LicenceManager
 
     public function atLimit(): bool
     {
-        $limit = $this->user->licenseLimit();
+        return $this->user->licenses()->count() >= $this->user->licenseLimit();
+    }
 
-        return $limit !== null && $this->user->licenses()->count() >= $limit;
+    /** Shown when the licence limit is reached: only AtGlance Support raises it. */
+    public static function limitMessage(int $limit): string
+    {
+        return "Your account can hold {$limit} ".($limit === 1 ? 'licence' : 'licences')
+            .'. To increase the limit, contact the AtGlance Support team. You can also revoke a licence you no longer use.';
     }
 
     /** User-facing message after a successful confirm(). */
@@ -172,8 +180,7 @@ class LicenceManager
         abort_if(
             $this->atLimit(),
             403,
-            "Your {$this->user->planLabel()} plan includes {$limit} ".($limit === 1 ? 'licence' : 'licences')
-                .'. Revoke an existing licence or upgrade your plan.'
+            self::limitMessage($limit)
         );
     }
 }

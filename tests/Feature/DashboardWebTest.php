@@ -135,7 +135,8 @@ class DashboardWebTest extends TestCase
         Livewire::test(Licences::class)->set('name', 'one')->call('create')->assertHasNoErrors();
 
         Livewire::test(Licences::class)
-            ->assertSee('Revoke the existing one to create a new licence')
+            ->assertSee('To increase the limit, contact the AtGlance Support team')
+            ->assertSee('Contact AtGlance Support')
             ->set('name', 'two')->call('create')
             ->assertDispatched('toast', type: 'error');
 

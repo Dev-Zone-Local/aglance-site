@@ -19,26 +19,8 @@ class PolicyRules
 
     public const MAX_VALIDITY_MONTHS = 120;
 
-    public const MAX_FILES_PER_DAY = 1000;
-
-    /**
-     * The global "licence files per account per day" (1..1000).
-     *
-     * @throws \Illuminate\Validation\ValidationException
-     */
-    public static function validateFilesPerDay(mixed $value, string $prefix = ''): int
-    {
-        $validator = Validator::make(['max_files_per_day' => $value], [
-            'max_files_per_day' => ['required', 'integer', 'min:1', 'max:'.self::MAX_FILES_PER_DAY],
-        ]);
-        if ($validator->fails()) {
-            throw \Illuminate\Validation\ValidationException::withMessages([
-                $prefix.'max_files_per_day' => $validator->errors()->get('max_files_per_day'),
-            ]);
-        }
-
-        return (int) $value;
-    }
+    /** Highest licence limit an admin may set; users contact AtGlance Support to get more than their limit. */
+    public const MAX_LICENCES = 1000;
 
     /**
      * @return array<string, mixed>
@@ -46,6 +28,7 @@ class PolicyRules
     public static function rules(bool $custom = false): array
     {
         return [
+            'max_licences' => ['required', 'integer', 'min:1', 'max:'.self::MAX_LICENCES],
             'max_nodes' => ['required', 'integer', 'min:0', 'max:1000000'],
             'max_users' => ['required', 'integer', 'min:0', 'max:1000000'],
             'validity_value' => [$custom ? 'required_without:expires_on' : 'required', 'nullable', 'integer', 'min:1', 'max:120'],

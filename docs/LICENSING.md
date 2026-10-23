@@ -1,50 +1,65 @@
-# Licensing: offline licence files (.atgl)
+# Licensing: Management Console licences
 
-atglance.live issues licence files for the Management Console. The console verifies them offline
-with built-in public keys and never calls atglance.live. The file format is defined in the AtGlance
-workspace, `contracts/LICENSE_FORMAT.md`. The console repo's `docs/LICENSING.md` covers the console
-side: verification, the read-only lock, and error codes.
+A **licence** is created by the user on **Dashboard > Licences** and confirmed with the 5-digit
+code we email them (accounts flagged by an admin also need admin approval). A confirmed licence
+can then be used in one of two ways, and both follow the same policy:
 
-The older online licence keys (`atg_...`, `/api/licenses/*`) remain in place for consoles up to 2.2.
+| Console | How | What happens |
+|---|---|---|
+| With internet access | paste the **licence key** (`atg_...`) | the console calls `POST /api/licenses/activate` once; atglance.live answers with the licence file for that console |
+| Without internet access | download the **licence file** (`.atgl`) for the licence and upload it | the console checks the file offline |
+
+Either way the console ends up with the same signed licence file (payload v2) and checks it
+offline from then on; there is no later online check. The file format is defined in the AtGlance
+workspace, `contracts/LICENSE_FORMAT.md`; the console repo's `docs/LICENSING.md` covers the console
+side (verification, limits, features, error codes).
+
+**One licence = one console.** An online activation binds the licence to the console's
+instance ID; a file download needs the console's Installation ID and binds it the same way. A
+licence in use by one console is refused for another (revoke it and create a new licence to move).
+
+Consoles up to 2.2 use only the key and the old JSON answer; they keep working.
 
 ## What the site does
 
-1. A signed-in user opens **Dashboard > Licences** and clicks **Generate licence file**. The
-   Installation ID field is optional.
-2. `App\Support\LicenseFile\Issuer` builds a payload version 2 from the account and the resolved
-   policy, never from the request:
-   - `customer` is the account name, and `email` the account email;
-   - `PolicyResolver` picks the policy: the user's custom license, then the user's plan default,
-     then the global default (see "Policies");
-   - the policy gives `max_nodes`, `max_users`, `features`, the validity (`expires_at`) and the
-     activation window (`activate_before` = now + 5 to 180 minutes).
+1. `App\Support\LicenseFile\Issuer` issues the file for one licence: the licence must be confirmed
+   (and approved for flagged accounts) and not expired.
+2. `PolicyResolver` picks the policy: the user's custom license, then the plan default, then the
+   global default (see "Policies"). It gives `max_nodes`, `max_users`, `features` and the
+   activation window (`activate_before` = now + 5 to 180 minutes). The file expires with its
+   licence; the licence's expiry is set from the policy's validity when it is created.
 3. `PayloadBuilder` produces the exact JSON bytes. `Packer` signs them with Ed25519, encrypts with
    AES-256-GCM (random 12-byte IV, header as AAD), and packs the `.atgl` binary.
-4. A row is written to `licenses` (model `App\Models\LicenseFile`) with the limits, features,
-   `policy_id`, `policy_type` and `issued_by`. The file itself is not stored.
-5. The response is `application/octet-stream` with
-   `Content-Disposition: attachment; filename="atglance-<license_id>.atgl"`.
+4. A row is written to `licenses` (model `App\Models\LicenseFile`) with its licence (`token_id`),
+   limits, features, `policy_id`, `policy_type` and `issued_by` (`user` for a download, `console`
+   for an online activation). The file itself is not stored.
 
-| Route | Auth | Limits |
+| Route | Auth | Notes |
 |---|---|---|
-| `POST /api/license/generate` | Sanctum | `throttle:5,1`, and the global policy's "Licence files per account per day" (default 20) |
-| `POST /dashboard/licences/file` | web session | same |
+| `POST /api/licenses/{id}/file` | Sanctum | body `install_id` (required); `throttle:5,1` |
+| `POST /dashboard/licences/{id}/file` | web session | same; errors come back on the page |
+| `POST /api/licenses/activate` | licence key | with `"license_file": true` the answer carries `license_file` (base64 .atgl); without it, the 2.2 answer |
 
-Refused with 403: unverified email, and accounts flagged for admin approval. Refused with 503:
-the keys are missing or malformed. The 503 message gives no details.
+Refused with 403: unconfirmed, expired, or not yet approved licences. 409: the licence is in use by
+another console. 503 (or `license_file: null` with `license_file_error` on activate): the signing
+keys are missing or malformed; the message gives no details.
+
+**Licence limit.** A user may hold at most the policy's "Licence limit" licences (at least 1). At
+the limit the dashboard says to contact the AtGlance Support team; only an admin raises it (plan
+default or the user's custom license).
 
 ## Policies
 
 **Admin → Access → License Policy** (`/admin/license-policy`, admins only, checked on the server)
-edits the defaults for new licence files:
+edits the defaults for licences (keys and files alike):
 
 | Field | Validation |
 |---|---|
+| Licence limit | integer >= 1: total licences a user may hold; users contact AtGlance Support to get more |
 | Node limit | integer >= 0, `0` = unlimited |
 | User limit | integer >= 0, `0` = unlimited |
 | License valid up to | number + unit (months or years), 1 to 120 months in total |
 | License file expiry window | 5 to 180 minutes (hard cap: the licence format allows at most 3 hours) |
-| Licence files per account per day | global default only: 1 to 1000 (default 20), for every plan and custom license |
 | Features enabled | catalog keys (Feature Catalog) |
 
 There is one **global default** and one **default per plan of Admin → Pricing plans** (the plan
@@ -53,20 +68,20 @@ with "Use the global default" uses the global one. Saving affects only licences 
 afterwards; issued files never change. Every change is written to `policy_audit_log` (admin, field,
 old and new value, time) and shown under the form.
 
-**Resolution order** when a user generates a file: the user's custom license, then the plan default,
+**Resolution order** for a licence (key activation or file download): the user's custom license, then the plan default,
 then the global default.
 
 ## Custom licenses
 
 **Admin → Users → Edit → Create custom license** (button at the top of the user's edit page) opens
 a form pre-filled from the policy that
-applies to the user. The admin may change the limits, the validity or an explicit expiry date, the
+applies to the user. The admin may change the licence limit, the node and user limits, the validity or an explicit expiry date, the
 activation window (still 180 minutes at most), the features, an Installation ID and internal notes.
 It is saved as a `custom_license_policies` row (`policy_type = custom`, `created_by_admin_id`).
 
-Delivery: the policy is attached to the user, who generates the file from their own dashboard.
-The activation window therefore starts when the user downloads the file, not while a file is passed
-along. The dashboard shows "Standard" or "Custom", the limits and the features.
+Delivery: the policy is attached to the user, whose licences then use it, with the key or a
+downloaded file. A file's activation window starts when the user downloads it, not while a file
+is passed along. The dashboard shows "Standard" or "Custom", the limits and the features.
 
 The admin can edit or **revoke** the custom license from the same row. After revoking, new files
 use the default policy again.

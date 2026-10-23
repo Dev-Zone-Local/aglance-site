@@ -2,10 +2,12 @@
 
 namespace App\Support\LicenseFile;
 
+use App\Models\License;
+use App\Models\LicenseActivation;
 use App\Models\LicenseFile;
-use App\Models\LicensePolicy;
 use App\Models\User;
 use App\Support\LicensePolicy\PolicyResolver;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -13,17 +15,20 @@ use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
 /**
- * Issues an offline licence file (.atgl, payload v2) for a signed-in user. Limits, validity,
- * activation window and features come from the resolved policy (custom, then plan default, then
- * global default) and the account; the only input is the optional Installation ID.
+ * Issues a licence file (.atgl, payload v2) for one licence. The same file is what a console
+ * gets when it activates the licence key online, and what the user downloads for an offline
+ * console. Limits, features and activation window come from the owner's resolved policy (custom,
+ * then plan default, then global default); the expiry is the licence's own expiry.
  *
- * Failures: HttpException via abort() (not allowed / not configured) or
+ * One licence = one console: the file is bound to the console's Installation ID, and a licence
+ * already in use by another console is refused.
+ *
+ * Failures: HttpException via abort() (licence not usable, in use elsewhere, not configured) or
  * ValidationException (bad Installation ID).
  */
 class Issuer
 {
-    /** @param  string  $issuedBy  who triggered the generation: user (dashboard, API) or admin */
-    public function __construct(private readonly Packer $packer, private readonly string $issuedBy = 'user') {}
+    public function __construct(private readonly Packer $packer) {}
 
     /** Packer from config('atglance.license_file'); 503 when the keys are missing or malformed. */
     public static function fromConfig(): self
@@ -43,49 +48,60 @@ class Issuer
     }
 
     /**
+     * @param  string  $installId  the console's Installation ID
+     * @param  string  $issuedBy  "user" (dashboard / API download) or "console" (online key activation)
      * @return array{bytes: string, license: LicenseFile}
      */
-    public function issue(User $user, ?string $installId = null): array
+    public function issue(License $licence, string $installId, string $issuedBy = 'user'): array
     {
-        $this->ensureAllowed($user);
+        /** @var User $user */
+        $user = $licence->tokenable;
+        $this->ensureUsable($licence, $user);
 
-        $installId = $installId !== null ? strtolower(trim($installId)) : '';
-        if ($installId !== '' && ! Str::isUuid($installId)) {
-            throw ValidationException::withMessages(['install_id' => 'The Installation ID is the UUID shown in the Management Console installer.']);
+        $installId = strtolower(trim($installId));
+        if ($issuedBy === 'user' && ! Str::isUuid($installId)) {
+            throw ValidationException::withMessages(['install_id' => 'Enter the Installation ID shown in the Management Console (installer, or Admin Settings › Licence).']);
         }
 
-        $plans = (array) config('atglance.plans');
-        $planCode = array_key_exists($user->plan, $plans) ? $user->plan : config('atglance.default_plan');
         $policy = PolicyResolver::for($user);
-        // A custom policy's Installation ID wins over the one typed on the dashboard.
-        $installId = $policy['install_id'] ?: ($installId !== '' ? $installId : null);
+        if ($policy['install_id'] && strtolower($policy['install_id']) !== $installId) {
+            throw ValidationException::withMessages(['install_id' => 'Your licence can only be used on the installation '.$policy['install_id'].'. Contact AtGlance Support to change it.']);
+        }
+
+        $this->bindToConsole($licence, $installId);
+
+        $plans = (array) config('atglance.plans');
         $now = now();
+        // The licence's own expiry (set from the policy when it was created); older licences
+        // without one get the policy's validity from today.
+        $expiresAt = $licence->expires_at ?? ($policy['expires_on'] ?? null);
 
         $payload = PayloadBuilder::buildV2(
             licenseId: 'LIC-'.Str::uuid(),
             keyId: $this->packer->keyId(),
             customer: $user->name !== '' ? $user->name : $user->email,
             email: $user->email,
-            plan: $planCode,
+            plan: array_key_exists($user->plan, $plans) ? $user->plan : (string) config('atglance.default_plan'),
             features: $policy['features'],
             maxNodes: $policy['max_nodes'],
             maxUsers: $policy['max_users'],
             policyId: $policy['policy_id'],
             policyType: $policy['policy_type'],
-            validityMonths: $policy['validity_months'],
+            validityMonths: $expiresAt ? PolicyResolver::monthsUntil($expiresAt) : $policy['validity_months'],
             activationWindowMinutes: $policy['activation_window_minutes'],
             minVersion: (string) config('atglance.license_file.min_version', '2.3.0'),
             installId: $installId,
             now: $now,
-            expiresAt: $policy['expires_on'],
+            expiresAt: $expiresAt,
         );
 
         $bytes = $this->packer->pack(PayloadBuilder::encode($payload));
 
-        $license = DB::transaction(fn () => LicenseFile::create([
+        $file = LicenseFile::create([
             'format_version' => 2,
             'license_id' => $payload['license_id'],
             'user_id' => $user->id,
+            'token_id' => $licence->id,
             'org' => $payload['customer'],
             'plan' => $payload['plan'],
             'max_nodes' => $payload['max_nodes'],
@@ -94,33 +110,58 @@ class Issuer
             'policy_id' => $payload['policy_id'],
             'policy_type' => $payload['policy_type'],
             'validity_months' => $payload['validity_months'],
-            'issued_by' => $this->issuedBy,
+            'issued_by' => $issuedBy,
             'issued_at' => self::localTime($payload['issued_at']),
             'activate_before' => self::localTime($payload['activate_before']),
             'expires_at' => self::localTime($payload['expires_at']),
             'key_id' => $payload['key_id'],
             'install_id' => $payload['install_id'],
-        ]));
+        ]);
 
-        return ['bytes' => $bytes, 'license' => $license];
+        return ['bytes' => $bytes, 'license' => $file];
+    }
+
+    /**
+     * Marks the licence in use by this console (the same record an online activation writes).
+     * A licence already used by another console is refused: one licence, one console.
+     */
+    private function bindToConsole(License $licence, string $installId): void
+    {
+        $activation = LicenseActivation::query()->where('token_id', $licence->id)->first();
+        if ($activation === null) {
+            try {
+                DB::transaction(fn () => LicenseActivation::create([
+                    'token_id' => $licence->id,
+                    'instance_id' => $installId,
+                    'activated_at' => now(),
+                    'last_seen_at' => now(),
+                ]));
+
+                return;
+            } catch (UniqueConstraintViolationException) {
+                $activation = LicenseActivation::query()->where('token_id', $licence->id)->first();
+            }
+        }
+
+        abort_if(
+            strtolower((string) $activation->instance_id) !== $installId,
+            409,
+            'This licence is already in use by another Management Console. Revoke it and create a new licence to move to another console.'
+        );
+    }
+
+    private function ensureUsable(License $licence, ?User $user): void
+    {
+        abort_unless($user instanceof User, 404, 'Licence not found');
+        abort_unless($user->hasDeliverableEmail(), 422, 'Your account has no deliverable email address. Add a public email on GitHub and sign in again.');
+        abort_if($licence->isExpired(), 403, 'This licence has expired. Create a new licence.');
+        abort_unless($licence->isConfirmed(), 403, 'Confirm this licence with the code we emailed you first.');
+        abort_if($licence->needsApproval(), 403, 'This licence is waiting for approval by an AtGlance admin.');
     }
 
     /** A payload date (UTC) in the app timezone, so the stored row matches the file. */
     private static function localTime(string $date): Carbon
     {
         return Carbon::parse($date)->setTimezone(config('app.timezone'));
-    }
-
-    /** Verified, deliverable email; not waiting for an admin review; within the daily cap. */
-    private function ensureAllowed(User $user): void
-    {
-        abort_unless($user->hasVerifiedEmail(), 403, 'Verify your email address before generating a licence file.');
-        abort_unless($user->hasDeliverableEmail(), 422, 'Your account has no deliverable email address. Add a public email on GitHub and sign in again.');
-        abort_if($user->license_requires_approval, 403, 'Your account needs an AtGlance admin review before it can generate licence files. Contact support.');
-
-        // Admin → License Policy → Global default → Licence files per account per day.
-        $max = max(1, (int) LicensePolicy::global()->max_files_per_day);
-        $today = LicenseFile::query()->where('user_id', $user->id)->where('issued_at', '>=', now()->subDay())->count();
-        abort_if($today >= $max, 429, "You can generate {$max} licence files per day. Try again tomorrow.");
     }
 }

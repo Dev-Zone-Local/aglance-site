@@ -60,8 +60,8 @@ Route::middleware('auth:sanctum')->prefix('licenses')->controller(ConsoleLicense
     Route::put('org', 'updateOrg')->middleware('throttle:10,1,license-org');
 });
 
-// Offline licence file (.atgl) for the signed-in user; values come from the account, not the request.
-Route::post('license/generate', [LicenseFileController::class, 'generate'])
+// Licence file (.atgl) for one of the user's licences, bound to one console (install_id).
+Route::post('licenses/{id}/file', [LicenseFileController::class, 'generate'])->whereNumber('id')
     ->middleware(['auth:sanctum', 'throttle:5,1,license-file']);
 
 // Management Console licences managed from the dashboard

@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CustomLicenseActions
 {
-    private const FIELDS = ['max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
+    private const FIELDS = ['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
         'activation_window_minutes', 'features', 'install_id', 'notes'];
 
     public static function active(User $user): ?CustomLicensePolicy
@@ -49,6 +49,7 @@ class CustomLicenseActions
                 $resolved = PolicyResolver::for($record);
 
                 return [
+                    'max_licences' => $resolved['max_licences'],
                     'max_nodes' => $resolved['max_nodes'],
                     'max_users' => $resolved['max_users'],
                     'validity_value' => $resolved['validity_months'] % 12 === 0 ? intdiv($resolved['validity_months'], 12) : $resolved['validity_months'],
