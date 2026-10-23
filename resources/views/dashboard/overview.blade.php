@@ -11,7 +11,7 @@
             Run AtGlance inside your boundary: install the CLI on your hosts and the Management Console for your organization.
             <x-slot:actions>
                 <x-button :href="route('dashboard.install')" size="lg">Install AtGlance <x-glyph name="arrow-right" /></x-button>
-                <x-button :href="route('dashboard.licences')" size="lg" variant="white">Manage licences</x-button>
+                <x-button :href="route('dashboard.licences')" size="lg" variant="white">Licence files</x-button>
             </x-slot:actions>
         </x-hero>
 
@@ -19,7 +19,7 @@
             @foreach ([
                 ['cpu', 'AtGlance CLI', $cliVersion ? 'v'.$cliVersion : '—', 'Latest version', route('dashboard.install', ['cli']), 'Install the CLI'],
                 ['server', 'Management Console', $consoleVersion ? 'v'.$consoleVersion : '—', 'Latest version', route('dashboard.install', ['console']), 'Install the Console'],
-                ['key-round', 'Licences', $licences->count().($limit !== null ? ' / '.$limit : ''), $user->planLabel().' plan', route('dashboard.licences'), $licences->isNotEmpty() ? 'View licences' : 'Create a licence'],
+                ['key-round', 'Licence files', $activeFiles.' / '.$limit, 'active · '.$user->planLabel().' plan', route('dashboard.licences'), $licenceFiles->isNotEmpty() ? 'View licence files' : 'Generate a licence file'],
             ] as [$icon, $label, $value, $sub, $href, $cta])
                 <a href="{{ $href }}" class="group block rounded-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-ag-teal">
                     <x-card hover class="h-full p-6">
@@ -39,17 +39,14 @@
             <x-glyph name="bell" :size="14" /> What's new: read the release notes <x-glyph name="arrow-right" :size="14" />
         </a>
 
-        @if ($licences->isNotEmpty())
+        @if ($licenceFiles->isNotEmpty())
             <x-card class="p-6">
-                <h2 class="mb-3 text-[15px] font-medium text-ag-ink">Your licences</h2>
+                <h2 class="mb-3 text-[15px] font-medium text-ag-ink">Your licence files</h2>
                 <ul class="divide-y divide-ag-line">
-                    @foreach ($licences->take(3) as $licence)
+                    @foreach ($licenceFiles->take(3) as $file)
                         <li class="flex flex-wrap items-center gap-3 py-3 text-sm">
-                            <span class="font-mono text-ag-ink">{{ $licence->name }}</span>
-                            <x-licence-status :status="$licence->status()" />
-                            @if ($licence->activation?->org_name)
-                                <span class="text-ag-subtle">{{ $licence->activation->org_name }}</span>
-                            @endif
+                            <span class="font-mono text-ag-ink">{{ $file->license_id }}</span>
+                            <span class="text-ag-subtle">{{ $file->statusLabel() }} · expires {{ $file->expires_at->format('M j, Y') }}</span>
                         </li>
                     @endforeach
                 </ul>

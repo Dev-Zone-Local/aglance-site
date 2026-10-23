@@ -4,7 +4,10 @@ namespace App\Filament\Resources\LicenseFiles;
 
 use App\Filament\Resources\LicenseFiles\Pages\ListLicenseFiles;
 use App\Models\LicenseFile;
+use App\Support\LicensePolicy\PolicyAudit;
 use BackedEnum;
+use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
@@ -14,8 +17,9 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Offline licence files (.atgl) issued to users. Read-only: a file cannot be revoked once
- * downloaded (the console checks it offline); it stops working at expires_at.
+ * Licence files (.atgl) issued to users. A file cannot be revoked once downloaded (the console
+ * checks it offline); it stops working at expires_at. An admin can release a file's slot so it
+ * no longer counts toward the user's limit (audited).
  */
 class LicenseFileResource extends Resource
 {
@@ -40,8 +44,10 @@ class LicenseFileResource extends Resource
             ->columns([
                 TextColumn::make('license_id')->label('Licence ID')->searchable()->fontFamily('mono')->copyable(),
                 TextColumn::make('user.email')->label('User')->searchable(),
-                TextColumn::make('licence.name')->label('Licence')->fontFamily('mono')
-                    ->description(fn (LicenseFile $r) => $r->issued_by === 'console' ? 'online activation' : 'download'),
+                TextColumn::make('status')->label('Status')->badge()
+                    ->state(fn (LicenseFile $r) => $r->statusLabel())
+                    ->color(fn (string $state) => match ($state) { 'Active' => 'success', 'Released' => 'gray', default => 'danger' })
+                    ->description(fn (LicenseFile $r) => $r->released_at ? 'released '.$r->released_at->format('M j, Y') : null),
                 TextColumn::make('org')->label('Customer')->searchable()->toggleable(),
                 TextColumn::make('plan')->badge()->color('gray'),
                 TextColumn::make('policy_type')->label('Policy')->badge()
@@ -73,6 +79,21 @@ class LicenseFileResource extends Resource
                         true: fn (Builder $q) => $q->where('expires_at', '<=', now()),
                         false: fn (Builder $q) => $q->where('expires_at', '>', now()),
                     ),
+            ])
+            ->recordActions([
+                Action::make('release')
+                    ->label('Release slot')
+                    ->icon(Heroicon::OutlinedArrowUturnLeft)
+                    ->color('warning')
+                    ->visible(fn (LicenseFile $r) => $r->isActive())
+                    ->requiresConfirmation()
+                    ->modalHeading("Release this licence file's slot?")
+                    ->modalDescription("The file stops counting toward the user's licence file limit, so they can generate another one. The file itself keeps working offline until it expires; release only when the customer confirms the console no longer uses it (e.g. a hardware move).")
+                    ->action(function (LicenseFile $record): void {
+                        $record->update(['released_at' => now(), 'released_by_admin_id' => auth()->id()]);
+                        PolicyAudit::record(auth()->id(), 'license_file', $record, 'File '.$record->license_id.' ('.$record->user?->email.')', 'released', [], []);
+                        Notification::make()->title('Slot released')->success()->send();
+                    }),
             ]);
     }
 

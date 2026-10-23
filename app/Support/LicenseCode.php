@@ -6,8 +6,9 @@ use App\Models\User;
 use Illuminate\Support\Facades\Cache;
 
 /**
- * One-time 5-digit email code that gates licence actions ("confirm" and "revoke").
- * A code is bound to its purpose and subject (the licence id).
+ * One-time 5-digit email code that confirms the generation of a licence file (when the licence
+ * policy requires it).
+ * A code is bound to its purpose and subject.
  * Only an HMAC of the code is cached; a code is valid for TTL_MINUTES and
  * MAX_ATTEMPTS wrong guesses, and can be used once.
  */
@@ -17,10 +18,8 @@ class LicenseCode
 
     public const MAX_ATTEMPTS = 5;
 
-    public const REVOKE = 'revoke';
-
-    /** Confirms a saved licence request and reveals its key. Subject: licence id. */
-    public const CONFIRM = 'confirm';
+    /** Confirms the generation of a licence file. Subject: "file". */
+    public const FILE = 'file';
 
     public static function issue(User $user, string $subject, string $purpose): string
     {

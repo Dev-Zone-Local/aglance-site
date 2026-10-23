@@ -6,7 +6,6 @@ use App\Filament\Pages\LicensePolicyPage;
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Models\CustomLicensePolicy;
 use App\Models\FeatureCatalog;
-use App\Models\License;
 use App\Models\LicenseFile;
 use App\Models\LicensePolicy;
 use App\Models\PolicyAuditLog;
@@ -33,6 +32,8 @@ class LicensePolicyTest extends TestCase
     {
         parent::setUp();
         LicenseFixtures::configure();
+        // Generation without the emailed code and with room for several files.
+        LicensePolicy::global()->update(['require_email_code' => false, 'max_files' => 20]);
         // License Policy shows one tab per plan of Admin → Pricing plans.
         PricingPlan::create(['name' => 'Free', 'price' => '0', 'description' => '', 'features' => [], 'order' => 1]);
         PricingPlan::create(['name' => 'Enterprise', 'price' => 'Custom', 'description' => '', 'features' => [], 'order' => 2]);
@@ -47,20 +48,15 @@ class LicensePolicyTest extends TestCase
     private function policy(array $overrides = []): array
     {
         return array_merge([
-            'max_licences' => 2, 'max_nodes' => 10, 'max_users' => 5, 'validity_value' => 6, 'validity_unit' => 'months',
+            'max_files' => 20, 'require_email_code' => false, 'install_id_mode' => 'optional', 'max_nodes' => 10, 'max_users' => 5, 'validity_value' => 6, 'validity_unit' => 'months',
             'activation_window_minutes' => 60, 'features' => ['sso', 'notifications'],
         ], $overrides);
     }
 
-    /** A new confirmed licence of $user, and the payload of its licence file. */
+    /** A new licence file of $user (no email code in these tests), as its payload. */
     private function generate(User $user): array
     {
-        // Expiry from the policy, as LicenceManager::create() sets it.
-        $policy = PolicyResolver::for($user);
-        $expires = $policy['expires_on'] ?? now()->addMonthsNoOverflow($policy['validity_months']);
-        $licence = License::findOrFail($user->createToken('console', [License::ABILITY], $expires)->accessToken->id);
-        $licence->confirm();
-        $res = $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => (string) Str::uuid()])->assertOk();
+        $res = $this->actingAs($user)->postJson('/api/license-files', ['install_id' => (string) Str::uuid()])->assertOk();
 
         return LicenseFixtures::decode($res->getContent())['payload'];
     }
@@ -84,17 +80,17 @@ class LicensePolicyTest extends TestCase
         Livewire::test(LicensePolicyPage::class)
             ->assertSee('Global default')
             ->assertSee('Pro Team plan')
-            ->assertSee('Licence limit')
-            ->set('data.global.max_licences', 0)
+            ->assertSee('Licence file limit')->assertSee('Email verification')->assertSee('Installation ID')
+            ->set('data.global.max_files', 0)
             ->call('save')
-            ->assertHasErrors(['data.global.max_licences'])
-            ->set('data.global.max_licences', 3)
+            ->assertHasErrors(['data.global.max_files'])
+            ->set('data.global.max_files', 3)
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame(3, LicensePolicy::global()->fresh()->max_licences);
-        $this->assertDatabaseHas('policy_audit_log', ['field' => 'max_licences', 'old_value' => '1', 'new_value' => '3']);
-        $this->assertSame(3, User::factory()->create(['plan' => 'free'])->licenseLimit());
+        $this->assertSame(3, LicensePolicy::global()->fresh()->max_files);
+        $this->assertDatabaseHas('policy_audit_log', ['field' => 'max_files', 'old_value' => '20', 'new_value' => '3']);
+        $this->assertSame(3, User::factory()->create(['plan' => 'free'])->licenseFileLimit());
 
         PricingPlan::query()->where('name', 'Pro Team')->delete();
         $this->assertNotContains('plan:pro_team', LicensePolicyPage::policies()->pluck('scope')->all());

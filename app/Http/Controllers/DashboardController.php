@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\License;
 use App\Support\Downloads;
 use App\Support\InstallCatalog;
 use Illuminate\Contracts\View\View;
@@ -15,7 +14,6 @@ class DashboardController extends Controller
     public function overview(Request $request): View
     {
         $user = $request->user();
-        License::forgetExpiredKeys();
 
         // Results of the signed links in emails (verify address, unsubscribe from releases).
         $notices = [
@@ -43,8 +41,9 @@ class DashboardController extends Controller
             'notice' => $notice,
             'cliVersion' => $all['cli']['releases'][0]['version'] ?? null,
             'consoleVersion' => $all['console']['releases'][0]['version'] ?? null,
-            'licences' => $user->licenses()->with('activation', 'tokenable')->latest('id')->get(),
-            'limit' => $user->licenseLimit(),
+            'licenceFiles' => $user->licenseFiles()->latest('issued_at')->get(),
+            'activeFiles' => \App\Support\LicenseFile\Issuer::activeCount($user),
+            'limit' => $user->licenseFileLimit(),
         ]);
     }
 

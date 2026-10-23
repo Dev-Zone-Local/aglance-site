@@ -109,7 +109,7 @@ class InstallCatalog
 
         $steps[] = $productId === 'cli'
             ? ['key' => 'licence', 'title' => 'Register your host', 'text' => 'Configure the CLI and register this host with your Management Console.', 'link' => ['href' => route('docs.show', 'quickstart'), 'label' => 'Read the quickstart']]
-            : ['key' => 'licence', 'title' => 'Activate with a licence', 'text' => 'The installer asks for a licence key. Create one, enter the emailed code, and paste the key into the installer.', 'link' => ['href' => route('dashboard.licences'), 'label' => 'Manage licences']];
+            : ['key' => 'licence', 'title' => 'Activate with a licence', 'text' => 'The installer asks for a licence file. Generate one on Licences (with the Installation ID the installer shows) and upload it in the installer.', 'link' => ['href' => route('dashboard.licences'), 'label' => 'Licence files']];
 
         return $steps;
     }

@@ -72,7 +72,7 @@ Route::middleware('auth')->prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'overview'])->name('dashboard');
     Route::get('/install/{product?}/{target?}', [DashboardController::class, 'install'])->name('dashboard.install');
     Route::get('/licences', Licences::class)->name('dashboard.licences');
-    Route::post('/licences/{id}/file', [LicenseFileController::class, 'generate'])->whereNumber('id')
+    Route::post('/licences/file', [LicenseFileController::class, 'generate'])
         ->middleware('throttle:5,1,web-license-file')->name('dashboard.licences.file');
     Route::get('/profile', Profile::class)->name('dashboard.profile');
     Route::post('/email/resend', [DashboardController::class, 'resendVerification'])

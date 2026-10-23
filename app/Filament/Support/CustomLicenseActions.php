@@ -18,13 +18,13 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Users → Create Custom License / Edit / Revoke. The custom policy is attached to the user,
- * who then generates the file from their dashboard: the 3-hour activation window starts at
+ * Users → Edit → Create custom license / Edit / Revoke. The custom policy is attached to the
+ * user, who then generates licence files from their dashboard: the activation window starts at
  * generation, so it does not run out while a file is passed along.
  */
 class CustomLicenseActions
 {
-    private const FIELDS = ['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
+    private const FIELDS = ['max_files', 'require_email_code', 'install_id_mode', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
         'activation_window_minutes', 'features', 'install_id', 'notes'];
 
     public static function active(User $user): ?CustomLicensePolicy
@@ -49,7 +49,9 @@ class CustomLicenseActions
                 $resolved = PolicyResolver::for($record);
 
                 return [
-                    'max_licences' => $resolved['max_licences'],
+                    'max_files' => $resolved['max_files'],
+                    'require_email_code' => $resolved['require_email_code'],
+                    'install_id_mode' => $resolved['install_id_mode'],
                     'max_nodes' => $resolved['max_nodes'],
                     'max_users' => $resolved['max_users'],
                     'validity_value' => $resolved['validity_months'] % 12 === 0 ? intdiv($resolved['validity_months'], 12) : $resolved['validity_months'],

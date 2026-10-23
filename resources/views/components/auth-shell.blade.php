@@ -6,7 +6,7 @@
             <h2 class="mb-4 text-[30px] font-medium leading-tight tracking-heading text-white sm:text-[40px]">Your operations platform,<br>inside your boundary.</h2>
             <p class="max-w-[560px] text-base leading-[1.7] text-ag-ink-soft">One account for the AtGlance CLI downloads and your self-hosted Management Console licences.</p>
             <div class="mt-8 grid gap-3 sm:grid-cols-3">
-                @foreach ([['server', 'Self-hosted', 'Console runs in your VPC or on-prem.'], ['key-round', 'Licences', 'Create a licence key for your Console.'], ['shield-check', 'No telemetry', 'Nothing leaves your boundary.']] as [$icon, $t, $d])
+                @foreach ([['server', 'Self-hosted', 'Console runs in your VPC or on-prem.'], ['key-round', 'Licences', 'Generate a licence file for your Console.'], ['shield-check', 'No telemetry', 'Nothing leaves your boundary.']] as [$icon, $t, $d])
                     <div class="rounded-2xl bg-white/[0.06] p-4">
                         <span class="mb-3 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/[0.12] text-ag-mint"><x-glyph :name="$icon" :size="13" /></span>
                         <div class="text-sm font-medium text-white">{{ $t }}</div>

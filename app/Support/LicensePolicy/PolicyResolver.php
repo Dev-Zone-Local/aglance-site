@@ -8,14 +8,14 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 
 /**
- * The policy a user's next licence file is issued with, in this order:
+ * The policy a user's licence files follow, in this order:
  * the user's custom policy, then their plan's default, then the global default.
  * Only stored policies are used; nothing comes from the request.
  */
 class PolicyResolver
 {
     /**
-     * @return array{policy_id: string, policy_type: string, label: string, max_licences: int, max_nodes: int, max_users: int,
+     * @return array{policy_id: string, policy_type: string, label: string, max_files: int, require_email_code: bool, install_id_mode: string, max_nodes: int, max_users: int,
      *     validity_months: int, expires_on: ?Carbon, activation_window_minutes: int, features: list<string>,
      *     install_id: ?string, custom: ?CustomLicensePolicy}
      */
@@ -27,7 +27,9 @@ class PolicyResolver
                 'policy_id' => $custom->policyId(),
                 'policy_type' => 'custom',
                 'label' => 'Custom',
-                'max_licences' => max(1, (int) $custom->max_licences),
+                'max_files' => max(1, (int) $custom->max_files),
+                'require_email_code' => (bool) $custom->require_email_code,
+                'install_id_mode' => $custom->install_id_mode === 'required' ? 'required' : 'optional',
                 'max_nodes' => $custom->max_nodes,
                 'max_users' => $custom->max_users,
                 'validity_months' => $custom->expires_on
@@ -48,7 +50,9 @@ class PolicyResolver
             'policy_id' => $policy->scope,
             'policy_type' => 'default',
             'label' => 'Standard',
-            'max_licences' => max(1, (int) $policy->max_licences),
+            'max_files' => max(1, (int) $policy->max_files),
+            'require_email_code' => (bool) $policy->require_email_code,
+            'install_id_mode' => $policy->install_id_mode === 'required' ? 'required' : 'optional',
             'max_nodes' => $policy->max_nodes,
             'max_users' => $policy->max_users,
             'validity_months' => $policy->validityMonths(),

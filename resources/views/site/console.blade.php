@@ -34,7 +34,7 @@
         @if ($page['sections']['deploy'])
         <section class="mt-20">
             <x-section-heading eyebrow="Deploy" title="Running in five minutes"
-                sub="The installer sets up Docker if needed, pulls the Console images and starts them. It asks for a licence key from your AtGlance dashboard." />
+                sub="The installer sets up Docker if needed, pulls the Console images and starts them. It asks for a licence file from your AtGlance dashboard." />
             <div class="mt-8 grid gap-4 lg:grid-cols-2">
                 <x-code-block title="Linux" code="curl -fsSL https://app.atglance.live/console/atglance-installer.sh | sudo bash" />
                 <x-code-block title="Windows (PowerShell as Administrator)" code="irm https://app.atglance.live/console/atglance-installer.ps1 | iex" />

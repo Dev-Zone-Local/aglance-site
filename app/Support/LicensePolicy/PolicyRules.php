@@ -19,8 +19,8 @@ class PolicyRules
 
     public const MAX_VALIDITY_MONTHS = 120;
 
-    /** Highest licence limit an admin may set; users contact AtGlance Support to get more than their limit. */
-    public const MAX_LICENCES = 1000;
+    /** Highest licence file limit an admin may set; users contact AtGlance Support to get more. */
+    public const MAX_FILES = 1000;
 
     /**
      * @return array<string, mixed>
@@ -28,7 +28,9 @@ class PolicyRules
     public static function rules(bool $custom = false): array
     {
         return [
-            'max_licences' => ['required', 'integer', 'min:1', 'max:'.self::MAX_LICENCES],
+            'max_files' => ['required', 'integer', 'min:1', 'max:'.self::MAX_FILES],
+            'require_email_code' => ['required', 'boolean'],
+            'install_id_mode' => ['required', Rule::in(['required', 'optional'])],
             'max_nodes' => ['required', 'integer', 'min:0', 'max:1000000'],
             'max_users' => ['required', 'integer', 'min:0', 'max:1000000'],
             'validity_value' => [$custom ? 'required_without:expires_on' : 'required', 'nullable', 'integer', 'min:1', 'max:120'],

@@ -82,7 +82,7 @@ class LicensePolicyPage extends Page
         $state = [];
         foreach (self::policies() as $policy) {
             $state[self::formKey($policy->scope)] = $policy->only([
-                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_licences', 'features',
+                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_files', 'require_email_code', 'install_id_mode', 'features',
             ]);
         }
         $this->form->fill($state);
@@ -113,9 +113,14 @@ class LicensePolicyPage extends Page
         $p = $key === '' ? '' : $key.'.';
 
         return [
-            TextInput::make("{$p}max_licences")->label('Licence limit')->integer()
-                ->minValue(1)->maxValue(PolicyRules::MAX_LICENCES)->required()
-                ->helperText('Total licences a user may hold (keys and their files), at least 1. To get more, users contact AtGlance Support.'),
+            TextInput::make("{$p}max_files")->label('Licence file limit')->integer()
+                ->minValue(1)->maxValue(PolicyRules::MAX_FILES)->required()
+                ->helperText('Licence files an account may hold; each counts until it expires. At least 1. To get more, users contact AtGlance Support.'),
+            Toggle::make("{$p}require_email_code")->label('Email verification')
+                ->helperText('On: a 5-digit code emailed to the account must be entered before a licence file is generated.'),
+            Select::make("{$p}install_id_mode")->label('Installation ID')
+                ->options(['optional' => 'Optional (file works on any console)', 'required' => 'Required (file works on one console)'])->required()
+                ->helperText('Whether the console\'s Installation ID must be entered when a file is generated.'),
             TextInput::make("{$p}max_nodes")->label('Node limit')->integer()->minValue(0)->required()
                 ->helperText('0 = unlimited. Active nodes (registered systems) a console may have.'),
             TextInput::make("{$p}max_users")->label('User limit')->integer()->minValue(0)->required()
@@ -143,10 +148,10 @@ class LicensePolicyPage extends Page
             $input = (array) ($this->data[$key] ?? $state[$key] ?? []);
             $inherit = $policy->scope !== LicensePolicy::GLOBAL && (bool) ($input['inherit_global'] ?? false);
             $values = $inherit
-                ? $policy->only(['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features'])
+                ? $policy->only(['max_files', 'require_email_code', 'install_id_mode', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features'])
                 : PolicyRules::validate($input, false, "data.{$key}.");
             $validated[$policy->scope] = ['inherit_global' => $inherit] + array_intersect_key($values, array_flip([
-                'max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
+                'max_files', 'require_email_code', 'install_id_mode', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
             ]));
         }
 

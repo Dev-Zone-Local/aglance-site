@@ -9,7 +9,6 @@ use Filament\Panel;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
@@ -94,11 +93,6 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         ];
     }
 
-    /** Management Console licences (Sanctum tokens with the console:license ability). */
-    public function licenses(): MorphMany
-    {
-        return $this->morphMany(License::class, 'tokenable')->whereJsonContains('abilities', License::ABILITY);
-    }
 
     public function isAdmin(): bool
     {
@@ -118,12 +112,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Total licences the user may hold: the "Licence limit" of their policy (custom license, then
-     * plan default, then global default), at least 1. Only AtGlance Support raises it.
+     * Licence files the user may hold at once (they count until they expire): the "Licence file
+     * limit" of their policy (custom license, then plan default, then global default), at least 1.
      */
-    public function licenseLimit(): int
+    public function licenseFileLimit(): int
     {
-        return max(1, (int) \App\Support\LicensePolicy\PolicyResolver::for($this)['max_licences']);
+        return max(1, (int) \App\Support\LicensePolicy\PolicyResolver::for($this)['max_files']);
     }
 
     /** GitHub users without a public/verified email get an unreachable noreply address. */

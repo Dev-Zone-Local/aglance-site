@@ -2,18 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\LicenseFiles\Pages\ListLicenseFiles;
 use App\Models\FeatureCatalog;
-use App\Models\License;
-use App\Models\LicenseActivation;
 use App\Models\LicenseFile;
+use App\Models\LicensePolicy;
 use App\Models\User;
+use App\Notifications\LicenseCodeNotification;
+use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
+use Livewire\Livewire;
 use Tests\Support\LicenseFixtures;
 use Tests\TestCase;
 
 /**
- * Licence files (.atgl) of a licence: POST /api/licenses/{id}/file, the dashboard form, and the
- * file a console receives when it activates the licence key online.
+ * Licence files (.atgl), the only kind of Management Console licence: POST /api/license-files
+ * (and its email code), the dashboard form, the licence file limit and the admin release.
  */
 class LicenseFileTest extends TestCase
 {
@@ -25,36 +29,39 @@ class LicenseFileTest extends TestCase
     {
         parent::setUp();
         LicenseFixtures::configure();
+        Notification::fake();
     }
 
-    /** A confirmed (usable) licence of $user. */
-    private function licence(User $user, string $name = 'prod-console'): License
+    /** Requests the emailed code and returns it. */
+    private function code(User $user): string
     {
-        $licence = License::findOrFail($user->createToken($name, [License::ABILITY], now()->addYear())->accessToken->id);
-        $licence->confirm();
+        $this->actingAs($user)->postJson('/api/license-files/code')->assertOk();
+        $code = null;
+        Notification::assertSentTo($user, LicenseCodeNotification::class, function (LicenseCodeNotification $n) use (&$code) {
+            $code = $n->code;
 
-        return $licence->fresh();
+            return true;
+        });
+
+        return $code;
     }
 
-    private function download(User $user, License $licence, ?string $installId = self::INSTALL)
+    private function generate(User $user, array $body = []): \Illuminate\Testing\TestResponse
     {
-        return $this->actingAs($user)->post("/api/licenses/{$licence->id}/file", array_filter(['install_id' => $installId]), ['Accept' => 'application/octet-stream']);
+        return $this->actingAs($user)->postJson('/api/license-files', $body + ['install_id' => self::INSTALL, 'code' => $this->code($user)]);
     }
 
-    public function test_guests_cannot_download(): void
+    public function test_guests_cannot_generate(): void
     {
-        $licence = $this->licence(User::factory()->create());
-
-        $this->postJson("/api/licenses/{$licence->id}/file", ['install_id' => self::INSTALL])->assertUnauthorized();
-        $this->withHeader('Accept', 'text/html')->post(route('dashboard.licences.file', $licence->id))->assertRedirect(route('login'));
+        $this->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertUnauthorized();
+        $this->withHeader('Accept', 'text/html')->post(route('dashboard.licences.file'))->assertRedirect(route('login'));
     }
 
-    public function test_downloads_a_signed_encrypted_file_for_the_licence(): void
+    public function test_generates_a_signed_encrypted_file_after_the_emailed_code(): void
     {
         $user = User::factory()->create(['name' => 'Acme Corp', 'email' => 'ops@acme.test', 'plan' => 'enterprise']);
-        $licence = $this->licence($user);
 
-        $res = $this->download($user, $licence)->assertOk();
+        $res = $this->generate($user)->assertOk();
 
         $res->assertHeader('Content-Type', 'application/octet-stream');
         $file = LicenseFile::sole();
@@ -69,91 +76,115 @@ class LicenseFileTest extends TestCase
         $this->assertSame('enterprise', $p['plan']);
         $this->assertSame(2, $p['format_version']);
         $this->assertSame(self::INSTALL, $p['install_id']);
-        $this->assertSame(0, $p['max_nodes']);
         $this->assertSame('global', $p['policy_id']);
         $this->assertSame(FeatureCatalog::defaultKeys(), $p['features']);
-        // The file expires with its licence.
-        $this->assertSame($licence->expires_at->utc()->format('Y-m-d\TH:i:s\Z'), $p['expires_at']);
         $this->assertSame(3 * 3600, strtotime($p['activate_before']) - strtotime($p['issued_at']));
-
-        $this->assertSame($licence->id, $file->token_id);
-        $this->assertSame('user', $file->issued_by);
-        // The licence is now in use by that console.
-        $this->assertSame(self::INSTALL, LicenseActivation::sole()->instance_id);
+        $this->assertSame(gmdate('Y-m-d\TH:i:s\Z', strtotime('+12 months', strtotime($p['issued_at']))), $p['expires_at']);
     }
 
-    public function test_installation_id_is_required(): void
+    public function test_wrong_or_missing_code_is_refused(): void
     {
         $user = User::factory()->create();
-        $licence = $this->licence($user);
 
-        $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file")->assertStatus(422)->assertJsonValidationErrors('install_id');
-        $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => 'not-a-uuid'])->assertStatus(422)->assertJsonValidationErrors('install_id');
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertStatus(422)->assertJsonValidationErrors('code');
+        $this->code($user);
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL, 'code' => '00000'])->assertStatus(422)->assertJsonValidationErrors('code');
         $this->assertSame(0, LicenseFile::count());
     }
 
-    public function test_one_licence_one_console(): void
+    public function test_email_verification_can_be_turned_off_in_the_policy(): void
     {
+        LicensePolicy::global()->update(['require_email_code' => false]);
         $user = User::factory()->create();
-        $licence = $this->licence($user);
 
-        $this->download($user, $licence)->assertOk();
-        $this->download($user, $licence)->assertOk(); // the same console may download again
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
+        Notification::assertNothingSent();
+    }
 
-        $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => '3f2b8c1e-0000-4000-8000-000000000002'])
-            ->assertStatus(409);
-        $this->assertSame(2, LicenseFile::count());
+    public function test_installation_id_required_or_optional_per_policy(): void
+    {
+        LicensePolicy::global()->update(['require_email_code' => false, 'install_id_mode' => 'required']);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/license-files')->assertStatus(422)->assertJsonValidationErrors('install_id');
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => 'not-a-uuid'])->assertStatus(422)->assertJsonValidationErrors('install_id');
+
+        LicensePolicy::global()->update(['install_id_mode' => 'optional']);
+        $res = $this->actingAs($user)->postJson('/api/license-files')->assertOk();
+        $this->assertNull(LicenseFixtures::decode($res->getContent())['payload']['install_id']);
+    }
+
+    public function test_files_count_until_they_expire_so_the_limit_cannot_be_bypassed(): void
+    {
+        LicensePolicy::global()->update(['require_email_code' => false, 'max_files' => 1]);
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => '3f2b8c1e-0000-4000-8000-000000000002'])
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Your account can hold 1 active licence file. A file counts until it expires. To increase the limit, contact the AtGlance Support team.');
+
+        // After the first file expires, the slot is free again.
+        $this->travel(13)->months();
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
+    }
+
+    public function test_admin_release_frees_a_slot_and_is_audited(): void
+    {
+        LicensePolicy::global()->update(['require_email_code' => false, 'max_files' => 1]);
+        $user = User::factory()->create();
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
+        $file = LicenseFile::sole();
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+        Livewire::test(ListLicenseFiles::class)->callAction(TestAction::make('release')->table($file));
+
+        $this->assertNotNull($file->fresh()->released_at);
+        $this->assertDatabaseHas('policy_audit_log', ['subject_type' => 'license_file', 'action' => 'released', 'admin_id' => $admin->id]);
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
     }
 
     public function test_client_input_cannot_change_the_licence(): void
     {
         $user = User::factory()->create(['plan' => 'free']);
-        $licence = $this->licence($user);
 
-        $res = $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", [
-            'install_id' => self::INSTALL, 'plan' => 'enterprise', 'max_nodes' => 9999, 'features' => ['everything'],
-            'policy_type' => 'custom', 'expires_at' => '2099-01-01T00:00:00Z',
-        ])->assertOk();
+        $p = LicenseFixtures::decode($this->generate($user, [
+            'plan' => 'enterprise', 'max_nodes' => 9999, 'features' => ['everything'], 'policy_type' => 'custom', 'expires_at' => '2099-01-01T00:00:00Z',
+        ])->assertOk()->getContent())['payload'];
 
-        $p = LicenseFixtures::decode($res->getContent())['payload'];
         $this->assertSame('free', $p['plan']);
         $this->assertSame(0, $p['max_nodes']);
         $this->assertSame('default', $p['policy_type']);
         $this->assertNotContains('everything', $p['features']);
     }
 
-    public function test_only_confirmed_and_approved_licences_of_the_user(): void
+    public function test_blocked_accounts_cannot_generate(): void
     {
-        $user = User::factory()->create();
-        $unconfirmed = License::findOrFail($user->createToken('new', [License::ABILITY], now()->addYear())->accessToken->id);
-        $this->actingAs($user)->postJson("/api/licenses/{$unconfirmed->id}/file", ['install_id' => self::INSTALL])->assertForbidden();
-
-        $flagged = User::factory()->create(['license_requires_approval' => true]);
-        $this->actingAs($flagged)->postJson('/api/licenses/'.$this->licence($flagged)->id.'/file', ['install_id' => self::INSTALL])->assertForbidden();
-
-        $other = User::factory()->create();
-        $this->actingAs($other)->postJson('/api/licenses/'.$this->licence($user)->id.'/file', ['install_id' => self::INSTALL])->assertNotFound();
+        LicensePolicy::global()->update(['require_email_code' => false]);
+        $this->actingAs(User::factory()->create(['license_requires_approval' => true]))
+            ->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertForbidden();
 
         $this->assertSame(0, LicenseFile::count());
     }
 
     public function test_rate_limited_per_minute(): void
     {
+        LicensePolicy::global()->update(['require_email_code' => false, 'max_files' => 50]);
         $user = User::factory()->create();
-        $licence = $this->licence($user);
 
         for ($i = 0; $i < 5; $i++) {
-            $this->download($user, $licence)->assertOk();
+            $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
         }
-        $this->download($user, $licence)->assertStatus(429);
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertStatus(429);
     }
 
     public function test_missing_keys_give_503_without_details(): void
     {
+        LicensePolicy::global()->update(['require_email_code' => false]);
         config(['atglance.license_file.signing_key' => null]);
-        $user = User::factory()->create();
 
-        $this->actingAs($user)->postJson('/api/licenses/'.$this->licence($user)->id.'/file', ['install_id' => self::INSTALL])
+        $this->actingAs(User::factory()->create())->postJson('/api/license-files', ['install_id' => self::INSTALL])
             ->assertStatus(503)
             ->assertJsonMissing(['message' => 'The signing key is not an Ed25519 private key in PKCS#8 form.']);
     }
@@ -161,10 +192,10 @@ class LicenseFileTest extends TestCase
     public function test_dashboard_form_downloads_the_file(): void
     {
         $user = User::factory()->create();
-        $licence = $this->licence($user);
+        $code = $this->code($user);
 
         $res = $this->actingAs($user)->withHeader('Accept', 'text/html')
-            ->post(route('dashboard.licences.file', $licence->id), ['install_id' => self::INSTALL])->assertOk();
+            ->post(route('dashboard.licences.file'), ['install_id' => self::INSTALL, 'code' => $code])->assertOk();
 
         $res->assertHeader('Content-Type', 'application/octet-stream');
         $this->assertSame($user->email, LicenseFixtures::decode($res->getContent())['payload']['email']);
@@ -172,32 +203,30 @@ class LicenseFileTest extends TestCase
 
     public function test_dashboard_form_shows_errors_on_the_page(): void
     {
-        $user = User::factory()->create();
-        $licence = $this->licence($user);
-        LicenseActivation::create(['token_id' => $licence->id, 'instance_id' => 'another-console-id', 'activated_at' => now(), 'last_seen_at' => now()]);
+        LicensePolicy::global()->update(['require_email_code' => false]);
+        $user = User::factory()->create(['license_requires_approval' => true]);
 
         $this->actingAs($user)->from(route('dashboard.licences'))
             ->withHeader('Accept', 'text/html')
-            ->post(route('dashboard.licences.file', $licence->id), ['install_id' => self::INSTALL])
+            ->post(route('dashboard.licences.file'), ['install_id' => self::INSTALL])
             ->assertRedirect(route('dashboard.licences'))
             ->assertSessionHasErrors('license_file');
     }
 
-    public function test_licences_page_offers_key_and_file_and_lists_files(): void
+    public function test_licences_page_shows_policy_files_and_limit(): void
     {
+        LicensePolicy::global()->update(['require_email_code' => false, 'max_files' => 1]);
         $user = User::factory()->create();
-        $licence = $this->licence($user);
-        $this->download($user, $licence)->assertOk();
+        $this->actingAs($user)->postJson('/api/license-files', ['install_id' => self::INSTALL])->assertOk();
         $id = LicenseFile::sole()->license_id;
 
         $this->actingAs($user)->get(route('dashboard.licences'))
             ->assertOk()
-            ->assertSee('Console with internet access')
-            ->assertSee('Console without internet access')
-            ->assertSee('Licence file')
+            ->assertSee('1 / 1 active files')
             ->assertSee($id)
             ->assertSee('activation window: 180 min left')
-            ->assertDontSee('up to version 2.2');
+            ->assertSee('To increase the limit, contact the AtGlance Support team')
+            ->assertDontSee('licence key');
 
         $this->travel(181)->minutes();
         $this->get(route('dashboard.licences'))->assertSee('activation window: expired');

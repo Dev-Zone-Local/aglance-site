@@ -15,7 +15,7 @@ class LicensePolicy extends Model
 
     protected $fillable = [
         'scope', 'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit',
-        'activation_window_minutes', 'max_licences', 'features',
+        'activation_window_minutes', 'max_files', 'require_email_code', 'install_id_mode', 'features',
     ];
 
     protected function casts(): array
@@ -26,7 +26,8 @@ class LicensePolicy extends Model
             'max_users' => 'integer',
             'validity_value' => 'integer',
             'activation_window_minutes' => 'integer',
-            'max_licences' => 'integer',
+            'max_files' => 'integer',
+            'require_email_code' => 'boolean',
             'features' => 'array',
         ];
     }
