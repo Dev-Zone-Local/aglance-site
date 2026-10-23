@@ -3,16 +3,16 @@
 namespace Tests\Feature;
 
 use App\Filament\Pages\LicensePolicyPage;
-use App\Filament\Resources\Users\Pages\ListUsers;
+use App\Filament\Resources\Users\Pages\EditUser;
 use App\Models\CustomLicensePolicy;
 use App\Models\FeatureCatalog;
 use App\Models\LicenseFile;
 use App\Models\LicensePolicy;
 use App\Models\PolicyAuditLog;
+use App\Models\PricingPlan;
 use App\Models\User;
 use App\Support\LicensePolicy\PolicyResolver;
 use App\Support\LicensePolicy\PolicyRules;
-use Filament\Actions\Testing\TestAction;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
@@ -31,6 +31,9 @@ class LicensePolicyTest extends TestCase
     {
         parent::setUp();
         LicenseFixtures::configure();
+        // License Policy shows one tab per plan of Admin → Pricing plans.
+        PricingPlan::create(['name' => 'Free', 'price' => '0', 'description' => '', 'features' => [], 'order' => 1]);
+        PricingPlan::create(['name' => 'Enterprise', 'price' => 'Custom', 'description' => '', 'features' => [], 'order' => 2]);
     }
 
     private function admin(): User
@@ -59,6 +62,32 @@ class LicensePolicyTest extends TestCase
         foreach (array_keys(config('atglance.plans')) as $plan) {
             $this->assertTrue(LicensePolicy::forPlan($plan)->inherit_global);
         }
+    }
+
+    public function test_policy_tabs_follow_the_pricing_plans_and_global_holds_the_daily_cap(): void
+    {
+        PricingPlan::create(['name' => 'Pro Team', 'price' => '49', 'description' => '', 'features' => [], 'order' => 3]);
+        $this->actingAs($this->admin());
+
+        $this->assertSame(['global', 'plan:free', 'plan:enterprise', 'plan:pro_team'], LicensePolicyPage::policies()->pluck('scope')->all());
+
+        Livewire::test(LicensePolicyPage::class)
+            ->assertSee('Global default')
+            ->assertSee('Pro Team plan')
+            ->assertSee('Licence files per account per day')
+            ->set('data.global.max_files_per_day', 0)
+            ->call('save')
+            ->assertHasErrors(['data.global.max_files_per_day'])
+            ->set('data.global.max_files_per_day', 3)
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(3, LicensePolicy::global()->fresh()->max_files_per_day);
+        $this->assertDatabaseHas('policy_audit_log', ['field' => 'max_files_per_day', 'old_value' => '20', 'new_value' => '3']);
+
+        PricingPlan::query()->where('name', 'Pro Team')->delete();
+        $this->assertNotContains('plan:pro_team', LicensePolicyPage::policies()->pluck('scope')->all());
+        $this->assertNull(LicensePolicy::forPlan('pro_team'));
     }
 
     public function test_only_admins_can_open_the_policy_pages(): void
@@ -168,8 +197,8 @@ class LicensePolicyTest extends TestCase
         $admin = $this->admin();
         $this->actingAs($admin);
 
-        Livewire::test(ListUsers::class)
-            ->callAction(TestAction::make('customLicense')->table($user), data: $this->policy([
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->callAction('customLicense', data: $this->policy([
                 'max_nodes' => 3, 'max_users' => 0, 'validity_value' => 2, 'validity_unit' => 'years',
                 'activation_window_minutes' => 45, 'features' => ['sso', 'workspaces'], 'notes' => 'Pilot customer',
             ]))
@@ -197,8 +226,8 @@ class LicensePolicyTest extends TestCase
         $user = User::factory()->create();
         $this->actingAs($this->admin());
 
-        Livewire::test(ListUsers::class)
-            ->callAction(TestAction::make('customLicense')->table($user), data: $this->policy(['activation_window_minutes' => 200]))
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
+            ->callAction('customLicense', data: $this->policy(['activation_window_minutes' => 200]))
             ->assertHasActionErrors(['activation_window_minutes']);
 
         $this->assertSame(0, CustomLicensePolicy::count());
@@ -210,7 +239,7 @@ class LicensePolicyTest extends TestCase
         $custom = CustomLicensePolicy::create(['user_id' => $user->id] + $this->policy());
         $this->actingAs($this->admin());
 
-        Livewire::test(ListUsers::class)->callAction(TestAction::make('revokeCustomLicense')->table($user));
+        Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])->callAction('revokeCustomLicense');
 
         $this->assertNotNull($custom->fresh()->revoked_at);
         $this->assertDatabaseHas('policy_audit_log', ['subject_type' => 'custom_license_policy', 'action' => 'revoked']);

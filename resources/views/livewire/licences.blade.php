@@ -9,6 +9,13 @@
             <div class="font-mono text-xs text-ag-subtle">{{ $user->planLabel() }} plan · {{ $licences->count() }} / {{ $limit ?? 'unlimited' }} used</div>
         </div>
         <h2 class="mb-1 text-2xl font-medium text-ag-ink">Licence for the Management Console</h2>
+        <div class="mb-4 mt-3 flex max-w-2xl items-start gap-2 rounded-input bg-ag-warning-soft px-4 py-3 text-sm text-ag-warning-text" data-testid="licence-key-deprecated">
+            <x-glyph name="alert-triangle" class="mt-0.5 shrink-0" />
+            <span>
+                Licence keys work only with Management Console <b>up to version 2.2</b>. This option will be deprecated:
+                from version 2.3 on, use the <b>licence file (.atgl)</b> below.
+            </span>
+        </div>
         <p class="mb-6 max-w-2xl text-sm text-ag-subtle">
             The Management Console installer asks for a licence key to confirm the installation belongs to your account.
             Create one here and paste it when the installer prompts for it. Licences are valid for one year, or until you revoke them.
@@ -203,15 +210,16 @@
         @if (! $user->hasVerifiedEmail())
             <p class="rounded-input bg-ag-surface px-4 py-3 text-sm text-ag-subtle">Verify your email address to generate licence files.</p>
         @else
-            <form method="POST" action="{{ route('dashboard.licences.file') }}" class="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <form method="POST" action="{{ route('dashboard.licences.file') }}" class="max-w-2xl">
                 @csrf
-                <div class="sm:w-96">
-                    <label for="install-id" class="mb-1.5 block text-sm font-medium text-ag-ink">Installation ID <span class="font-normal text-ag-muted">(optional)</span></label>
+                <label for="install-id" class="mb-1.5 block text-sm font-medium text-ag-ink">Installation ID <span class="font-normal text-ag-muted">(optional)</span></label>
+                {{-- Input and button on one row; the help text goes below the row so the button lines up with the input. --}}
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                     <input id="install-id" name="install_id" value="{{ old('install_id') }}" maxlength="64" autocomplete="off" spellcheck="false"
-                        placeholder="e.g. 3f2b8c1e-…" class="ag-input bg-white font-mono text-sm" @error('install_id') aria-invalid="true" @enderror>
-                    <p class="mt-1.5 text-[13px] text-ag-muted">Shown in the console installer. With it, the file works on that console only.</p>
+                        placeholder="e.g. 3f2b8c1e-…" class="ag-input min-w-0 flex-1 bg-white font-mono text-sm" @error('install_id') aria-invalid="true" @enderror>
+                    <x-button class="shrink-0"><x-glyph name="download" :size="16" /> Generate licence file</x-button>
                 </div>
-                <x-button>Generate licence file</x-button>
+                <p class="mt-1.5 text-[13px] text-ag-muted">Shown in the console installer. With it, the file works on that console only.</p>
             </form>
             @error('install_id') <p class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p> @enderror
             @error('license_file') <p class="mt-3 text-[13px] text-ag-danger-text">{{ $message }}</p> @enderror

@@ -3,6 +3,7 @@
 namespace App\Support\LicenseFile;
 
 use App\Models\LicenseFile;
+use App\Models\LicensePolicy;
 use App\Models\User;
 use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Support\Carbon;
@@ -117,7 +118,8 @@ class Issuer
         abort_unless($user->hasDeliverableEmail(), 422, 'Your account has no deliverable email address. Add a public email on GitHub and sign in again.');
         abort_if($user->license_requires_approval, 403, 'Your account needs an AtGlance admin review before it can generate licence files. Contact support.');
 
-        $max = (int) config('atglance.license_file.max_per_day', 20);
+        // Admin → License Policy → Global default → Licence files per account per day.
+        $max = max(1, (int) LicensePolicy::global()->max_files_per_day);
         $today = LicenseFile::query()->where('user_id', $user->id)->where('issued_at', '>=', now()->subDay())->count();
         abort_if($today >= $max, 429, "You can generate {$max} licence files per day. Try again tomorrow.");
     }

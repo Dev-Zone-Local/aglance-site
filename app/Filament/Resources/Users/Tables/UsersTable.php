@@ -88,8 +88,6 @@ class UsersTable
                         $record->markEmailAsVerified();
                         Notification::make()->title("{$record->email} activated")->success()->send();
                     }),
-                CustomLicenseActions::edit(),
-                CustomLicenseActions::revoke(),
                 EditAction::make(),
             ]);
     }

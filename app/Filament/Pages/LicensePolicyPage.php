@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Models\FeatureCatalog;
 use App\Models\LicensePolicy;
 use App\Models\PolicyAuditLog;
+use App\Models\PricingPlan;
 use App\Support\LicensePolicy\PolicyAudit;
 use App\Support\LicensePolicy\PolicyRules;
 use BackedEnum;
@@ -51,16 +52,22 @@ class LicensePolicyPage extends Page
         return (bool) auth()->user()?->isAdmin();
     }
 
-    /** @return Collection<int, LicensePolicy> global first, then the plans in config order */
+    /**
+     * The global default, then one policy per plan of Admin → Pricing plans (in their order).
+     * A plan added there gets a policy that uses the global default until it is changed here.
+     *
+     * @return Collection<int, LicensePolicy>
+     */
     public static function policies(): Collection
     {
         LicensePolicy::global();
-        foreach (array_keys((array) config('atglance.plans')) as $plan) {
-            LicensePolicy::query()->firstOrCreate(['scope' => 'plan:'.$plan], [
+        $codes = PricingPlan::query()->orderBy('order')->get()->map(fn (PricingPlan $p) => $p->code())->filter()->unique()->values()->all();
+        foreach ($codes as $code) {
+            LicensePolicy::query()->firstOrCreate(['scope' => 'plan:'.$code], [
                 'inherit_global' => true, 'features' => FeatureCatalog::defaultKeys(),
             ]);
         }
-        $order = array_merge([LicensePolicy::GLOBAL], array_map(fn ($p) => 'plan:'.$p, array_keys((array) config('atglance.plans'))));
+        $order = array_merge([LicensePolicy::GLOBAL], array_map(fn ($c) => 'plan:'.$c, $codes));
 
         return LicensePolicy::query()->whereIn('scope', $order)->get()->sortBy(fn ($p) => array_search($p->scope, $order))->values();
     }
@@ -75,7 +82,7 @@ class LicensePolicyPage extends Page
         $state = [];
         foreach (self::policies() as $policy) {
             $state[self::formKey($policy->scope)] = $policy->only([
-                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
+                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_files_per_day', 'features',
             ]);
         }
         $this->form->fill($state);
@@ -94,6 +101,10 @@ class LicensePolicyPage extends Page
                 Grid::make(2)
                     ->visible(fn (Get $get) => ! $isPlan || ! $get("{$key}.inherit_global"))
                     ->schema(self::policyFields($key)),
+                $isPlan ? null : TextInput::make("{$key}.max_files_per_day")
+                    ->label('Licence files per account per day')
+                    ->integer()->minValue(1)->maxValue(PolicyRules::MAX_FILES_PER_DAY)->required()
+                    ->helperText('How many licence files one account may generate in 24 hours, for every plan and custom license.'),
             ]));
         }
 
@@ -138,6 +149,9 @@ class LicensePolicyPage extends Page
             $validated[$policy->scope] = ['inherit_global' => $inherit] + array_intersect_key($values, array_flip([
                 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'features',
             ]));
+            if ($policy->scope === LicensePolicy::GLOBAL) {
+                $validated[$policy->scope]['max_files_per_day'] = PolicyRules::validateFilesPerDay($input['max_files_per_day'] ?? null, "data.{$key}.");
+            }
         }
 
         DB::transaction(function () use ($validated, $adminId) {

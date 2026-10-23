@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\FeatureCatalog;
 use App\Models\LicenseFile;
+use App\Models\LicensePolicy;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Support\LicenseFixtures;
@@ -123,9 +124,9 @@ class LicenseFileTest extends TestCase
         $this->actingAs($user)->postJson('/api/license/generate')->assertStatus(429);
     }
 
-    public function test_daily_cap(): void
+    public function test_daily_cap_comes_from_the_global_policy(): void
     {
-        config(['atglance.license_file.max_per_day' => 2]);
+        LicensePolicy::global()->update(['max_files_per_day' => 2]);
         $user = User::factory()->create();
 
         $this->actingAs($user)->postJson('/api/license/generate')->assertOk();
@@ -173,6 +174,7 @@ class LicenseFileTest extends TestCase
         $this->get(route('dashboard.licences'))
             ->assertOk()
             ->assertSee('Generate licence file')
+            ->assertSee('up to version 2.2')
             ->assertSee('within 3 hours')
             ->assertSee($id)
             ->assertSee('activation window: 180 min left');

@@ -37,8 +37,7 @@ return [
         'enc_key' => env('LICENSE_ENC_KEY'),
         // Lowest console version that understands licence files.
         'min_version' => env('LICENSE_MIN_CONSOLE_VERSION', '2.3.0'),
-        // Files one user may generate per day (on top of the per-minute rate limit).
-        'max_per_day' => 20,
+        // Files one account may generate per day: Admin → License Policy → Global default.
     ],
 
 ];

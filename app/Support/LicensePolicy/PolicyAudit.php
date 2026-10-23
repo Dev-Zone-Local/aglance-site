@@ -13,7 +13,7 @@ class PolicyAudit
     /** Fields recorded for policies and catalog entries. */
     public const FIELDS = [
         'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
-        'activation_window_minutes', 'features', 'install_id', 'notes', 'name', 'description',
+        'activation_window_minutes', 'max_files_per_day', 'features', 'install_id', 'notes', 'name', 'description',
     ];
 
     /**

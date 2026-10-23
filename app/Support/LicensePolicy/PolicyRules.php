@@ -19,6 +19,27 @@ class PolicyRules
 
     public const MAX_VALIDITY_MONTHS = 120;
 
+    public const MAX_FILES_PER_DAY = 1000;
+
+    /**
+     * The global "licence files per account per day" (1..1000).
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    public static function validateFilesPerDay(mixed $value, string $prefix = ''): int
+    {
+        $validator = Validator::make(['max_files_per_day' => $value], [
+            'max_files_per_day' => ['required', 'integer', 'min:1', 'max:'.self::MAX_FILES_PER_DAY],
+        ]);
+        if ($validator->fails()) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $prefix.'max_files_per_day' => $validator->errors()->get('max_files_per_day'),
+            ]);
+        }
+
+        return (int) $value;
+    }
+
     /**
      * @return array<string, mixed>
      */

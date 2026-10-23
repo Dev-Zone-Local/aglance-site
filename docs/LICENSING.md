@@ -27,7 +27,7 @@ The older online licence keys (`atg_...`, `/api/licenses/*`) remain in place for
 
 | Route | Auth | Limits |
 |---|---|---|
-| `POST /api/license/generate` | Sanctum | `throttle:5,1`, 20 files per user per 24 h |
+| `POST /api/license/generate` | Sanctum | `throttle:5,1`, and the global policy's "Licence files per account per day" (default 20) |
 | `POST /dashboard/licences/file` | web session | same |
 
 Refused with 403: unverified email, and accounts flagged for admin approval. Refused with 503:
@@ -44,9 +44,11 @@ edits the defaults for new licence files:
 | User limit | integer >= 0, `0` = unlimited |
 | License valid up to | number + unit (months or years), 1 to 120 months in total |
 | License file expiry window | 5 to 180 minutes (hard cap: the licence format allows at most 3 hours) |
+| Licence files per account per day | global default only: 1 to 1000 (default 20), for every plan and custom license |
 | Features enabled | catalog keys (Feature Catalog) |
 
-There is one **global default** and one **default per plan** (`free`, `enterprise`). A plan default
+There is one **global default** and one **default per plan of Admin → Pricing plans** (the plan
+name as a slug is the plan code users carry, e.g. `Enterprise` → `enterprise`). A plan default
 with "Use the global default" uses the global one. Saving affects only licences generated
 afterwards; issued files never change. Every change is written to `policy_audit_log` (admin, field,
 old and new value, time) and shown under the form.
@@ -56,7 +58,8 @@ then the global default.
 
 ## Custom licenses
 
-**Admin → Users → Create custom license** (row action) opens a form pre-filled from the policy that
+**Admin → Users → Edit → Create custom license** (button at the top of the user's edit page) opens
+a form pre-filled from the policy that
 applies to the user. The admin may change the limits, the validity or an explicit expiry date, the
 activation window (still 180 minutes at most), the features, an Installation ID and internal notes.
 It is saved as a `custom_license_policies` row (`policy_type = custom`, `created_by_admin_id`).
