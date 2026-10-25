@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CustomLicenseActions
 {
-    private const FIELDS = ['max_licences', 'install_id_mode', 'premium_features', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
+    private const FIELDS = ['max_licences', 'install_id_mode', 'features', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
         'activation_window_minutes', 'install_id', 'notes'];
 
     public static function active(User $user): ?CustomLicensePolicy
@@ -51,7 +51,7 @@ class CustomLicenseActions
                 return [
                     'max_licences' => $resolved['max_licences'],
                     'install_id_mode' => $resolved['install_id_mode'],
-                    'premium_features' => $resolved['premium_features'],
+                    'features' => $resolved['features'],
                     'max_nodes' => $resolved['max_nodes'],
                     'max_users' => $resolved['max_users'],
                     'validity_value' => $resolved['validity_months'] % 12 === 0 ? intdiv($resolved['validity_months'], 12) : $resolved['validity_months'],

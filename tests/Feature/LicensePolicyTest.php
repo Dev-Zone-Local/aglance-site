@@ -49,7 +49,7 @@ class LicensePolicyTest extends TestCase
     {
         return array_merge([
             'max_licences' => 2, 'max_nodes' => 10, 'max_users' => 5, 'validity_value' => 6, 'validity_unit' => 'months',
-            'activation_window_minutes' => 60, 'install_id_mode' => 'optional', 'premium_features' => false,
+            'activation_window_minutes' => 60, 'install_id_mode' => 'optional', 'features' => [],
         ], $overrides);
     }
 
@@ -77,11 +77,12 @@ class LicensePolicyTest extends TestCase
 
     public function test_catalog_sync_removes_keys_no_longer_in_the_contract(): void
     {
-        FeatureCatalog::create(['key' => 'sso', 'name' => 'SSO Login', 'description' => '', 'default_enabled' => true, 'sort' => 9]);
+        FeatureCatalog::create(['key' => 'retired_feature', 'name' => 'Retired', 'description' => '', 'default_enabled' => true, 'sort' => 99]);
 
         FeatureCatalogSync::sync();
 
-        $this->assertSame(['premium'], FeatureCatalog::keys());
+        $this->assertSame(array_column(LicenseFixtures::features(), 'key'), FeatureCatalog::keys());
+        $this->assertSame(['premium', 'nfs_storage'], FeatureCatalog::premiumKeys());
     }
 
     public function test_policy_tabs_follow_the_pricing_plans_and_set_the_licence_limit(): void
@@ -198,7 +199,7 @@ class LicensePolicyTest extends TestCase
         $this->assertSame('global', PolicyResolver::for($user)['policy_id']);
         $this->assertSame(1, PolicyResolver::for($user)['max_nodes']);
 
-        LicensePolicy::forPlan('enterprise')->update(['inherit_global' => false, 'max_nodes' => 50, 'premium_features' => true]);
+        LicensePolicy::forPlan('enterprise')->update(['inherit_global' => false, 'max_nodes' => 50, 'features' => ['nfs_storage']]);
         $this->assertSame('plan:enterprise', PolicyResolver::for($user)['policy_id']);
         $this->assertSame(50, PolicyResolver::for($user)['max_nodes']);
 
@@ -221,7 +222,7 @@ class LicensePolicyTest extends TestCase
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
             ->callAction('customLicense', data: $this->policy([
                 'max_nodes' => 3, 'max_users' => 0, 'validity_value' => 2, 'validity_unit' => 'years',
-                'activation_window_minutes' => 45, 'premium_features' => true, 'notes' => 'Pilot customer',
+                'activation_window_minutes' => 45, 'features' => ['nfs_storage', 'premium'], 'notes' => 'Pilot customer',
             ]))
             ->assertHasNoActionErrors();
 
@@ -235,11 +236,11 @@ class LicensePolicyTest extends TestCase
         $this->assertSame(3, $p['max_nodes']);
         $this->assertSame(0, $p['max_users']);
         $this->assertSame(24, $p['validity_months']);
-        $this->assertSame(['premium'], $p['features']);
+        $this->assertSame(['premium', 'nfs_storage'], $p['features']);
         $this->assertSame(45 * 60, strtotime($p['activate_before']) - strtotime($p['issued_at']));
         $this->assertSame(['policy_type' => 'custom', 'max_nodes' => 3], LicenseFile::sole()->only(['policy_type', 'max_nodes']));
 
-        $this->actingAs($user)->get(route('dashboard.licences'))->assertSee('Custom')->assertSee('Premium Features')->assertSee('Enabled');
+        $this->actingAs($user)->get(route('dashboard.licences'))->assertSee('Custom')->assertSee('NFS Storage')->assertSee('Premium features in your licence');
     }
 
     public function test_custom_licence_rejects_a_window_over_3_hours(): void
@@ -276,8 +277,89 @@ class LicensePolicyTest extends TestCase
             ->assertSee('Policy:')
             ->assertSee('Standard')
             ->assertSee('Node limit')
-            ->assertSee('Premium Features')
-            ->assertSee('Not included')
+            ->assertSee('Premium features in your licence')
+            ->assertSee('None')
             ->assertSee('Need more licences');
+    }
+
+    public function test_catalog_tiers_come_from_the_contract(): void
+    {
+        $this->assertSame('premium', FeatureCatalog::query()->where('key', 'nfs_storage')->value('tier'));
+        $this->assertSame('free', FeatureCatalog::query()->where('key', 'sso')->value('tier'));
+        $this->assertArrayHasKey('backup_restore', FeatureCatalog::freeOptions());
+        $this->assertArrayNotHasKey('sso', FeatureCatalog::premiumOptions());
+
+        // An admin edit of the tier does not survive a sync: the contract decides.
+        FeatureCatalog::query()->where('key', 'sso')->update(['tier' => 'premium']);
+        FeatureCatalogSync::sync();
+        $this->assertSame('free', FeatureCatalog::query()->where('key', 'sso')->value('tier'));
+    }
+
+    public function test_free_features_cannot_be_listed_or_turned_off_in_a_policy(): void
+    {
+        foreach ([['sso'], ['backup_restore', 'nfs_storage'], ['not_a_feature']] as $bad) {
+            try {
+                PolicyRules::validate($this->policy(['features' => $bad]));
+                $this->fail('Accepted '.json_encode($bad));
+            } catch (ValidationException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+
+        $this->assertSame(['premium', 'nfs_storage'], PolicyRules::validate($this->policy(['features' => ['nfs_storage', 'premium', 'nfs_storage']]))['features']);
+    }
+
+    public function test_nfs_storage_toggles_in_default_plan_and_custom_policies(): void
+    {
+        $user = User::factory()->create(['plan' => 'enterprise']);
+        $this->assertSame([], PolicyResolver::for($user)['features']);
+
+        LicensePolicy::global()->update(['features' => ['nfs_storage']]);
+        $this->assertSame(['nfs_storage'], PolicyResolver::for($user)['features']);
+
+        LicensePolicy::forPlan('enterprise')->update(['inherit_global' => false, 'features' => []]);
+        $this->assertSame([], PolicyResolver::for($user)['features']);
+
+        CustomLicensePolicy::create(['user_id' => $user->id] + $this->policy(['features' => ['nfs_storage']]));
+        $this->assertSame(['nfs_storage'], PolicyResolver::for($user)['features']);
+    }
+
+    public function test_policy_page_saves_premium_features_and_audits_them(): void
+    {
+        $this->actingAs($this->admin());
+
+        Livewire::test(LicensePolicyPage::class)
+            ->set('data.global.features', ['nfs_storage'])
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $this->assertSame(['nfs_storage'], LicensePolicy::global()->fresh()->features);
+        $this->assertDatabaseHas('policy_audit_log', ['subject_type' => 'license_policy', 'field' => 'features']);
+    }
+
+    public function test_issuer_embeds_only_premium_keys_and_ignores_client_features(): void
+    {
+        $user = User::factory()->create();
+        // Stored data can contain stale or free keys: they never reach the licence.
+        CustomLicensePolicy::create(['user_id' => $user->id] + $this->policy(['features' => ['sso', 'nfs_storage', 'old_key']]));
+
+        $licence = License::findOrFail($user->createToken('prod', [License::ABILITY], now()->addYear())->accessToken->id);
+        $licence->confirm();
+        $res = $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", [
+            'install_id' => (string) Str::uuid(),
+            'features' => ['premium', 'sso', 'quantum_reports'],
+        ])->assertOk();
+
+        $this->assertSame(['nfs_storage'], LicenseFixtures::decode($res->getContent())['payload']['features']);
+    }
+
+    public function test_pricing_page_marks_nfs_storage_as_premium(): void
+    {
+        PricingPlan::query()->where('name', 'Enterprise')->update(['features' => ['Unlimited nodes', 'NFS Storage']]);
+
+        $this->withHeader('Accept', 'text/html')->get(route('pricing'))
+            ->assertOk()
+            ->assertSee('NFS Storage')
+            ->assertSee('data-testid="premium-badge"', false);
     }
 }

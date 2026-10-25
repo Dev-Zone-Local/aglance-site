@@ -15,7 +15,7 @@ class LicensePolicy extends Model
 
     protected $fillable = [
         'scope', 'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit',
-        'activation_window_minutes', 'max_licences', 'install_id_mode', 'premium_features', 'features',
+        'activation_window_minutes', 'max_licences', 'install_id_mode', 'features',
     ];
 
     protected function casts(): array
@@ -27,14 +27,13 @@ class LicensePolicy extends Model
             'validity_value' => 'integer',
             'activation_window_minutes' => 'integer',
             'max_licences' => 'integer',
-            'premium_features' => 'boolean',
             'features' => 'array',
         ];
     }
 
     public static function global(): self
     {
-        return static::query()->firstOrCreate(['scope' => self::GLOBAL], ['premium_features' => FeatureCatalog::defaultKeys() !== []]);
+        return static::query()->firstOrCreate(['scope' => self::GLOBAL], ['features' => FeatureCatalog::defaultKeys()]);
     }
 
     /** The plan's default policy, only while the plan exists in Admin → Pricing plans. */

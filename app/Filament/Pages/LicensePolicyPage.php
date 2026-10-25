@@ -9,6 +9,7 @@ use App\Models\PricingPlan;
 use App\Support\LicensePolicy\PolicyAudit;
 use App\Support\LicensePolicy\PolicyRules;
 use BackedEnum;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -63,7 +64,7 @@ class LicensePolicyPage extends Page
         $codes = PricingPlan::query()->orderBy('order')->get()->map(fn (PricingPlan $p) => $p->code())->filter()->unique()->values()->all();
         foreach ($codes as $code) {
             LicensePolicy::query()->firstOrCreate(['scope' => 'plan:'.$code], [
-                'inherit_global' => true, 'premium_features' => FeatureCatalog::defaultKeys() !== [],
+                'inherit_global' => true, 'features' => FeatureCatalog::defaultKeys(),
             ]);
         }
         $order = array_merge([LicensePolicy::GLOBAL], array_map(fn ($c) => 'plan:'.$c, $codes));
@@ -81,7 +82,7 @@ class LicensePolicyPage extends Page
         $state = [];
         foreach (self::policies() as $policy) {
             $state[self::formKey($policy->scope)] = $policy->only([
-                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_licences', 'install_id_mode', 'premium_features',
+                'inherit_global', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'max_licences', 'install_id_mode', 'features',
             ]);
         }
         $this->form->fill($state);
@@ -128,8 +129,16 @@ class LicensePolicyPage extends Page
             Select::make("{$p}install_id_mode")->label('Installation ID for licence files')
                 ->options(['optional' => 'Optional (file works on any one console)', 'required' => 'Required (file works on that console only)'])->required()
                 ->helperText('Whether users must enter the console Installation ID when they generate a licence file. Online key activation records it automatically.'),
-            Toggle::make("{$p}premium_features")->label('Premium features')
-                ->helperText('Marks licences as premium (e.g. Enterprise). Reserved for premium add-ons; it does not change console behaviour yet.'),
+            // Free features: always on, shown checked and greyed out, never saved.
+            CheckboxList::make("{$p}free_features")->label('Free features (always included)')
+                ->options(fn () => FeatureCatalog::freeOptions())
+                ->formatStateUsing(fn () => array_keys(FeatureCatalog::freeOptions()))
+                ->disabled()->dehydrated(false)->columns(2)->columnSpanFull()
+                ->helperText('Always enabled in the console. They are never written into a licence and cannot be turned off.'),
+            CheckboxList::make("{$p}features")->label('Premium features')
+                ->options(fn () => FeatureCatalog::premiumOptions())
+                ->columns(2)->columnSpanFull()
+                ->helperText('Written into the licence (features). NFS Storage enables the console\'s NFS, backup, restore and migration plugin.'),
         ];
     }
 
@@ -145,10 +154,10 @@ class LicensePolicyPage extends Page
             $input = (array) ($this->data[$key] ?? $state[$key] ?? []);
             $inherit = $policy->scope !== LicensePolicy::GLOBAL && (bool) ($input['inherit_global'] ?? false);
             $values = $inherit
-                ? $policy->only(['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'premium_features'])
+                ? $policy->only(['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'features'])
                 : PolicyRules::validate($input, false, "data.{$key}.");
             $validated[$policy->scope] = ['inherit_global' => $inherit] + array_intersect_key($values, array_flip([
-                'max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'premium_features',
+                'max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'features',
             ]));
         }
 

@@ -168,6 +168,7 @@
             "policy_type": "default",
             "validity_months": 12,
             "features": [
+                "nfs_storage",
                 "premium"
             ]
         }
@@ -226,6 +227,7 @@
             "policy_type": "default",
             "validity_months": 12,
             "features": [
+                "nfs_storage",
                 "premium"
             ]
         }
@@ -246,6 +248,7 @@
             "policy_type": "default",
             "validity_months": 12,
             "features": [
+                "nfs_storage",
                 "premium"
             ]
         }
@@ -285,6 +288,84 @@
             "validity_months": 12,
             "features": [
                 "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 with nfs_storage",
+        "file": "v2-nfs-storage.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ]
+        }
+    },
+    {
+        "name": "v2 without nfs_storage",
+        "file": "v2-without-nfs.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 empty features",
+        "file": "v2-empty-features.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": []
+        }
+    },
+    {
+        "name": "v2 free keys in features are ignored (free is implicit)",
+        "file": "v2-free-keys-ignored.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
             ]
         }
     },

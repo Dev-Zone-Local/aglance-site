@@ -29,8 +29,8 @@ Consoles up to 2.2 use only the key and the old JSON answer; they keep working.
 1. `App\Support\LicenseFile\Issuer` issues the file for one licence: the licence must be confirmed
    (and approved for flagged accounts) and not expired.
 2. `PolicyResolver` picks the policy: the user's custom license, then the plan default, then the
-   global default (see "Policies"). It gives `max_nodes`, `max_users`, `features` (`["premium"]`
-   when Premium features is on, else `[]`), the Installation ID rule and the
+   global default (see "Policies"). It gives `max_nodes`, `max_users`, `features` (the policy's
+   **premium** keys only, e.g. `["nfs_storage"]`; free features are never written), the Installation ID rule and the
    activation window (`activate_before` = now + 5 to 180 minutes). The file expires with its
    licence; the licence's expiry is set from the policy's validity when it is created.
 3. `PayloadBuilder` produces the exact JSON bytes. `Packer` signs them with Ed25519, encrypts with
@@ -67,7 +67,8 @@ edits the defaults for licences (keys and files alike):
 | License valid up to | number + unit (months or years), 1 to 120 months in total |
 | License file expiry window | 5 to 180 minutes (hard cap: the licence format allows at most 3 hours) |
 | Installation ID for licence files | `required` or `optional` (default). Online key activation records it automatically |
-| Premium features | on/off: puts the `premium` key in licences (e.g. Enterprise). It changes no console behaviour yet; console modules are core and controlled in the console's Plugins |
+| Free features (always included) | shown checked and greyed out; not saved, never in a licence, cannot be turned off |
+| Premium features | checkboxes for the premium catalog keys: `nfs_storage` (NFS Storage: the console's NFS, backup, restore and migration plugin) and `premium` (Premium plan marker). Only these keys go into `features` |
 
 There is one **global default** and one **default per plan of Admin → Pricing plans** (the plan
 name as a slug is the plan code users carry, e.g. `Enterprise` → `enterprise`). A plan default
@@ -83,7 +84,7 @@ then the global default.
 **Admin → Users → Edit → Create custom license** (button at the top of the user's edit page) opens
 a form pre-filled from the policy that
 applies to the user. The admin may change the licence limit, the node and user limits, the validity or an explicit expiry date, the
-activation window (still 180 minutes at most), the Installation ID rule, Premium features, a fixed Installation ID and internal notes.
+activation window (still 180 minutes at most), the Installation ID rule, the premium features, a fixed Installation ID and internal notes.
 It is saved as a `custom_license_policies` row (`policy_type = custom`, `created_by_admin_id`).
 
 Delivery: the policy is attached to the user, whose licences then use it, with the key or a
@@ -101,10 +102,20 @@ plan and expiry.
 
 ## Features
 
-**Admin → Access → Feature Catalog** lists the feature keys a licence can carry; today only
-`premium` ("Premium Features"). It is informational and loosely coupled to the console. The keys come from
-the workspace `contracts/FEATURES.md` (copied to `resources/licensing/features.json`) and cannot
-be created, renamed or deleted on the site; admins edit the display name and description (audited).
+**Admin → Access → Feature Catalog** lists every console feature with its **tier**:
+
+- **free** (13 keys: systems and configs, users, workspaces, API keys, service accounts, SSO, AI Connect,
+  MCP, custom domain, S3, backup & restore, notifications, activity log): always on in the console, never in
+  a licence, shown checked and greyed out in policy forms;
+- **premium** (`nfs_storage` "NFS Storage", `premium` "Premium Features"): toggled per policy and written
+  into `features`.
+
+The issuer writes only premium keys (from the resolved policy; anything a client sends is ignored). The
+dashboard lists the premium features of the user's policy, and the pricing page shows a "Premium" badge next
+to a plan feature named like a premium feature (e.g. "NFS Storage").
+
+The keys and tiers come from the workspace `contracts/FEATURES.md` (copied to `resources/licensing/features.json`)
+and cannot be created, renamed, re-tiered or deleted on the site; admins edit the display name and description (audited).
 New keys from the contract appear after `php artisan migrate` or on opening the catalog page.
 
 ## Keys

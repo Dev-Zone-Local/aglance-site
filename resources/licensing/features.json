@@ -1,12 +1,139 @@
 {
     "features": [
         {
-            "key": "premium",
-            "name": "Premium Features",
-            "description": "Marks a licence as premium (Enterprise). Reserved for premium add-ons; it does not change console behaviour yet.",
+            "key": "systems_configs",
+            "name": "Systems and config backups",
+            "description": "Register systems and back up their configuration files with the atglance CLI; versions and diffs.",
+            "tier": "free",
             "default": false,
             "v1_default": false,
             "min_console_version": "2.3.0"
+        },
+        {
+            "key": "users_rbac",
+            "name": "Users, roles and organisations",
+            "description": "User accounts, roles and the organisation.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "workspaces",
+            "name": "Workspaces",
+            "description": "Workspaces and the Enterprise Console.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "api_keys",
+            "name": "API keys and CLI API",
+            "description": "Personal API keys (atgla-) and the CLI API v1.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "service_accounts",
+            "name": "Service accounts",
+            "description": "Service accounts and their keys (atgsa-).",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "sso",
+            "name": "SSO Login",
+            "description": "Sign-in with OIDC providers.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "ai_connect",
+            "name": "AI Connect",
+            "description": "AI review of configuration files.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "mcp_server",
+            "name": "MCP Server",
+            "description": "Read-only MCP server for AI clients.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "custom_domain",
+            "name": "Custom Domain",
+            "description": "Own domain and HTTPS through the built-in proxy.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "s3_backup",
+            "name": "S3 Backups",
+            "description": "Backups to S3-compatible storage.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "backup_restore",
+            "name": "Backup & Restore",
+            "description": "Scheduled backups and restore of the console.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "notifications",
+            "name": "Notifications",
+            "description": "Notification groups and channels.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "activity_log",
+            "name": "Activity log",
+            "description": "Activity log and security events.",
+            "tier": "free",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "premium",
+            "name": "Premium Features",
+            "description": "Marks a licence as a premium (Enterprise) plan. Does not enable a module by itself.",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.3.0"
+        },
+        {
+            "key": "nfs_storage",
+            "name": "NFS Storage",
+            "description": "NFS exports, the console NFS mount and its monitoring, and console backup, restore and migration through NFS.",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.4.0"
         }
     ]
 }

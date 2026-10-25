@@ -2,6 +2,7 @@
 
 namespace App\Support\LicensePolicy;
 
+use App\Models\FeatureCatalog;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
@@ -34,7 +35,9 @@ class PolicyRules
             'validity_unit' => ['required', Rule::in(['months', 'years'])],
             'activation_window_minutes' => ['required', 'integer', 'min:'.self::MIN_WINDOW_MINUTES, 'max:'.self::MAX_WINDOW_MINUTES],
             'install_id_mode' => ['required', Rule::in(['required', 'optional'])],
-            'premium_features' => ['required', 'boolean'],
+            // Premium keys only: free features are always on and cannot be listed or turned off.
+            'features' => ['present', 'array'],
+            'features.*' => ['string', Rule::in(FeatureCatalog::premiumKeys())],
         ] + ($custom ? [
             'expires_on' => ['nullable', 'date', 'after:today', 'before_or_equal:'.now()->addMonths(self::MAX_VALIDITY_MONTHS)->toDateString()],
             'install_id' => ['nullable', 'uuid'],
@@ -75,6 +78,9 @@ class PolicyRules
             }
             throw \Illuminate\Validation\ValidationException::withMessages($errors);
         }
+
+        // Premium keys in catalog order, no duplicates. Free keys never reach here (rule above).
+        $validated['features'] = FeatureCatalog::onlyPremium((array) ($validated['features'] ?? []));
 
         return $validated;
     }

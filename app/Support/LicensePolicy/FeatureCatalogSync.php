@@ -31,6 +31,7 @@ class FeatureCatalogSync
     public static function sync(): int
     {
         $added = 0;
+        $hasTier = \Illuminate\Support\Facades\Schema::hasColumn('feature_catalog', 'tier');
         foreach (self::contract() as $sort => $feature) {
             $row = FeatureCatalog::query()->firstOrNew(['key' => $feature['key']]);
             if (! $row->exists) {
@@ -40,6 +41,10 @@ class FeatureCatalogSync
                     'default_enabled' => (bool) ($feature['default'] ?? true),
                 ]);
                 $added++;
+            }
+            // The tier is defined by the contract only (the column exists from the 2026_10_25 migration on).
+            if ($hasTier) {
+                $row->tier = ($feature['tier'] ?? FeatureCatalog::TIER_PREMIUM) === FeatureCatalog::TIER_FREE ? FeatureCatalog::TIER_FREE : FeatureCatalog::TIER_PREMIUM;
             }
             $row->sort = $sort;
             $row->save();
