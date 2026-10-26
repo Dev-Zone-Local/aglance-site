@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -98,7 +99,22 @@ class License extends PersonalAccessToken
     /** The owner may view the key right now (within KEY_VISIBLE_MINUTES of creation). */
     public function keyIsVisible(): bool
     {
-        return $this->key_visible_until?->isFuture() && $this->getRawOriginal('plain_key') !== null;
+        return $this->key_visible_until?->isFuture() && $this->getRawOriginal('plain_key') !== null && ! $this->usedByFile();
+    }
+
+    /**
+     * A licence is used one way only. Once a licence file is generated from it, the key no longer
+     * validates (and is not shown again); once a console activated the key online, no licence
+     * file can be generated.
+     */
+    public function usedByFile(): bool
+    {
+        return $this->files()->where('issued_by', 'user')->exists();
+    }
+
+    public function usedByKey(): bool
+    {
+        return $this->activation()->exists() && ! $this->usedByFile();
     }
 
     /** Remove stored plain keys whose viewing window has passed. */
@@ -113,6 +129,12 @@ class License extends PersonalAccessToken
     public function activation(): HasOne
     {
         return $this->hasOne(LicenseActivation::class, 'token_id');
+    }
+
+    /** Licence files issued for this licence. */
+    public function files(): HasMany
+    {
+        return $this->hasMany(LicenseFile::class, 'token_id');
     }
 
     public function approver(): BelongsTo

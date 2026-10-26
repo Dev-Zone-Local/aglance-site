@@ -4,15 +4,20 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\ContactMessages\Pages\ListContactMessages;
 use App\Filament\Resources\ContactMessages\Pages\ViewContactMessage;
+use App\Mail\ContactReplyMail;
 use App\Models\ContactMessage;
+use App\Models\ContactMessageReply;
 use App\Models\Setting;
 use App\Models\User;
 use App\Notifications\ContactMessageConfirmation;
 use App\Notifications\ContactMessageReceived;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\AnonymousNotifiable;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -68,6 +73,15 @@ class ContactFormTest extends TestCase
             ->assertSee('value="ravi@example.com"', false)
             ->assertSee('<option value="bug" selected', false)
             ->assertSee('<option value="cli" selected', false);
+    }
+
+    public function test_need_more_licences_topic_fills_in_the_subject(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/contact?topic=more_licences')->assertOk()
+            ->assertSee('<option value="more_licences" selected', false)
+            ->assertSee('Need more licences')
+            ->assertSee('value="Need help to get more Licences"', false);
     }
 
     public function test_message_is_saved_and_emailed_to_support_and_sender(): void
@@ -192,5 +206,58 @@ class ContactFormTest extends TestCase
         $this->assertSame('Asked for nginx config', $m->admin_notes);
 
         Livewire::actingAs($admin)->test(ListContactMessages::class)->assertOk();
+    }
+
+    public function test_admin_replies_with_text_and_image_from_panel_address(): void
+    {
+        Mail::fake();
+        Storage::fake('public');
+        Setting::put(Setting::CONTACT, ['email' => 'hi@x.test', 'form_recipient' => 'help@x.test']);
+        $admin = User::factory()->admin()->create(['name' => 'Niket']);
+        $m = ContactMessage::create($this->valid());
+
+        Livewire::actingAs($admin)->test(ViewContactMessage::class, ['record' => $m->getKey()])
+            ->callAction('reply', data: [
+                'body' => "Add the APP_URL line.\nThen restart nginx.",
+                'images' => [UploadedFile::fake()->image('fix.png', 400, 300)],
+            ])
+            ->assertHasNoActionErrors();
+
+        $reply = ContactMessageReply::sole();
+        $this->assertNotNull($reply->sent_at);
+        $this->assertSame($admin->id, $reply->user_id);
+        $this->assertCount(1, $reply->images);
+        Storage::disk('public')->assertExists($reply->images[0]);
+        $this->assertSame('in_progress', $m->fresh()->status);
+
+        Mail::assertSent(ContactReplyMail::class, function (ContactReplyMail $mail) {
+            $html = $mail->render();
+
+            return $mail->hasTo('asha@example.com')
+                && $mail->hasReplyTo('help@x.test')
+                && $mail->hasSubject('Re: Console shows no styles #00001')
+                && str_contains($html, 'Hi Asha Rao,')
+                && str_contains($html, 'Add the APP_URL line.<br />')
+                && str_contains($html, 'Reference: #00001');
+        });
+
+        $this->actingAs($admin)->get("/admin/messages/{$m->id}")->assertOk()
+            ->assertSee('Replies')->assertSee('by Niket');
+    }
+
+    public function test_failed_reply_is_kept_with_error(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $m = ContactMessage::create($this->valid());
+        config(['mail.default' => 'smtp', 'mail.mailers.smtp.host' => '127.0.0.1', 'mail.mailers.smtp.port' => 1, 'mail.mailers.smtp.timeout' => 1]);
+
+        Livewire::actingAs($admin)->test(ViewContactMessage::class, ['record' => $m->getKey()])
+            ->callAction('reply', data: ['body' => 'Hello'])
+            ->assertNotified('Reply not sent');
+
+        $reply = ContactMessageReply::sole();
+        $this->assertNull($reply->sent_at);
+        $this->assertNotEmpty($reply->error);
+        $this->assertSame('new', $m->fresh()->status);
     }
 }

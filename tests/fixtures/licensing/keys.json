@@ -1,0 +1,17 @@
+{
+    "_warning": "TEST KEYS ONLY. Never use them outside tests.",
+    "keys": [
+        {
+            "key_id": "test-2026",
+            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIGcYnqNmQxjmnpbvFpgByK+DUIL4iXAKXTCwzkIpmXfq\n-----END PRIVATE KEY-----\n",
+            "ed25519_public_b64": "0AaY5NbwHNMtbIu7nB1Nw+5aZOzoJg4FP1WOSE72oJo=",
+            "aes_key_hex": "1109e59d3974efb665b02c5189c6d59906fe29c343d030ef52c6e97e4168798d"
+        },
+        {
+            "key_id": "other-2026",
+            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIH0eLRmyG7BOTYqnFZOlkdKniZLh6/ZrznTTjx7BgGDt\n-----END PRIVATE KEY-----\n",
+            "ed25519_public_b64": "SBc6uIDQyfkVOzcezwyYcSO1bZFcfy2HFSp+bHurL/g=",
+            "aes_key_hex": "b5469a3e4a50998e11817b7caa0d705c2c382fe945d6df83116f6bba50bccf04"
+        }
+    ]
+}

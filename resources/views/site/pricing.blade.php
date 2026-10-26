@@ -26,6 +26,10 @@
                         @foreach ($plan->features ?? [] as $feature)
                             <li class="flex items-start gap-2.5 text-sm text-ag-ink">
                                 <x-glyph name="check" class="mt-0.5 shrink-0 text-ag-success" /> <span>{{ $feature }}</span>
+                                {{-- A plan feature named like a premium catalog feature (e.g. NFS Storage) gets the Premium badge. --}}
+                                @if (in_array(mb_strtolower(trim((string) $feature)), $premiumFeatureNames ?? [], true))
+                                    <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800" data-testid="premium-badge">Premium</span>
+                                @endif
                             </li>
                         @endforeach
                     </ul>

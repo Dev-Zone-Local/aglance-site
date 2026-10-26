@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\LicenseFileController;
 use App\Http\Controllers\Auth\GithubController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
@@ -71,6 +72,8 @@ Route::middleware('auth')->prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'overview'])->name('dashboard');
     Route::get('/install/{product?}/{target?}', [DashboardController::class, 'install'])->name('dashboard.install');
     Route::get('/licences', Licences::class)->name('dashboard.licences');
+    Route::post('/licences/{id}/file', [LicenseFileController::class, 'generate'])->whereNumber('id')
+        ->middleware('throttle:5,1,web-license-file')->name('dashboard.licences.file');
     Route::get('/profile', Profile::class)->name('dashboard.profile');
     Route::post('/email/resend', [DashboardController::class, 'resendVerification'])
         ->middleware('throttle:3,1,web-resend-email')->name('verification.resend');
