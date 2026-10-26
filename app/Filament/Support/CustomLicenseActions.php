@@ -24,7 +24,7 @@ use Illuminate\Support\Facades\DB;
  */
 class CustomLicenseActions
 {
-    private const FIELDS = ['max_licences', 'install_id_mode', 'features', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
+    private const FIELDS = ['max_licences', 'install_id_mode', 'bundles', 'individual_features', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'expires_on',
         'activation_window_minutes', 'install_id', 'notes'];
 
     public static function active(User $user): ?CustomLicensePolicy
@@ -44,14 +44,15 @@ class CustomLicenseActions
             ->fillForm(function (User $record): array {
                 $custom = self::active($record);
                 if ($custom) {
-                    return $custom->only(self::FIELDS) + ['expires_on' => $custom->expires_on?->toDateString()];
+                    return PolicyRules::toForm($custom->bundles, $custom->individual_features)
+                        + $custom->only(self::FIELDS) + ['expires_on' => $custom->expires_on?->toDateString()];
                 }
                 $resolved = PolicyResolver::for($record);
 
                 return [
                     'max_licences' => $resolved['max_licences'],
                     'install_id_mode' => $resolved['install_id_mode'],
-                    'features' => $resolved['features'],
+                    ...PolicyRules::toForm($resolved['bundles'], $resolved['features']),
                     'max_nodes' => $resolved['max_nodes'],
                     'max_users' => $resolved['max_users'],
                     'validity_value' => $resolved['validity_months'] % 12 === 0 ? intdiv($resolved['validity_months'], 12) : $resolved['validity_months'],
@@ -60,7 +61,7 @@ class CustomLicenseActions
                 ];
             })
             ->schema([
-                Grid::make(2)->schema(array_merge(LicensePolicyPage::policyFields(), [
+                Grid::make(2)->schema(array_merge(LicensePolicyPage::policyFields('', true), [
                     DatePicker::make('expires_on')->label('Explicit expiry date (optional)')->native(false)
                         ->minDate(now()->addDay())->maxDate(now()->addMonths(PolicyRules::MAX_VALIDITY_MONTHS))
                         ->helperText('Overrides the validity above.'),
@@ -70,7 +71,7 @@ class CustomLicenseActions
                 ])),
             ])
             ->action(function (User $record, array $data): void {
-                $data = PolicyRules::validate($data, true);
+                $data = PolicyRules::validate(PolicyRules::fromForm($data), true);
                 $values = array_intersect_key($data, array_flip(self::FIELDS)) + ['expires_on' => null, 'install_id' => null, 'notes' => null];
                 $adminId = auth()->id();
 

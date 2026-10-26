@@ -17,7 +17,7 @@ class PolicyResolver
 {
     /**
      * @return array{policy_id: string, policy_type: string, label: string, max_licences: int, install_id_mode: string, max_nodes: int, max_users: int,
-     *     validity_months: int, expires_on: ?Carbon, activation_window_minutes: int, features: list<string>,
+     *     validity_months: int, expires_on: ?Carbon, activation_window_minutes: int, bundles: list<string>, features: list<string>,
      *     install_id: ?string, custom: ?CustomLicensePolicy}
      */
     public static function for(User $user): array
@@ -37,7 +37,7 @@ class PolicyResolver
                     : $custom->validity_value * ($custom->validity_unit === 'years' ? 12 : 1),
                 'expires_on' => $custom->expires_on ? Carbon::parse($custom->expires_on->toDateString(), 'UTC') : null,
                 'activation_window_minutes' => $custom->activation_window_minutes,
-                'features' => FeatureCatalog::onlyPremium((array) $custom->features),
+                ...self::premium((array) $custom->bundles, (array) $custom->individual_features),
                 'install_id' => $custom->install_id,
                 'custom' => $custom,
             ];
@@ -57,10 +57,23 @@ class PolicyResolver
             'validity_months' => $policy->validityMonths(),
             'expires_on' => null,
             'activation_window_minutes' => $policy->activation_window_minutes,
-            'features' => FeatureCatalog::onlyPremium((array) $policy->features),
+            ...self::premium((array) $policy->bundles, (array) $policy->individual_features),
             'install_id' => null,
             'custom' => null,
         ];
+    }
+
+    /**
+     * The licence's bundles and individual grants (features[]): only known keys, never a bundle key
+     * as a feature, and no separate grants when the premium bundle already includes everything.
+     *
+     * @return array{bundles: list<string>, features: list<string>}
+     */
+    private static function premium(array $bundles, array $features): array
+    {
+        $bundles = FeatureCatalog::onlyBundles($bundles);
+
+        return ['bundles' => $bundles, 'features' => $bundles !== [] ? [] : FeatureCatalog::onlyPremium($features)];
     }
 
     /** Whole months from today until $date, at least 1 and at most 120 (informational). */

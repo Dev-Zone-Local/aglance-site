@@ -69,11 +69,13 @@ class LicenseFileTest extends TestCase
         $this->assertSame($file->license_id, $p['license_id']);
         $this->assertSame('Acme Corp', $p['customer']);
         $this->assertSame('enterprise', $p['plan']);
-        $this->assertSame(2, $p['format_version']);
+        $this->assertSame(3, $p['format_version']);
+        $this->assertSame('2.4.0', $p['min_version'], 'v3 needs a console that reads bundles');
         $this->assertSame(self::INSTALL, $p['install_id']);
         $this->assertSame(0, $p['max_nodes']);
         $this->assertSame('global', $p['policy_id']);
-        $this->assertSame(FeatureCatalog::defaultKeys(), $p['features']);
+        $this->assertSame(FeatureCatalog::defaultBundles(), $p['bundles']);
+        $this->assertSame([], $p['features']);
         // The file expires with its licence.
         $this->assertSame($licence->expires_at->utc()->format('Y-m-d\TH:i:s\Z'), $p['expires_at']);
         $this->assertSame(3 * 3600, strtotime($p['activate_before']) - strtotime($p['issued_at']));

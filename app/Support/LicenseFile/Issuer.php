@@ -94,12 +94,14 @@ class Issuer
         // without one get the policy's validity from today.
         $expiresAt = $licence->expires_at ?? ($policy['expires_on'] ?? null);
 
-        $payload = PayloadBuilder::buildV2(
+        // Bundles and features come only from the resolved policy, never from the request.
+        $payload = PayloadBuilder::buildV3(
             licenseId: 'LIC-'.Str::uuid(),
             keyId: $this->packer->keyId(),
             customer: $user->name !== '' ? $user->name : $user->email,
             email: $user->email,
             plan: array_key_exists($user->plan, $plans) ? $user->plan : (string) config('atglance.default_plan'),
+            bundles: $policy['bundles'],
             features: $policy['features'],
             maxNodes: $policy['max_nodes'],
             maxUsers: $policy['max_users'],
@@ -116,7 +118,7 @@ class Issuer
         $bytes = $this->packer->pack(PayloadBuilder::encode($payload));
 
         $file = LicenseFile::create([
-            'format_version' => 2,
+            'format_version' => $payload['format_version'],
             'license_id' => $payload['license_id'],
             'user_id' => $user->id,
             'token_id' => $licence->id,
@@ -125,6 +127,7 @@ class Issuer
             'max_nodes' => $payload['max_nodes'],
             'max_users' => $payload['max_users'],
             'features' => $payload['features'],
+            'bundles' => $payload['bundles'],
             'policy_id' => $payload['policy_id'],
             'policy_type' => $payload['policy_type'],
             'validity_months' => $payload['validity_months'],
