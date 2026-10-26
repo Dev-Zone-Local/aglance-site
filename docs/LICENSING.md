@@ -108,7 +108,8 @@ plan and expiry.
   MCP, custom domain, S3, backup & restore, notifications, activity log): always on in the console, never in
   a licence, shown checked and greyed out in policy forms;
 - **premium** (`nfs_storage` "NFS Storage", `premium` "Premium Features"): toggled per policy and written
-  into `features`.
+  into `features`. `premium` is the umbrella key: a licence with it enables **every** premium feature,
+  present and future, so single premium keys are only needed for partial premium licences.
 
 The issuer writes only premium keys (from the resolved policy; anything a client sends is ignored). The
 dashboard lists the premium features of the user's policy, and the pricing page shows a "Premium" badge next

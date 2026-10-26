@@ -138,7 +138,7 @@ class LicensePolicyPage extends Page
             CheckboxList::make("{$p}features")->label('Premium features')
                 ->options(fn () => FeatureCatalog::premiumOptions())
                 ->columns(2)->columnSpanFull()
-                ->helperText('Written into the licence (features). NFS Storage enables the console\'s NFS, backup, restore and migration plugin.'),
+                ->helperText('Written into the licence (features). "Premium Features" enables every premium feature, including future ones; tick single features (e.g. NFS Storage) to include only those.'),
         ];
     }
 

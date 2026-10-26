@@ -240,7 +240,7 @@ class LicensePolicyTest extends TestCase
         $this->assertSame(45 * 60, strtotime($p['activate_before']) - strtotime($p['issued_at']));
         $this->assertSame(['policy_type' => 'custom', 'max_nodes' => 3], LicenseFile::sole()->only(['policy_type', 'max_nodes']));
 
-        $this->actingAs($user)->get(route('dashboard.licences'))->assertSee('Custom')->assertSee('NFS Storage')->assertSee('Premium features in your licence');
+        $this->actingAs($user)->get(route('dashboard.licences'))->assertSee('Custom')->assertSee('All premium features')->assertSee('Premium features in your licence');
     }
 
     public function test_custom_licence_rejects_a_window_over_3_hours(): void
@@ -361,5 +361,16 @@ class LicensePolicyTest extends TestCase
             ->assertOk()
             ->assertSee('NFS Storage')
             ->assertSee('data-testid="premium-badge"', false);
+    }
+
+    public function test_dashboard_shows_all_premium_features_for_the_umbrella_key(): void
+    {
+        $user = User::factory()->create();
+        LicensePolicy::global()->update(['features' => ['premium']]);
+
+        $this->actingAs($user)->get(route('dashboard.licences'))
+            ->assertOk()
+            ->assertSee('data-testid="all-premium"', false)
+            ->assertSee('All premium features');
     }
 }

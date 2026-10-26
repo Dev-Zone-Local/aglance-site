@@ -36,11 +36,15 @@
             </dl>
             <div class="mt-3 text-sm" data-testid="licence-premium">
                 <span class="text-xs text-ag-muted">Premium features in your licence:</span>
+                @if (in_array('premium', $policy['features'], true))
+                    <span class="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs text-ag-ink" data-testid="all-premium">All premium features <span class="rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">Premium</span></span>
+                @else
                 @forelse ($policy['features'] as $feature)
                     <span class="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs text-ag-ink">{{ $featureNames[$feature] ?? $feature }} <span class="rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">Premium</span></span>
                 @empty
                     <span class="text-ag-subtle">None</span>
                 @endforelse
+                @endif
                 <span class="block text-xs text-ag-muted mt-1">All other console features are free and always included.</span>
             </div>
         </div>

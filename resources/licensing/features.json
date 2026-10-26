@@ -120,7 +120,7 @@
         {
             "key": "premium",
             "name": "Premium Features",
-            "description": "Marks a licence as a premium (Enterprise) plan. Does not enable a module by itself.",
+            "description": "All premium features: a licence with this key enables every premium feature, present and future, without listing them one by one.",
             "tier": "premium",
             "default": false,
             "v1_default": false,
