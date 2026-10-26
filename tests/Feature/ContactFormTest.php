@@ -75,6 +75,15 @@ class ContactFormTest extends TestCase
             ->assertSee('<option value="cli" selected', false);
     }
 
+    public function test_need_more_licences_topic_fills_in_the_subject(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user)->get('/contact?topic=more_licences')->assertOk()
+            ->assertSee('<option value="more_licences" selected', false)
+            ->assertSee('Need more licences')
+            ->assertSee('value="Need help to get more Licences"', false);
+    }
+
     public function test_message_is_saved_and_emailed_to_support_and_sender(): void
     {
         $user = $this->signIn();

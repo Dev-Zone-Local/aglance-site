@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class PricingPlan extends Model
 {
@@ -19,5 +20,11 @@ class PricingPlan extends Model
             'highlighted' => 'boolean',
             'order' => 'integer',
         ];
+    }
+
+    /** Plan code users carry in users.plan, e.g. "Enterprise" → "enterprise". */
+    public function code(): string
+    {
+        return Str::slug($this->name, '_');
     }
 }

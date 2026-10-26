@@ -57,6 +57,41 @@ class LicenseFileContractTest extends TestCase
         $this->assertSame($expected, $payload);
     }
 
+    /** The v2 builder reproduces the payloads inside the v2 sample files byte for byte. */
+    public function test_payload_builder_v2_reproduces_the_fixture_payloads(): void
+    {
+        foreach (['v2-default.atgl' => null, 'v2-custom.atgl' => '2028-01-01T00:00:00Z', 'v2-unlimited.atgl' => null] as $file => $expiresAt) {
+            $decoded = LicenseFixtures::decode((string) file_get_contents(LicenseFixtures::dir().'/'.$file));
+            $p = $decoded['payload'];
+
+            $payload = PayloadBuilder::buildV2(
+                licenseId: $p['license_id'],
+                keyId: 'test-2026',
+                customer: $p['customer'],
+                email: $p['email'],
+                plan: $p['plan'],
+                features: $p['features'],
+                maxNodes: $p['max_nodes'],
+                maxUsers: $p['max_users'],
+                policyId: $p['policy_id'],
+                policyType: $p['policy_type'],
+                validityMonths: $p['validity_months'],
+                activationWindowMinutes: (int) ((strtotime($p['activate_before']) - strtotime($p['issued_at'])) / 60),
+                minVersion: $p['min_version'],
+                installId: $p['install_id'],
+                now: new DateTimeImmutable($p['issued_at']),
+                expiresAt: $expiresAt ? new DateTimeImmutable($expiresAt) : null,
+            );
+
+            $this->assertSame($decoded['payload_bytes'], PayloadBuilder::encode($payload), $file);
+        }
+    }
+
+    public function test_runtime_catalog_matches_the_contract_copy(): void
+    {
+        $this->assertFileEquals(LicenseFixtures::dir().'/features.json', dirname(__DIR__, 2).'/resources/licensing/features.json');
+    }
+
     public function test_packed_file_has_the_contract_layout(): void
     {
         $expected = json_decode((string) file_get_contents(LicenseFixtures::dir().'/valid.payload.json'), true);

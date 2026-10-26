@@ -67,6 +67,15 @@
                                 @endforeach
                             </select>
                             @error('topic')<p class="mt-1.5 text-[13px] text-ag-danger-text">{{ $message }}</p>@enderror
+                            {{-- "Need more licences" fills in a subject when it is still empty. --}}
+                            <script>
+                                document.getElementById('field-topic').addEventListener('change', function () {
+                                    var subject = document.getElementById('field-subject');
+                                    if (this.value === 'more_licences' && subject && subject.value.trim() === '') {
+                                        subject.value = 'Need help to get more Licences';
+                                    }
+                                });
+                            </script>
                         </div>
                         <div>
                             <label for="field-product" class="ag-label">Product <span class="font-normal text-ag-muted">(optional)</span></label>
@@ -80,7 +89,7 @@
                         </div>
 
                         <div class="sm:col-span-2">
-                            <x-input name="subject" label="Subject" required maxlength="150" placeholder="Console shows no styles on my domain" />
+                            <x-input name="subject" label="Subject" required maxlength="150" placeholder="Console shows no styles on my domain" :value="$topic === 'more_licences' ? 'Need help to get more Licences' : null" />
                         </div>
                         <div class="sm:col-span-2">
                             <label for="field-message" class="ag-label">Message</label>

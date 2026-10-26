@@ -14,15 +14,15 @@ return [
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
     /*
-    | Subscription plans. `licenses` is the max number of Management Console
-    | licences a user on the plan may hold (null = unlimited). New users get `free`.
+    | Subscription plans (labels). How many licences a user on a plan may hold is the
+    | plan's "Licence limit" in Admin → License Policy. New users get `free`.
     */
     'default_plan' => 'free',
 
     'plans' => [
-        // seats, features and valid_days go into licence files (.atgl).
-        'free' => ['label' => 'Free', 'licenses' => 1, 'seats' => 5, 'features' => [], 'valid_days' => 365],
-        'enterprise' => ['label' => 'Enterprise', 'licenses' => null, 'seats' => 1000, 'features' => ['sso', 'mcp', 'ai'], 'valid_days' => 365],
+        // Licence limits, validity and features come from Admin → License Policy (per plan).
+        'free' => ['label' => 'Free'],
+        'enterprise' => ['label' => 'Enterprise'],
     ],
 
     /*
@@ -37,8 +37,7 @@ return [
         'enc_key' => env('LICENSE_ENC_KEY'),
         // Lowest console version that understands licence files.
         'min_version' => env('LICENSE_MIN_CONSOLE_VERSION', '2.3.0'),
-        // Files one user may generate per day (on top of the per-minute rate limit).
-        'max_per_day' => 20,
+        // Files one account may generate per day: Admin → License Policy → Global default.
     ],
 
 ];

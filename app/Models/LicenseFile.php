@@ -14,7 +14,8 @@ class LicenseFile extends Model
     protected $table = 'licenses';
 
     protected $fillable = [
-        'license_id', 'user_id', 'org', 'plan', 'seats', 'features',
+        'format_version', 'license_id', 'user_id', 'token_id', 'org', 'plan', 'seats', 'max_nodes', 'max_users', 'features', 'bundles',
+        'policy_id', 'policy_type', 'validity_months', 'issued_by',
         'issued_at', 'activate_before', 'expires_at', 'key_id', 'install_id',
     ];
 
@@ -22,11 +23,22 @@ class LicenseFile extends Model
     {
         return [
             'features' => 'array',
+            'bundles' => 'array',
+            'format_version' => 'integer',
             'seats' => 'integer',
+            'max_nodes' => 'integer',
+            'max_users' => 'integer',
+            'validity_months' => 'integer',
             'issued_at' => 'datetime',
             'activate_before' => 'datetime',
             'expires_at' => 'datetime',
         ];
+    }
+
+    /** The licence (key) this file was issued for. */
+    public function licence(): BelongsTo
+    {
+        return $this->belongsTo(License::class, 'token_id');
     }
 
     public function user(): BelongsTo

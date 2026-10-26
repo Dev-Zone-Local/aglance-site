@@ -117,14 +117,13 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return config("atglance.plans.{$this->plan}.label", ucfirst((string) $this->plan));
     }
 
-    /** Max Management Console licences for the user's plan; null = unlimited. Unknown plans get the free limit. */
-    public function licenseLimit(): ?int
+    /**
+     * Total licences the user may hold: the "Licence limit" of their policy (custom license, then
+     * plan default, then global default), at least 1. Only AtGlance Support raises it.
+     */
+    public function licenseLimit(): int
     {
-        $plans = config('atglance.plans');
-
-        return array_key_exists($this->plan, $plans)
-            ? $plans[$this->plan]['licenses']
-            : $plans[config('atglance.default_plan')]['licenses'];
+        return max(1, (int) \App\Support\LicensePolicy\PolicyResolver::for($this)['max_licences']);
     }
 
     /** GitHub users without a public/verified email get an unreachable noreply address. */

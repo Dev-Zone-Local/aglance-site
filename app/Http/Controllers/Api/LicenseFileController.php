@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Support\LicenceManager;
 use App\Support\LicenseFile\Issuer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -10,24 +11,27 @@ use Illuminate\Http\Response;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
- * POST /api/license/generate (Sanctum) and POST /dashboard/licences/file (web session):
- * downloads a new offline licence file (.atgl) for the signed-in user.
+ * POST /api/licenses/{id}/file (Sanctum) and POST /dashboard/licences/{id}/file (web session):
+ * downloads the licence file (.atgl) of one of the user's licences, for a Management Console
+ * without internet access. The Installation ID is required or optional per policy; with one, the
+ * file works on that console only.
  *
- * All licence values come from the account and plan. The body may only carry an optional
- * `install_id` (the console's Installation ID) to bind the file to one console.
+ * Limits, features and validity come from the user's policy; the request may only carry the
+ * Installation ID.
  */
 class LicenseFileController extends Controller
 {
-    public function generate(Request $request): Response|RedirectResponse
+    public function generate(Request $request, int $id): Response|RedirectResponse
     {
         $request->validate(['install_id' => ['nullable', 'string', 'max:64']]);
 
         try {
-            $issued = Issuer::fromConfig()->issue($request->user(), $request->input('install_id'));
+            $licence = LicenceManager::for($request->user())->find($id);
+            $issued = Issuer::fromConfig()->issue($licence, $request->input('install_id'));
         } catch (HttpExceptionInterface $e) {
             // The dashboard form gets its error back on the page instead of an error page.
             if (! $request->is('api/*') && ! $request->expectsJson()) {
-                return back()->withInput()->withErrors(['license_file' => $e->getMessage()]);
+                return back()->withInput()->withErrors(['license_file' => $e->getMessage(), 'file_licence_id' => (string) $id]);
             }
             throw $e;
         }

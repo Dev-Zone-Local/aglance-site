@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Models\LicensePolicy;
 use App\Models\User;
 use App\Notifications\LicenseCodeNotification;
+use App\Support\LicenceManager;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -119,6 +121,7 @@ class LicenseTest extends TestCase
     public function test_code_is_bound_to_its_licence(): void
     {
         Notification::fake();
+        LicensePolicy::global()->update(['max_licences' => 10]);
         $user = User::factory()->create(['plan' => 'enterprise']);
         $this->actingAs($user);
 
@@ -210,23 +213,25 @@ class LicenseTest extends TestCase
 
         $this->createLicense('second')
             ->assertForbidden()
-            ->assertJsonPath('message', 'Your Free plan includes 1 licence. Revoke an existing licence or upgrade your plan.');
+            ->assertJsonPath('message', LicenceManager::limitMessage(1));
 
         // Revoking frees the slot again.
         $this->deleteJson("/api/licenses/{$first['id']}", ['password' => 'password'])->assertOk();
         $this->createLicense('replacement')->assertSuccessful();
     }
 
-    public function test_enterprise_plan_is_unlimited(): void
+    public function test_licence_limit_comes_from_the_policy(): void
     {
+        LicensePolicy::global()->update(['max_licences' => 3]);
         $user = User::factory()->create(['plan' => 'enterprise']);
         $this->actingAs($user);
 
         foreach (range(1, 3) as $i) {
             $this->createLicense("console-{$i}")->assertSuccessful();
         }
+        $this->createLicense('console-4')->assertForbidden()->assertJsonPath('message', LicenceManager::limitMessage(3));
 
-        $this->getJson('/api/licenses')->assertJsonPath('limit', null)->assertJsonCount(3, 'licenses');
+        $this->getJson('/api/licenses')->assertJsonPath('limit', 3)->assertJsonCount(3, 'licenses');
     }
 
     public function test_unknown_plan_falls_back_to_free_limit(): void

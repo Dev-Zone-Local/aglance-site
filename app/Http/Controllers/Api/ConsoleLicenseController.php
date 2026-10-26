@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\License;
 use App\Models\LicenseActivation;
+use App\Support\LicenseFile\Issuer;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
  * Endpoints called by the self-hosted AtGlance Management Console, authenticated with
@@ -31,6 +33,9 @@ class ConsoleLicenseController extends Controller
         if (! $token) {
             return $this->invalid();
         }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
+        }
         if (! $token->isUsable()) {
             return $this->notUsable($token);
         }
@@ -47,6 +52,9 @@ class ConsoleLicenseController extends Controller
         $token = $this->licenseToken($request);
         if (! $token) {
             return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
         }
         if (! $token->isUsable()) {
             return $this->notUsable($token);
@@ -68,7 +76,7 @@ class ConsoleLicenseController extends Controller
                     'last_seen_at' => now(),
                 ]);
 
-                return response()->json($this->payload($request, $token, $activation), 201);
+                return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)), 201);
             } catch (UniqueConstraintViolationException) {
                 // Another console activated the same licence at the same moment.
                 $activation = $this->activation($token);
@@ -81,7 +89,30 @@ class ConsoleLicenseController extends Controller
 
         $this->touch($request, $activation, $data);
 
-        return response()->json($this->payload($request, $token, $activation));
+        return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)));
+    }
+
+    /**
+     * Consoles from 2.3 ask for the licence file with "license_file": true. They get the same
+     * signed .atgl a user downloads for an offline console (base64), bound to this console's
+     * instance_id, so limits, features and expiry work the same with a key or a file.
+     */
+    private function withLicenseFile(Request $request, License $token, LicenseActivation $activation, array $payload): array
+    {
+        if (! $request->boolean('license_file')) {
+            return $payload;
+        }
+
+        try {
+            $issued = Issuer::fromConfig()->issue($token, $activation->instance_id, 'console');
+            $payload['license_file'] = base64_encode($issued['bytes']);
+            $payload['license_file_id'] = $issued['license']->license_id;
+        } catch (HttpExceptionInterface $e) {
+            $payload['license_file'] = null;
+            $payload['license_file_error'] = $e->getMessage();
+        }
+
+        return $payload;
     }
 
     /**
@@ -93,6 +124,9 @@ class ConsoleLicenseController extends Controller
         $token = $this->licenseToken($request);
         if (! $token) {
             return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
         }
         if ($token->isExpired()) {
             return $this->notUsable($token);
@@ -125,6 +159,9 @@ class ConsoleLicenseController extends Controller
         $token = $this->licenseToken($request);
         if (! $token) {
             return $this->invalid();
+        }
+        if ($token->usedByFile()) {
+            return $this->usedByFile();
         }
         if ($token->isExpired()) {
             return $this->notUsable($token);
@@ -244,6 +281,16 @@ class ConsoleLicenseController extends Controller
         return response()->json(['valid' => false, 'message' => 'Invalid licence'], 401);
     }
 
+    /** A licence file was generated from this licence: its key no longer validates. */
+    private function usedByFile(): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'in_use_file',
+            'message' => 'This licence is in use with a licence file, so its licence key cannot be used. Upload the licence file, or create a new licence.',
+        ], 409);
+    }
+
     private function inUseElsewhere(LicenseActivation $activation): JsonResponse
     {
         return response()->json([
@@ -251,7 +298,7 @@ class ConsoleLicenseController extends Controller
             'status' => 'in_use_elsewhere',
             'message' => 'This licence is already in use by another Management Console'
                 .($activation->org_name ? " (organization: {$activation->org_name})" : '')
-                .'. Revoke it and create a new licence to move it.',
+                .' until it expires. Create a new licence for this console.',
         ], 409);
     }
 }

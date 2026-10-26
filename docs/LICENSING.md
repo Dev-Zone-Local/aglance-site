@@ -1,34 +1,142 @@
-# Licensing: offline licence files (.atgl)
+# Licensing: Management Console licences
 
-atglance.live issues licence files for the Management Console. The console verifies them offline
-with built-in public keys and never calls atglance.live. The file format is defined in the AtGlance
-workspace, `contracts/LICENSE_FORMAT.md`. The console repo's `docs/LICENSING.md` covers the console
-side: verification, the read-only lock, and error codes.
+A **licence** is created by the user on **Dashboard > Licences** and confirmed with the 5-digit
+code we email them (accounts flagged by an admin also need admin approval). A confirmed licence
+can then be used in one of two ways, and both follow the same policy:
 
-The older online licence keys (`atg_...`, `/api/licenses/*`) remain in place for consoles up to 2.2.
+| Console | How | What happens |
+|---|---|---|
+| With internet access | paste the **licence key** (`atg_...`) | the console calls `POST /api/licenses/activate` once; atglance.live answers with the licence file for that console |
+| Without internet access | generate the **licence file** (`.atgl`) from the licence and upload it | the console checks the file offline |
+
+Either way the console ends up with the same signed licence file (payload v2) and checks it
+offline from then on; there is no later online check. The file format is defined in the AtGlance
+workspace, `contracts/LICENSE_FORMAT.md`; the console repo's `docs/LICENSING.md` covers the console
+side (verification, limits, features, error codes).
+
+**One licence = one console.** An online activation records the console's Installation ID
+automatically. A licence file takes the Installation ID as the policy says ("Installation ID for
+licence files": required or optional); with an ID the file works on that console only. Either way
+the licence is then **in use** (a `license_activations` row; a file without an ID records
+`unbound-file`). A licence in use is refused for another console, and the user cannot revoke it
+until it expires: revoking would free a slot while the console keeps working offline. AtGlance
+Support can still remove it. The key and its file expire on the same date.
+
+Consoles up to 2.2 use only the key and the old JSON answer; they keep working.
 
 ## What the site does
 
-1. A signed-in user opens **Dashboard > Licences** and clicks **Generate licence file**. The
-   Installation ID field is optional.
-2. `App\Support\LicenseFile\Issuer` builds the payload from the account and plan, never from the
-   request:
-   - `customer` is the account name, and `email` the account email;
-   - `plan`, `seats`, `features` and the validity come from `config('atglance.plans')`;
-   - `issued_at` is now, `activate_before` is now + 3 hours, `expires_at` is now + `valid_days`.
-3. `PayloadBuilder` produces the exact JSON bytes. `Packer` signs them with Ed25519, encrypts with
+1. `App\Support\LicenseFile\Issuer` issues the file for one licence: the licence must be confirmed
+   (and approved for flagged accounts) and not expired.
+2. `PolicyResolver` picks the policy: the user's custom license, then the plan default, then the
+   global default (see "Policies"). It gives `max_nodes`, `max_users`, `bundles` (e.g. `["premium"]`) and
+   `features` (individual premium grants, e.g. `["nfs_storage"]`; free features and bundle keys are never
+   written there), the Installation ID rule and the
+   activation window (`activate_before` = now + 5 to 180 minutes). The file expires with its
+   licence; the licence's expiry is set from the policy's validity when it is created.
+3. `PayloadBuilder::buildV3` produces the exact JSON bytes (payload v3, `min_version` at least 2.4.0). `Packer` signs them with Ed25519, encrypts with
    AES-256-GCM (random 12-byte IV, header as AAD), and packs the `.atgl` binary.
-4. A row is written to `licenses` (model `App\Models\LicenseFile`). The file itself is not stored.
-5. The response is `application/octet-stream` with
-   `Content-Disposition: attachment; filename="atglance-<license_id>.atgl"`.
+4. A row is written to `licenses` (model `App\Models\LicenseFile`) with its licence (`token_id`),
+   limits, `bundles`, `features`, `policy_id`, `policy_type` and `issued_by` (`user` for a download, `console`
+   for an online activation). The file itself is not stored.
 
-| Route | Auth | Limits |
+| Route | Auth | Notes |
 |---|---|---|
-| `POST /api/license/generate` | Sanctum | `throttle:5,1`, 20 files per user per 24 h |
-| `POST /dashboard/licences/file` | web session | same |
+| `POST /api/licenses/{id}/file` | Sanctum | body `install_id` (required or optional per policy; a UUID when given); `throttle:5,1` |
+| `POST /dashboard/licences/{id}/file` | web session | same; errors come back on the page |
+| `POST /api/licenses/activate` | licence key | with `"license_file": true` the answer carries `license_file` (base64 .atgl); without it, the 2.2 answer |
 
-Refused with 403: unverified email, and accounts flagged for admin approval. Refused with 503:
-the keys are missing or malformed. The 503 message gives no details.
+Refused with 403: unconfirmed, expired, or not yet approved licences. 409: the licence is in use by
+another console. 409 on revoke: the licence is in use and not expired. 503 (or `license_file: null` with `license_file_error` on activate): the signing
+keys are missing or malformed; the message gives no details.
+
+**Licence limit.** A user may hold at most the policy's "Licence limit" licences (at least 1). The
+dashboard has a "Need more licences" link (also shown at the limit) to `/contact?topic=more_licences`,
+which selects "Need more licences" and fills in the subject "Need help to get more Licences". Only
+an admin raises the limit (plan default or the user's custom license).
+
+## Policies
+
+**Admin → Access → License Policy** (`/admin/license-policy`, admins only, checked on the server)
+edits the defaults for licences (keys and files alike):
+
+| Field | Validation |
+|---|---|
+| Licence limit | integer >= 1: total licences a user may hold; users contact AtGlance Support to get more |
+| Node limit | integer >= 0, `0` = unlimited |
+| User limit | integer >= 0, `0` = unlimited |
+| License valid up to | number + unit (months or years), 1 to 120 months in total |
+| License file expiry window | 5 to 180 minutes (hard cap: the licence format allows at most 3 hours) |
+| Installation ID for licence files | `required` or `optional` (default). Online key activation records it automatically |
+| Free features (always included) | shown checked and greyed out; not saved, never in a licence, cannot be turned off |
+| Premium Features | one toggle: the `premium` bundle, "Includes all premium features: NFS Storage, and any premium features added later." The members are listed read-only. Default policies cannot grant single premium features (custom licenses can) |
+
+There is one **global default** and one **default per plan of Admin → Pricing plans** (the plan
+name as a slug is the plan code users carry, e.g. `Enterprise` → `enterprise`). A plan default
+with "Use the global default" uses the global one. Saving affects only licences generated
+afterwards; issued files never change. Every change is written to `policy_audit_log` (admin, field,
+old and new value, time) and shown under the form.
+
+**Resolution order** for a licence (key activation or file download): the user's custom license, then the plan default,
+then the global default.
+
+## Custom licenses
+
+**Admin → Users → Edit → Create custom license** (button at the top of the user's edit page) opens
+a form pre-filled from the policy that
+applies to the user. The admin may change the licence limit, the node and user limits, the validity or an explicit expiry date, the
+activation window (still 180 minutes at most), the Installation ID rule, the premium features, a fixed Installation ID and internal notes.
+
+Premium features in a custom license:
+- **Premium Features (all)** ticked: every premium feature shows ticked and disabled; the policy stores
+  `bundles: ["premium"]` and no individual grants.
+- Unticked: single premium features (e.g. NFS Storage) can be picked; they are stored in `individual_features`
+  and written into the licence's `features`. Picking every premium feature one by one still stores individual
+  grants; the form suggests "Premium Features (all)" so that later premium features are included.
+- A summary line shows the result before saving: "Premium: All (bundle)", "Premium: NFS Storage only" or
+  "Premium: None".
+It is saved as a `custom_license_policies` row (`policy_type = custom`, `created_by_admin_id`).
+
+Delivery: the policy is attached to the user, whose licences then use it, with the key or a
+downloaded file. A file's activation window starts when the user downloads it, not while a file
+is passed along. The dashboard shows "Standard" or "Custom", the limits, and "Premium Features (all)" or the
+individually granted premium features.
+
+The admin can edit or **revoke** the custom license from the same row. After revoking, new files
+use the default policy again.
+
+**Offline revocation.** Files already downloaded cannot be revoked: the console checks them offline
+and they work until `expires_at`. Revoking only changes files generated afterwards.
+
+All issued files are listed in **Admin → Access → Licence files** with filters for user, policy type,
+plan and expiry, and a Premium column ("Premium Features (all)" or the granted features).
+
+## Features
+
+**Admin → Access → Feature Catalog** lists every console feature with its **tier**:
+
+- **free** (13 keys: systems and configs, users, workspaces, API keys, service accounts, SSO, AI Connect,
+  MCP, custom domain, S3, backup & restore, notifications, activity log): always on in the console, never in
+  a licence, shown checked and greyed out in policy forms;
+- **premium** (`nfs_storage` "NFS Storage"): granted through the **Premium Features** bundle, or one by one in
+  a custom license.
+
+**Bundles** are groups, not features (workspace `contracts/FEATURES.md`, "Bundles"). The `premium` bundle
+("Premium Features") contains every premium feature. A licence carries it in `bundles[]`; the console resolves
+the members from its own catalog, so premium features added in later console versions are included without a
+new licence. Individual grants go into `features[]` and do not grow. A bundle key never goes into `features[]`.
+
+Policies store `bundles` and `individual_features` separately (migration `2026_10_27_000100_premium_bundle`
+converted the old `premium` key to `bundles: ["premium"]`; default policies that granted single premium
+features got the bundle). Changes to each are audited as separate fields.
+
+The issuer writes `bundles` and `features` only from the resolved policy (custom, plan, global); anything a
+client sends is ignored. The dashboard lists the premium features of the user's policy, and the pricing page shows a "Premium" badge next
+to a plan feature named like a premium feature (e.g. "NFS Storage").
+
+The keys and tiers come from the workspace `contracts/FEATURES.md` (copied to `resources/licensing/features.json`)
+and cannot be created, renamed, re-tiered or deleted on the site; admins edit the display name and description (audited).
+New keys from the contract appear after `php artisan migrate` or on opening the catalog page.
 
 ## Keys
 
@@ -54,7 +162,7 @@ see the console's `docs/LICENSING.md`.
 php vendor/bin/phpunit --filter LicenseFile
 ```
 
-- `tests/Feature/LicenseFileTest.php` covers auth, account-only values, the Installation ID, rate
+- `tests/Feature/LicenseFileTest.php` covers auth, account-only values, the Installation ID (required / optional), the in-use revoke lock, rate
   limits, the daily cap, missing keys, the dashboard form, and the activation-window list.
 - `tests/Unit/LicenseFileContractTest.php` checks the issuer against the shared test vectors in
   `tests/fixtures/licensing/` (a copy of the workspace `contracts/fixtures/`; test keys only). Set

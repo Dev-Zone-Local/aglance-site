@@ -29,6 +29,12 @@ final class LicenseFixtures
         throw new RuntimeException("No test key {$keyId}");
     }
 
+    /** @return list<array{key: string, name: string}> the feature catalog of the contract */
+    public static function features(): array
+    {
+        return json_decode((string) file_get_contents(self::dir().'/features.json'), true)['features'];
+    }
+
     /** Points config('atglance.license_file') at the TEST key. */
     public static function configure(): void
     {
