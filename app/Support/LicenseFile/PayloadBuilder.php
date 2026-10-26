@@ -107,6 +107,49 @@ final class PayloadBuilder
         ];
     }
 
+    /** First console version that reads payload v3 (bundles). */
+    public const V3_MIN_VERSION = '2.4.0';
+
+    /**
+     * Payload version 3 (LICENSE_FORMAT.md): v2 plus bundles[]. features[] holds individual
+     * premium grants only, never a bundle key. min_version is at least V3_MIN_VERSION.
+     *
+     * @param  list<string>  $bundles  bundle keys (e.g. premium)
+     * @param  list<string>  $features  individually granted premium keys
+     * @return array<string, mixed>
+     */
+    public static function buildV3(
+        string $licenseId,
+        string $keyId,
+        string $customer,
+        string $email,
+        string $plan,
+        array $bundles,
+        array $features,
+        int $maxNodes,
+        int $maxUsers,
+        string $policyId,
+        string $policyType,
+        int $validityMonths,
+        int $activationWindowMinutes,
+        string $minVersion,
+        ?string $installId,
+        DateTimeInterface $now,
+        ?DateTimeInterface $expiresAt = null,
+    ): array {
+        $bundles = array_values(array_unique(array_map('strval', $bundles)));
+        $payload = self::buildV2(
+            licenseId: $licenseId, keyId: $keyId, customer: $customer, email: $email, plan: $plan,
+            features: array_values(array_diff(array_map('strval', $features), $bundles)),
+            maxNodes: $maxNodes, maxUsers: $maxUsers, policyId: $policyId, policyType: $policyType,
+            validityMonths: $validityMonths, activationWindowMinutes: $activationWindowMinutes,
+            minVersion: version_compare($minVersion, self::V3_MIN_VERSION, '<') ? self::V3_MIN_VERSION : $minVersion,
+            installId: $installId, now: $now, expiresAt: $expiresAt,
+        );
+
+        return ['format_version' => 3] + $payload + ['bundles' => $bundles];
+    }
+
     /** $months calendar months later; the day is clamped to the month's last day (Jan 31 + 1 = Feb 28/29). */
     public static function addMonths(DateTimeImmutable $date, int $months): DateTimeImmutable
     {

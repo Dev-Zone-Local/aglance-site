@@ -389,7 +389,7 @@ class ConsoleLicenseTest extends TestCase
         $payload = LicenseFixtures::decode($bytes)['payload'];
         $this->assertSame($instance, $payload['install_id']);
         $this->assertSame('Acme Corp', $payload['customer']);
-        $this->assertSame(2, $payload['format_version']);
+        $this->assertSame(3, $payload['format_version']);
         $this->assertSame($res->json('license_file_id'), $payload['license_id']);
         $this->assertDatabaseHas('licenses', ['license_id' => $payload['license_id'], 'issued_by' => 'console']);
 

@@ -15,7 +15,7 @@ class CustomLicensePolicy extends Model
 {
     protected $fillable = [
         'user_id', 'created_by_admin_id', 'updated_by_admin_id', 'max_nodes', 'max_users',
-        'validity_value', 'validity_unit', 'expires_on', 'activation_window_minutes', 'max_licences', 'install_id_mode', 'features',
+        'validity_value', 'validity_unit', 'expires_on', 'activation_window_minutes', 'max_licences', 'install_id_mode', 'bundles', 'individual_features',
         'install_id', 'notes', 'revoked_at', 'revoked_by_admin_id',
     ];
 
@@ -27,7 +27,8 @@ class CustomLicensePolicy extends Model
             'validity_value' => 'integer',
             'activation_window_minutes' => 'integer',
             'max_licences' => 'integer',
-            'features' => 'array',
+            'bundles' => 'array',
+            'individual_features' => 'array',
             'expires_on' => 'date',
             'revoked_at' => 'datetime',
         ];

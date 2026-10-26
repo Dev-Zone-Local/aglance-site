@@ -118,15 +118,6 @@
             "min_console_version": "2.3.0"
         },
         {
-            "key": "premium",
-            "name": "Premium Features",
-            "description": "All premium features: a licence with this key enables every premium feature, present and future, without listing them one by one.",
-            "tier": "premium",
-            "default": false,
-            "v1_default": false,
-            "min_console_version": "2.3.0"
-        },
-        {
             "key": "nfs_storage",
             "name": "NFS Storage",
             "description": "NFS exports, the console NFS mount and its monitoring, and console backup, restore and migration through NFS.",
@@ -134,6 +125,15 @@
             "default": false,
             "v1_default": false,
             "min_console_version": "2.4.0"
+        }
+    ],
+    "bundles": [
+        {
+            "key": "premium",
+            "name": "Premium Features",
+            "description": "Includes all premium features, and any premium features added later.",
+            "members_tier": "premium",
+            "default": false
         }
     ]
 }

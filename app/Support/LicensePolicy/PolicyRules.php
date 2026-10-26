@@ -35,9 +35,13 @@ class PolicyRules
             'validity_unit' => ['required', Rule::in(['months', 'years'])],
             'activation_window_minutes' => ['required', 'integer', 'min:'.self::MIN_WINDOW_MINUTES, 'max:'.self::MAX_WINDOW_MINUTES],
             'install_id_mode' => ['required', Rule::in(['required', 'optional'])],
-            // Premium keys only: free features are always on and cannot be listed or turned off.
-            'features' => ['present', 'array'],
-            'features.*' => ['string', Rule::in(FeatureCatalog::premiumKeys())],
+            // Bundles (e.g. premium = Premium Features) and individual premium grants. Free features
+            // are always on and cannot be listed; a bundle key is never a feature key.
+            'bundles' => ['present', 'array'],
+            'bundles.*' => ['string', Rule::in(FeatureCatalog::bundleKeys())],
+            // Default policies grant premium features only through bundles; custom policies may grant them one by one.
+            'individual_features' => $custom ? ['present', 'array'] : ['present', 'array', 'max:0'],
+            'individual_features.*' => ['string', Rule::in(FeatureCatalog::premiumKeys())],
         ] + ($custom ? [
             'expires_on' => ['nullable', 'date', 'after:today', 'before_or_equal:'.now()->addMonths(self::MAX_VALIDITY_MONTHS)->toDateString()],
             'install_id' => ['nullable', 'uuid'],
@@ -55,7 +59,9 @@ class PolicyRules
      */
     public static function validate(array $data, bool $custom = false, string $prefix = ''): array
     {
-        $validator = Validator::make($data, self::rules($custom));
+        $validator = Validator::make($data, self::rules($custom), [
+            'individual_features.max' => 'Default policies include premium features only through "Premium Features". Single premium features are granted with a custom license.',
+        ]);
         $validator->after(function ($v) use ($data, $custom) {
             if ($custom && ! empty($data['expires_on'])) {
                 return;
@@ -79,9 +85,49 @@ class PolicyRules
             throw \Illuminate\Validation\ValidationException::withMessages($errors);
         }
 
-        // Premium keys in catalog order, no duplicates. Free keys never reach here (rule above).
-        $validated['features'] = FeatureCatalog::onlyPremium((array) ($validated['features'] ?? []));
+        // Known keys in catalog order, no duplicates. With a bundle, every member is included:
+        // no separate grants are stored.
+        $validated['bundles'] = FeatureCatalog::onlyBundles((array) ($validated['bundles'] ?? []));
+        $validated['individual_features'] = $validated['bundles'] !== []
+            ? []
+            : FeatureCatalog::onlyPremium((array) ($validated['individual_features'] ?? []));
 
         return $validated;
+    }
+
+    /**
+     * Form state to policy fields: the "Premium Features" toggle/checkbox (premium_bundle) becomes
+     * bundles; the individual checkboxes become individual_features (none with the bundle).
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, mixed>
+     */
+    public static function fromForm(array $input): array
+    {
+        $bundle = filter_var($input['premium_bundle'] ?? false, FILTER_VALIDATE_BOOL);
+        unset($input['premium_bundle'], $input['premium_members']);
+
+        return [
+            'bundles' => $bundle ? [FeatureCatalog::BUNDLE_PREMIUM] : [],
+            'individual_features' => $bundle ? [] : array_values((array) ($input['individual_features'] ?? [])),
+        ] + $input;
+    }
+
+    /**
+     * Policy fields to form state (see fromForm). With the bundle, every premium feature shows as
+     * ticked (and disabled) in the custom form.
+     *
+     * @param  array<int, string>|null  $bundles
+     * @param  array<int, string>|null  $features
+     * @return array{premium_bundle: bool, individual_features: list<string>}
+     */
+    public static function toForm(?array $bundles, ?array $features): array
+    {
+        $bundle = in_array(FeatureCatalog::BUNDLE_PREMIUM, (array) $bundles, true);
+
+        return [
+            'premium_bundle' => $bundle,
+            'individual_features' => $bundle ? FeatureCatalog::premiumKeys() : FeatureCatalog::onlyPremium((array) $features),
+        ];
     }
 }
