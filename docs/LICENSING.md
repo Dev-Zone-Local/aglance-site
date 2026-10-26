@@ -29,14 +29,15 @@ Consoles up to 2.2 use only the key and the old JSON answer; they keep working.
 1. `App\Support\LicenseFile\Issuer` issues the file for one licence: the licence must be confirmed
    (and approved for flagged accounts) and not expired.
 2. `PolicyResolver` picks the policy: the user's custom license, then the plan default, then the
-   global default (see "Policies"). It gives `max_nodes`, `max_users`, `features` (`["premium"]`
-   when Premium features is on, else `[]`), the Installation ID rule and the
+   global default (see "Policies"). It gives `max_nodes`, `max_users`, `bundles` (e.g. `["premium"]`) and
+   `features` (individual premium grants, e.g. `["nfs_storage"]`; free features and bundle keys are never
+   written there), the Installation ID rule and the
    activation window (`activate_before` = now + 5 to 180 minutes). The file expires with its
    licence; the licence's expiry is set from the policy's validity when it is created.
-3. `PayloadBuilder` produces the exact JSON bytes. `Packer` signs them with Ed25519, encrypts with
+3. `PayloadBuilder::buildV3` produces the exact JSON bytes (payload v3, `min_version` at least 2.4.0). `Packer` signs them with Ed25519, encrypts with
    AES-256-GCM (random 12-byte IV, header as AAD), and packs the `.atgl` binary.
 4. A row is written to `licenses` (model `App\Models\LicenseFile`) with its licence (`token_id`),
-   limits, features, `policy_id`, `policy_type` and `issued_by` (`user` for a download, `console`
+   limits, `bundles`, `features`, `policy_id`, `policy_type` and `issued_by` (`user` for a download, `console`
    for an online activation). The file itself is not stored.
 
 | Route | Auth | Notes |
@@ -67,7 +68,8 @@ edits the defaults for licences (keys and files alike):
 | License valid up to | number + unit (months or years), 1 to 120 months in total |
 | License file expiry window | 5 to 180 minutes (hard cap: the licence format allows at most 3 hours) |
 | Installation ID for licence files | `required` or `optional` (default). Online key activation records it automatically |
-| Premium features | on/off: puts the `premium` key in licences (e.g. Enterprise). It changes no console behaviour yet; console modules are core and controlled in the console's Plugins |
+| Free features (always included) | shown checked and greyed out; not saved, never in a licence, cannot be turned off |
+| Premium Features | one toggle: the `premium` bundle, "Includes all premium features: NFS Storage, and any premium features added later." The members are listed read-only. Default policies cannot grant single premium features (custom licenses can) |
 
 There is one **global default** and one **default per plan of Admin → Pricing plans** (the plan
 name as a slug is the plan code users carry, e.g. `Enterprise` → `enterprise`). A plan default
@@ -83,12 +85,22 @@ then the global default.
 **Admin → Users → Edit → Create custom license** (button at the top of the user's edit page) opens
 a form pre-filled from the policy that
 applies to the user. The admin may change the licence limit, the node and user limits, the validity or an explicit expiry date, the
-activation window (still 180 minutes at most), the Installation ID rule, Premium features, a fixed Installation ID and internal notes.
+activation window (still 180 minutes at most), the Installation ID rule, the premium features, a fixed Installation ID and internal notes.
+
+Premium features in a custom license:
+- **Premium Features (all)** ticked: every premium feature shows ticked and disabled; the policy stores
+  `bundles: ["premium"]` and no individual grants.
+- Unticked: single premium features (e.g. NFS Storage) can be picked; they are stored in `individual_features`
+  and written into the licence's `features`. Picking every premium feature one by one still stores individual
+  grants; the form suggests "Premium Features (all)" so that later premium features are included.
+- A summary line shows the result before saving: "Premium: All (bundle)", "Premium: NFS Storage only" or
+  "Premium: None".
 It is saved as a `custom_license_policies` row (`policy_type = custom`, `created_by_admin_id`).
 
 Delivery: the policy is attached to the user, whose licences then use it, with the key or a
 downloaded file. A file's activation window starts when the user downloads it, not while a file
-is passed along. The dashboard shows "Standard" or "Custom", the limits and Premium Features.
+is passed along. The dashboard shows "Standard" or "Custom", the limits, and "Premium Features (all)" or the
+individually granted premium features.
 
 The admin can edit or **revoke** the custom license from the same row. After revoking, new files
 use the default policy again.
@@ -97,14 +109,33 @@ use the default policy again.
 and they work until `expires_at`. Revoking only changes files generated afterwards.
 
 All issued files are listed in **Admin → Access → Licence files** with filters for user, policy type,
-plan and expiry.
+plan and expiry, and a Premium column ("Premium Features (all)" or the granted features).
 
 ## Features
 
-**Admin → Access → Feature Catalog** lists the feature keys a licence can carry; today only
-`premium` ("Premium Features"). It is informational and loosely coupled to the console. The keys come from
-the workspace `contracts/FEATURES.md` (copied to `resources/licensing/features.json`) and cannot
-be created, renamed or deleted on the site; admins edit the display name and description (audited).
+**Admin → Access → Feature Catalog** lists every console feature with its **tier**:
+
+- **free** (13 keys: systems and configs, users, workspaces, API keys, service accounts, SSO, AI Connect,
+  MCP, custom domain, S3, backup & restore, notifications, activity log): always on in the console, never in
+  a licence, shown checked and greyed out in policy forms;
+- **premium** (`nfs_storage` "NFS Storage"): granted through the **Premium Features** bundle, or one by one in
+  a custom license.
+
+**Bundles** are groups, not features (workspace `contracts/FEATURES.md`, "Bundles"). The `premium` bundle
+("Premium Features") contains every premium feature. A licence carries it in `bundles[]`; the console resolves
+the members from its own catalog, so premium features added in later console versions are included without a
+new licence. Individual grants go into `features[]` and do not grow. A bundle key never goes into `features[]`.
+
+Policies store `bundles` and `individual_features` separately (migration `2026_10_27_000100_premium_bundle`
+converted the old `premium` key to `bundles: ["premium"]`; default policies that granted single premium
+features got the bundle). Changes to each are audited as separate fields.
+
+The issuer writes `bundles` and `features` only from the resolved policy (custom, plan, global); anything a
+client sends is ignored. The dashboard lists the premium features of the user's policy, and the pricing page shows a "Premium" badge next
+to a plan feature named like a premium feature (e.g. "NFS Storage").
+
+The keys and tiers come from the workspace `contracts/FEATURES.md` (copied to `resources/licensing/features.json`)
+and cannot be created, renamed, re-tiered or deleted on the site; admins edit the display name and description (audited).
 New keys from the contract appear after `php artisan migrate` or on opening the catalog page.
 
 ## Keys

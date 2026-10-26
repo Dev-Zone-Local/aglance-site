@@ -34,9 +34,18 @@
                 <div><dt class="text-xs text-ag-muted">Valid for</dt><dd class="text-ag-ink">{{ $policy['expires_on'] ? 'until '.$policy['expires_on']->format('M j, Y') : $policy['validity_months'].' '.($policy['validity_months'] === 1 ? 'month' : 'months') }}</dd></div>
                 <div><dt class="text-xs text-ag-muted">File install window</dt><dd class="text-ag-ink">{{ $policy['activation_window_minutes'] }} minutes</dd></div>
             </dl>
-            <div class="mt-3 text-sm">
-                <span class="text-xs text-ag-muted">{{ $featureNames['premium'] ?? 'Premium Features' }}:</span>
-                <span class="text-ag-ink" data-testid="licence-premium">{{ $policy['premium_features'] ? 'Enabled' : 'Not included' }}</span>
+            <div class="mt-3 text-sm" data-testid="licence-premium">
+                <span class="text-xs text-ag-muted">Premium features in your licence:</span>
+                @if (in_array(\App\Models\FeatureCatalog::BUNDLE_PREMIUM, $policy['bundles'], true))
+                    <span class="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs text-ag-ink" data-testid="all-premium">Premium Features (all) <span class="rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">Premium</span></span>
+                @else
+                @forelse ($policy['features'] as $feature)
+                    <span class="ml-1 inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-0.5 text-xs text-ag-ink">{{ $featureNames[$feature] ?? $feature }} <span class="rounded-full bg-amber-100 px-1.5 text-[10px] font-medium text-amber-800">Premium</span></span>
+                @empty
+                    <span class="text-ag-subtle">None</span>
+                @endforelse
+                @endif
+                <span class="block text-xs text-ag-muted mt-1">All other console features are free and always included.</span>
             </div>
         </div>
 

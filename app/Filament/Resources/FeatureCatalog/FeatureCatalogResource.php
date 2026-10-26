@@ -54,6 +54,9 @@ class FeatureCatalogResource extends Resource
             ->columns([
                 TextColumn::make('key')->fontFamily('mono')->copyable(),
                 TextColumn::make('name')->label('Display name'),
+                TextColumn::make('tier')->badge()
+                    ->color(fn (string $state) => $state === 'premium' ? 'warning' : 'gray')
+                    ->tooltip(fn (string $state) => $state === 'premium' ? 'Enabled only when a licence lists it' : 'Always on in the console'),
                 TextColumn::make('description')->wrap()->color('gray'),
                 IconColumn::make('default_enabled')->label('On in new defaults')->boolean(),
             ])

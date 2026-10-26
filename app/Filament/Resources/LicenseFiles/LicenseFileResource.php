@@ -53,7 +53,10 @@ class LicenseFileResource extends Resource
                 TextColumn::make('max_users')->label('Users')
                     ->state(fn (LicenseFile $r) => $r->max_users ?? $r->seats)
                     ->formatStateUsing(fn ($state) => $state === 0 ? 'Unlimited' : $state),
-                TextColumn::make('features')->label('Features')->badge()->color('gray')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('premium')->label('Premium')
+                    ->state(fn (LicenseFile $r) => in_array(\App\Models\FeatureCatalog::BUNDLE_PREMIUM, (array) $r->bundles, true)
+                        ? 'Premium Features (all)'
+                        : (implode(', ', array_values(array_intersect_key(\App\Models\FeatureCatalog::premiumOptions(), array_flip((array) $r->features)))) ?: 'None')),
                 TextColumn::make('issued_by')->label('Issued by')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('issued_at')->label('Issued')->dateTime()->sortable(),
                 TextColumn::make('expires_at')->label('Expires')->date()->sortable()

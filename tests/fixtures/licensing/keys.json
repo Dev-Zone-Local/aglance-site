@@ -3,15 +3,15 @@
     "keys": [
         {
             "key_id": "test-2026",
-            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIFDXuQPQw1CUOmrOW1msKE/mQ92ra8G7E/++Zfb08FhD\n-----END PRIVATE KEY-----\n",
-            "ed25519_public_b64": "2fl8gEMk/tC2IdS+DMe4TckUD3kkAgHcfO9897k7yTE=",
-            "aes_key_hex": "a9f9428e00672b455f09a5ac968473f17c302850900bfb6b0787b2121a62b009"
+            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIGcYnqNmQxjmnpbvFpgByK+DUIL4iXAKXTCwzkIpmXfq\n-----END PRIVATE KEY-----\n",
+            "ed25519_public_b64": "0AaY5NbwHNMtbIu7nB1Nw+5aZOzoJg4FP1WOSE72oJo=",
+            "aes_key_hex": "1109e59d3974efb665b02c5189c6d59906fe29c343d030ef52c6e97e4168798d"
         },
         {
             "key_id": "other-2026",
-            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIOTxw552jZFwhj4TN7Xrn/IHtYUjZjGx1d3Qvn7Hdf/w\n-----END PRIVATE KEY-----\n",
-            "ed25519_public_b64": "+nupKaX/VHjyf0OxwjTpUnXGns6PlX1kg+siQrV/7NA=",
-            "aes_key_hex": "f4d10bc13a4a36d0c465f469d49e1d5aab12e4ea3b206d22a6c7b1023557c9c5"
+            "ed25519_private_pem": "-----BEGIN PRIVATE KEY-----\nMC4CAQAwBQYDK2VwBCIEIH0eLRmyG7BOTYqnFZOlkdKniZLh6/ZrznTTjx7BgGDt\n-----END PRIVATE KEY-----\n",
+            "ed25519_public_b64": "SBc6uIDQyfkVOzcezwyYcSO1bZFcfy2HFSp+bHurL/g=",
+            "aes_key_hex": "b5469a3e4a50998e11817b7caa0d705c2c382fe945d6df83116f6bba50bccf04"
         }
     ]
 }

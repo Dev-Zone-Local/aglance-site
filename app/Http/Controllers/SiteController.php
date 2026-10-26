@@ -53,7 +53,10 @@ class SiteController extends Controller
 
     public function pricing(): View
     {
-        return view('site.pricing', ['plans' => PricingPlan::orderBy('order')->get()]);
+        return view('site.pricing', [
+            'plans' => PricingPlan::orderBy('order')->get(),
+            'premiumFeatureNames' => array_map(fn ($n) => mb_strtolower((string) $n), array_values(\App\Models\FeatureCatalog::premiumOptions())),
+        ]);
     }
 
     public function faq(): View

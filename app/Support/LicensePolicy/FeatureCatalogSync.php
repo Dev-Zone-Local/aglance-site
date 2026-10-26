@@ -27,10 +27,30 @@ class FeatureCatalogSync
         return array_values(array_filter((array) ($data['features'] ?? []), fn ($f) => is_string($f['key'] ?? null)));
     }
 
+    /**
+     * The bundles of the contract (FEATURES.md, "Bundles"): groups of features, not rows of the
+     * catalog.
+     *
+     * @return list<array{key: string, name: string, description?: string, members_tier: string, default?: bool}>
+     */
+    public static function bundles(): array
+    {
+        static $cache = [];
+        $path = self::path();
+        if (! array_key_exists($path, $cache)) {
+            $data = json_decode((string) @file_get_contents($path), true);
+            $cache[$path] = array_values(array_filter((array) ($data['bundles'] ?? []),
+                fn ($b) => is_string($b['key'] ?? null) && is_string($b['name'] ?? null)));
+        }
+
+        return $cache[$path];
+    }
+
     /** @return int rows added */
     public static function sync(): int
     {
         $added = 0;
+        $hasTier = \Illuminate\Support\Facades\Schema::hasColumn('feature_catalog', 'tier');
         foreach (self::contract() as $sort => $feature) {
             $row = FeatureCatalog::query()->firstOrNew(['key' => $feature['key']]);
             if (! $row->exists) {
@@ -40,6 +60,10 @@ class FeatureCatalogSync
                     'default_enabled' => (bool) ($feature['default'] ?? true),
                 ]);
                 $added++;
+            }
+            // The tier is defined by the contract only (the column exists from the 2026_10_25 migration on).
+            if ($hasTier) {
+                $row->tier = ($feature['tier'] ?? FeatureCatalog::TIER_PREMIUM) === FeatureCatalog::TIER_FREE ? FeatureCatalog::TIER_FREE : FeatureCatalog::TIER_PREMIUM;
             }
             $row->sort = $sort;
             $row->save();
