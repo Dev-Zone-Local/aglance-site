@@ -3,6 +3,7 @@
 use App\Models\License;
 use App\Models\User;
 use App\Support\Captcha;
+use App\Support\LicenseFile\Packer;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
 use Illuminate\Support\Facades\Validator;
@@ -62,3 +63,33 @@ Artisan::command('licenses:forget-expired-keys', function () {
 })->purpose('Remove plain licence keys whose viewing window has passed');
 
 Schedule::command('licenses:forget-expired-keys')->everyFiveMinutes();
+
+// New signing and encryption keys for offline licence files (.atgl). Prints them only:
+// nothing is written to disk. See docs/LICENSING.md, "Keys".
+Artisan::command('license:generate-keys {key_id? : Key ID, e.g. atgl-2026-10}', function () {
+    $keyId = (string) ($this->argument('key_id') ?: 'atgl-'.now()->format('Y-m'));
+    if (preg_match('/^[A-Za-z0-9._-]{1,64}$/', $keyId) !== 1) {
+        $this->error('The key ID must be 1-64 characters from A-Z a-z 0-9 . _ -');
+
+        return 1;
+    }
+    $keys = Packer::generateKeys();
+
+    $this->warn('Keep the private key and the AES key secret. Do not commit them or paste them into tickets.');
+    $this->newLine();
+    $this->line('<info>1. atglance.live environment</info> (secret manager or the server .env):');
+    $this->line('LICENSE_KEY_ID='.$keyId);
+    $this->line('LICENSE_SIGNING_PRIVATE_KEY='.$keys['private_b64']);
+    $this->line('LICENSE_ENC_KEY='.$keys['enc_key_hex']);
+    $this->newLine();
+    $this->line('<info>2. Management Console keyring entry</info> (add to the ATGLANCE_LICENSE_KEYRING build arg / config/license-keyring.json):');
+    $this->line(json_encode([$keyId => ['public_key' => $keys['public_b64'], 'enc_key' => $keys['enc_key_hex']]], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
+    $this->newLine();
+    $this->line('<info>Private key as PEM</info> (same key as LICENSE_SIGNING_PRIVATE_KEY):');
+    $this->line($keys['private_pem']);
+    $this->line('<info>Public key as PEM</info>:');
+    $this->line($keys['public_pem']);
+    $this->line('Ship a console release with the new keyring entry before atglance.live starts signing with this key ID.');
+
+    return 0;
+})->purpose('Generate a new key set for offline licence files (.atgl)');

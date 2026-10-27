@@ -1,0 +1,642 @@
+[
+    {
+        "name": "valid license at activation",
+        "file": "valid.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 1,
+            "max_nodes": 0,
+            "max_users": 25,
+            "policy_id": "v1",
+            "policy_type": "default",
+            "validity_months": null,
+            "features": [],
+            "bundles": []
+        }
+    },
+    {
+        "name": "valid license at startup months later",
+        "file": "valid.atgl",
+        "mode": "startup",
+        "now": "2026-06-01T00:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok"
+    },
+    {
+        "name": "activation window at exactly 3h",
+        "file": "valid.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T03:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok"
+    },
+    {
+        "name": "activation window passed (3h + 1s)",
+        "file": "valid.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T03:00:01Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_ACTIVATION_WINDOW"
+    },
+    {
+        "name": "license expired",
+        "file": "valid.atgl",
+        "mode": "startup",
+        "now": "2027-01-01T00:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_EXPIRED"
+    },
+    {
+        "name": "tampered byte",
+        "file": "tampered.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_DECRYPT"
+    },
+    {
+        "name": "wrong key_id",
+        "file": "unknown-key-id.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_KEY_ID"
+    },
+    {
+        "name": "signature from another key",
+        "file": "foreign-signature.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_SIGNATURE"
+    },
+    {
+        "name": "wrong product",
+        "file": "wrong-product.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PRODUCT"
+    },
+    {
+        "name": "future issued_at",
+        "file": "future-issued.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T00:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_ISSUED_FUTURE"
+    },
+    {
+        "name": "issued_at within 10 min tolerance",
+        "file": "future-issued.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T00:10:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok"
+    },
+    {
+        "name": "install_id mismatch",
+        "file": "install-bound.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_INSTALL_ID"
+    },
+    {
+        "name": "install_id match",
+        "file": "install-bound.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "11111111-2222-4333-8444-555555555555",
+        "expect": "ok"
+    },
+    {
+        "name": "invalid magic",
+        "file": "bad-magic.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_MAGIC"
+    },
+    {
+        "name": "truncated file",
+        "file": "truncated.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_FORMAT"
+    },
+    {
+        "name": "console older than min_version",
+        "file": "valid.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "1.9.9",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_MIN_VERSION"
+    },
+    {
+        "name": "v2 default policy",
+        "file": "v2-default.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 custom policy",
+        "file": "v2-custom.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T00:59:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 100,
+            "max_users": 50,
+            "policy_id": "custom:42",
+            "policy_type": "custom",
+            "validity_months": 24,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 custom policy after its 60-minute window",
+        "file": "v2-custom.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:01Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_ACTIVATION_WINDOW"
+    },
+    {
+        "name": "v2 custom policy at startup after the window",
+        "file": "v2-custom.atgl",
+        "mode": "startup",
+        "now": "2027-06-01T00:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok"
+    },
+    {
+        "name": "v2 unlimited",
+        "file": "v2-unlimited.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 0,
+            "max_users": 0,
+            "policy_id": "plan:enterprise",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 all features",
+        "file": "v2-all-features.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 minimal features",
+        "file": "v2-minimal-features.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v2 unknown feature key is ignored",
+        "file": "v2-unknown-feature.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 with nfs_storage",
+        "file": "v2-nfs-storage.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v2 without nfs_storage",
+        "file": "v2-without-nfs.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v2 empty features",
+        "file": "v2-empty-features.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v2 free keys in features are ignored (free is implicit)",
+        "file": "v2-free-keys-ignored.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v2 console older than min_version 2.3.0",
+        "file": "v2-default.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.2.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_MIN_VERSION"
+    },
+    {
+        "name": "v2 negative limit",
+        "file": "v2-bad-negative-limit.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v2 activation window over 3 hours",
+        "file": "v2-bad-window.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v2 malformed feature key",
+        "file": "v2-bad-feature-key.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v2 missing field",
+        "file": "v2-missing-field.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v2 limit changed after signing",
+        "file": "v2-tampered-limit.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_SIGNATURE"
+    },
+    {
+        "name": "v2 legacy premium key is the premium bundle",
+        "file": "v2-legacy-premium.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 2,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v3 free only",
+        "file": "v3-free-only.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v3 premium bundle",
+        "file": "v3-premium-bundle.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v3 nfs_storage only",
+        "file": "v3-nfs-only.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v3 premium bundle plus a redundant nfs_storage",
+        "file": "v3-bundle-plus-nfs.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v3 unknown bundle is ignored",
+        "file": "v3-unknown-bundle.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "nfs_storage"
+            ],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v3 bundle key in features is ignored",
+        "file": "v3-bundle-key-in-features.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v3 unknown feature key is ignored",
+        "file": "v3-unknown-feature.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [],
+            "bundles": [
+                "premium"
+            ]
+        }
+    },
+    {
+        "name": "v3 malformed bundle key",
+        "file": "v3-bad-bundle-key.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v3 missing bundles",
+        "file": "v3-missing-bundles.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_PAYLOAD"
+    },
+    {
+        "name": "v3 console older than min_version 2.4.0",
+        "file": "v3-premium-bundle.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.3.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_MIN_VERSION"
+    },
+    {
+        "name": "payload version 4",
+        "file": "v4-payload.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "E_VERSION"
+    }
+]

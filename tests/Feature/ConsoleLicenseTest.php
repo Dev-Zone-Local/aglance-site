@@ -9,6 +9,7 @@ use App\Notifications\LicenseCodeNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
+use Tests\Support\LicenseFixtures;
 use Tests\TestCase;
 
 class ConsoleLicenseTest extends TestCase
@@ -195,7 +196,7 @@ class ConsoleLicenseTest extends TestCase
             ->assertJsonPath('console.org_name', 'Acme Corp');
         $this->console($key)->postJson('/api/licenses/verify', ['org_name' => 'Other Org', 'instance_id' => self::CONSOLE_B])
             ->assertStatus(409)
-            ->assertJsonPath('message', 'This licence is already in use by another Management Console (organization: Acme Corp). Revoke it and create a new licence to move it.');
+            ->assertJsonPath('message', 'This licence is already in use by another Management Console (organization: Acme Corp) until it expires. Create a new licence for this console.');
     }
 
     public function test_activate_requires_org_name(): void
@@ -286,7 +287,7 @@ class ConsoleLicenseTest extends TestCase
             ->assertStatus(409)
             ->assertJsonPath('valid', false)
             ->assertJsonPath('status', 'in_use_elsewhere')
-            ->assertJsonPath('message', 'This licence is already in use by another Management Console (organization: Acme Corp). Revoke it and create a new licence to move it.');
+            ->assertJsonPath('message', 'This licence is already in use by another Management Console (organization: Acme Corp) until it expires. Create a new licence for this console.');
 
         $this->assertSame(self::CONSOLE_A, LicenseActivation::first()->instance_id);
     }
@@ -371,5 +372,82 @@ class ConsoleLicenseTest extends TestCase
             ->assertJsonPath('licenses.0.in_use', true)
             ->assertJsonPath('licenses.0.console.org_name', 'Acme Corp')
             ->assertJsonStructure(['licenses' => [['console' => ['instance_id', 'hostname', 'version', 'activated_at', 'last_seen_at']]]]);
+    }
+
+    public function test_activation_returns_the_licence_file_when_asked(): void
+    {
+        LicenseFixtures::configure();
+        $key = $this->newKey(User::factory()->create(['name' => 'Acme Corp']));
+        $instance = (string) Str::uuid();
+
+        $res = $this->console($key)->postJson('/api/licenses/activate', [
+            'org_name' => 'Acme Corp', 'instance_id' => $instance, 'license_file' => true,
+        ])->assertCreated();
+
+        $bytes = base64_decode((string) $res->json('license_file'), true);
+        $this->assertNotFalse($bytes);
+        $payload = LicenseFixtures::decode($bytes)['payload'];
+        $this->assertSame($instance, $payload['install_id']);
+        $this->assertSame('Acme Corp', $payload['customer']);
+        $this->assertSame(3, $payload['format_version']);
+        $this->assertSame($res->json('license_file_id'), $payload['license_id']);
+        $this->assertDatabaseHas('licenses', ['license_id' => $payload['license_id'], 'issued_by' => 'console']);
+
+        // Activating again from the same console gives a fresh file; old consoles (no flag) get none.
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => $instance, 'license_file' => true])
+            ->assertOk()->assertJsonStructure(['license_file']);
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => $instance])
+            ->assertOk()->assertJsonMissingPath('license_file');
+    }
+
+    public function test_activation_without_signing_keys_reports_the_missing_file(): void
+    {
+        config(['atglance.license_file.signing_key' => null]);
+        $key = $this->newKey();
+
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => self::CONSOLE_A, 'license_file' => true])
+            ->assertCreated()
+            ->assertJsonPath('license_file', null)
+            ->assertJsonStructure(['license_file_error']);
+    }
+
+    public function test_after_a_licence_file_is_generated_the_key_no_longer_validates(): void
+    {
+        LicenseFixtures::configure();
+        $user = User::factory()->create();
+        $key = $this->newKey($user);
+        $licence = License::query()->latest('id')->firstOrFail();
+        $licence->forceFill(['plain_key' => $key, 'key_visible_until' => now()->addMinutes(10)])->save();
+        $this->assertTrue($licence->fresh()->keyIsVisible());
+
+        $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => (string) Str::uuid()])->assertOk();
+        app('auth')->forgetGuards();
+
+        $this->console($key)->postJson('/api/licenses/verify')
+            ->assertStatus(409)->assertJsonPath('status', 'in_use_file');
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => self::CONSOLE_A])
+            ->assertStatus(409)->assertJsonPath('status', 'in_use_file');
+
+        $licence->refresh();
+        $this->assertTrue($licence->usedByFile());
+        $this->assertFalse($licence->keyIsVisible());
+        $this->assertNull($licence->getRawOriginal('plain_key'));
+    }
+
+    public function test_after_the_key_is_activated_no_licence_file_can_be_generated(): void
+    {
+        LicenseFixtures::configure();
+        $user = User::factory()->create();
+        $key = $this->newKey($user);
+        $licence = License::query()->latest('id')->firstOrFail();
+
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme Corp', 'instance_id' => self::CONSOLE_A])->assertCreated();
+        $this->assertTrue($licence->fresh()->usedByKey());
+
+        app('auth')->forgetGuards();
+        $this->flushHeaders();
+        $this->actingAs($user)->postJson("/api/licenses/{$licence->id}/file", ['install_id' => (string) Str::uuid()])->assertStatus(409);
+        $this->actingAs($user)->withHeader('Accept', 'text/html')->get(route('dashboard.licences'))
+            ->assertOk()->assertSee('data-testid="licence-file-disabled"', false)->assertSee('with licence key');
     }
 }

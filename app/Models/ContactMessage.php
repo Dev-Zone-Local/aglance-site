@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A message sent with the form on /contact. Saved first, then emailed to the support address
@@ -17,6 +18,7 @@ class ContactMessage extends Model
         'bug' => 'Bug report',
         'sales' => 'Sales / pricing',
         'licence' => 'Licence',
+        'more_licences' => 'Need more licences',
         'security' => 'Security report',
         'feedback' => 'Feedback / idea',
         'other' => 'Something else',
@@ -39,6 +41,11 @@ class ContactMessage extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function replies(): HasMany
+    {
+        return $this->hasMany(ContactMessageReply::class)->latest();
     }
 
     /** Short reference shown to the sender and in email subjects, e.g. "#00042". */

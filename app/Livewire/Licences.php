@@ -2,9 +2,12 @@
 
 namespace App\Livewire;
 
+use App\Models\FeatureCatalog;
 use App\Models\License;
 use App\Models\User;
 use App\Support\LicenceManager;
+use App\Support\LicenseFile\Issuer;
+use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
@@ -125,11 +128,31 @@ class Licences extends Component
     public function startRevoke(int $id): void
     {
         $this->attempt(function () use ($id) {
-            $this->revokingId = $this->manager()->find($id)->id;
+            $licence = $this->manager()->find($id);
+            $until = LicenceManager::lockedUntil($licence);
+            if ($until !== null) {
+                abort(409, 'This licence is in use and cannot be revoked until it expires ('.$until->format('M j, Y').').');
+            }
+            $this->revokingId = $licence->id;
             $this->revokeMode = $this->user()->password ? 'password' : 'code';
             $this->reset('revokePassword', 'revokeCode', 'revokeCodeSent');
             $this->resetErrorBag();
         });
+    }
+
+    /** Licence whose "Download licence file" form is open. */
+    public ?int $fileForId = null;
+
+    public function startFile(int $id): void
+    {
+        $this->attempt(function () use ($id) {
+            $this->fileForId = $this->manager()->find($id)->id;
+        });
+    }
+
+    public function cancelFile(): void
+    {
+        $this->reset('fileForId');
     }
 
     public function cancelRevoke(): void
@@ -211,6 +234,13 @@ class Licences extends Component
             'atLimit' => $this->manager()->atLimit(),
             'pending' => $this->pendingId ? $licences->firstWhere('id', $this->pendingId) : null,
             'revoking' => $this->revokingId ? $licences->firstWhere('id', $this->revokingId) : null,
+            'licenceFiles' => $user->licenseFiles()->with('licence')->latest('issued_at')->limit(20)->get(),
+            // After a refused download the page comes back with the licence id in the error bag.
+            'fileFor' => $licences->firstWhere('id', $this->fileForId ?? (int) (session('errors')?->first('file_licence_id') ?: 0)),
+            'limitMessage' => LicenceManager::limitMessage($user->licenseLimit()),
+            'policy' => PolicyResolver::for($user),
+            'featureNames' => FeatureCatalog::options(),
+            'unbound' => Issuer::UNBOUND,
         ]);
     }
 
