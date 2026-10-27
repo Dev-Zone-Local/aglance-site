@@ -36,6 +36,23 @@ class Issuer
 
     public function __construct(private readonly Packer $packer) {}
 
+    /**
+     * Whether licence files can be issued (signing keys present and well-formed). Without them
+     * every licence file fails with 503, and consoles activating a licence key fall back to a
+     * key-only licence: free features only, even when the policy grants Premium Features.
+     */
+    public static function isConfigured(): bool
+    {
+        $config = (array) config('atglance.license_file');
+        try {
+            Packer::fromEncoded((string) ($config['key_id'] ?? ''), (string) ($config['signing_key'] ?? ''), (string) ($config['enc_key'] ?? ''));
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     /** Packer from config('atglance.license_file'); 503 when the keys are missing or malformed. */
     public static function fromConfig(): self
     {

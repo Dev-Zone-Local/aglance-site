@@ -49,6 +49,15 @@ class LicensePolicyPage extends Page
 
     public ?array $data = [];
 
+    public function getSubheading(): ?string
+    {
+        return \App\Support\LicenseFile\Issuer::isConfigured()
+            ? null
+            : '⚠ Licence files cannot be issued: LICENSE_KEY_ID, LICENSE_SIGNING_PRIVATE_KEY or LICENSE_ENC_KEY is missing or invalid in .env. '
+                .'Licence file downloads fail, and consoles activating a licence key get free features only (no Premium Features). '
+                .'Set the keys, then run php artisan optimize.';
+    }
+
     /** Server-side: only admins, also for a direct URL. */
     public static function canAccess(): bool
     {
