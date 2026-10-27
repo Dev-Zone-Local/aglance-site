@@ -104,8 +104,38 @@ class LicenceManager
         if ($licence->isExpired() || ($licence->activation === null && ! $licence->files()->exists())) {
             return null;
         }
+        // The console now runs a newer licence's file: the old licence no longer holds it.
+        if (self::replacedBy($licence) !== null) {
+            return null;
+        }
 
         return $licence->expires_at ?? now()->addYears(100);
+    }
+
+    /**
+     * The newer licence of the same user whose licence file was issued for the same Installation
+     * ID after this licence's latest file. A console holds one licence file at a time, so the
+     * newer file replaced this one on that console and this licence may be revoked. Files
+     * without an Installation ID never replace anything: they could be on any console.
+     */
+    public static function replacedBy(License $licence): ?License
+    {
+        $file = $licence->files()->whereNotNull('install_id')->latest('issued_at')->latest('id')->first();
+        if ($file === null) {
+            return null;
+        }
+
+        $newer = \App\Models\LicenseFile::query()
+            ->where('user_id', $file->user_id)
+            ->where('install_id', $file->install_id)
+            ->whereNotNull('token_id')
+            ->where('token_id', '!=', $licence->id)
+            ->where(fn ($q) => $q->where('issued_at', '>', $file->issued_at)
+                ->orWhere(fn ($q) => $q->where('issued_at', $file->issued_at)->where('id', '>', $file->id)))
+            ->latest('issued_at')->latest('id')
+            ->first();
+
+        return $newer ? License::find($newer->token_id) : null;
     }
 
     /** Revoke with the account password, or the emailed revoke code. */

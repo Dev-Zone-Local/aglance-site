@@ -20,7 +20,7 @@
             <li class="flex items-start gap-2"><x-glyph name="key-round" :size="14" class="mt-0.5 shrink-0 text-ag-teal-text" /><span><b>Console with internet access:</b> paste the licence key. The console activates it online once, and its Installation ID is recorded automatically.</span></li>
             <li class="flex items-start gap-2"><x-glyph name="download" :size="14" class="mt-0.5 shrink-0 text-ag-teal-text" /><span><b>Console without internet access:</b> generate the licence file (.atgl) from the licence and upload it. The Installation ID is {{ $policy['install_id_mode'] === 'required' ? 'required' : 'optional' }} for your licences.</span></li>
         </ul>
-        <p class="mb-5 max-w-2xl text-sm text-ag-subtle">Use a licence one way only. Once its key is activated, no licence file can be generated from it; once a licence file is generated, its key no longer works and is not shown again. Either way the licence is <b>in use</b> and cannot be revoked until it expires. The key and its file expire on the same date.</p>
+        <p class="mb-5 max-w-2xl text-sm text-ag-subtle">Use a licence one way only. Once its key is activated, no licence file can be generated from it; once a licence file is generated, its key no longer works and is not shown again. Either way the licence is <b>in use</b> and cannot be revoked until it expires. The key and its file expire on the same date. Exception: when a newer licence file is generated for the same Installation ID, it replaces the older one on that console, and the older licence can be revoked.</p>
 
         <div class="mb-6 rounded-input bg-ag-surface p-5" data-testid="licence-policy">
             <div class="mb-3 flex items-center gap-2 text-sm text-ag-ink">
@@ -198,6 +198,7 @@
                     <tbody>
                         @foreach ($licences as $licence)
                             @php($status = $licence->status())
+                            @php($replacedBy = \App\Support\LicenceManager::replacedBy($licence))
                             <tr class="border-b border-ag-line text-ag-ink" wire:key="licence-{{ $licence->id }}">
                                 <td class="py-2.5 pr-4 font-mono">{{ $licence->name }}</td>
                                 <td class="py-2.5 pr-4">
@@ -206,6 +207,10 @@
                                         <span class="block text-xs text-ag-muted" data-testid="used-by">with licence file</span>
                                     @elseif ($licence->activation)
                                         <span class="block text-xs text-ag-muted" data-testid="used-by">with licence key</span>
+                                    @endif
+                                    @if ($replacedBy)
+                                        <span class="block text-xs text-ag-warning-text" data-testid="replaced-by"
+                                            title="A newer licence file for the same Installation ID replaced this one on the console">Replaced by {{ $replacedBy->name }} · can be revoked</span>
                                     @endif
                                 </td>
                                 <td class="py-2.5 pr-4 text-ag-subtle">

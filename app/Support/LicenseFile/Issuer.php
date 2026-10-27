@@ -10,6 +10,7 @@ use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -35,6 +36,23 @@ class Issuer
 
     public function __construct(private readonly Packer $packer) {}
 
+    /**
+     * Whether licence files can be issued (signing keys present and well-formed). Without them
+     * every licence file fails with 503, and consoles activating a licence key fall back to a
+     * key-only licence: free features only, even when the policy grants Premium Features.
+     */
+    public static function isConfigured(): bool
+    {
+        $config = (array) config('atglance.license_file');
+        try {
+            Packer::fromEncoded((string) ($config['key_id'] ?? ''), (string) ($config['signing_key'] ?? ''), (string) ($config['enc_key'] ?? ''));
+
+            return true;
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
     /** Packer from config('atglance.license_file'); 503 when the keys are missing or malformed. */
     public static function fromConfig(): self
     {
@@ -45,7 +63,9 @@ class Issuer
                 (string) ($config['signing_key'] ?? ''),
                 (string) ($config['enc_key'] ?? ''),
             );
-        } catch (InvalidArgumentException) {
+        } catch (InvalidArgumentException $e) {
+            // The reason names the setting, never a key value: e.g. a missing LICENSE_ENC_KEY.
+            Log::error('Licence files cannot be issued: atglance.license_file is not usable ('.$e->getMessage().'). Set LICENSE_KEY_ID, LICENSE_SIGNING_PRIVATE_KEY and LICENSE_ENC_KEY in .env (php artisan license:generate-keys), then run php artisan optimize.');
             abort(503, 'Licence files cannot be generated right now. Please try again later.');
         }
 

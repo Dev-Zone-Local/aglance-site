@@ -400,15 +400,43 @@ class ConsoleLicenseTest extends TestCase
             ->assertOk()->assertJsonMissingPath('license_file');
     }
 
-    public function test_activation_without_signing_keys_reports_the_missing_file(): void
+    public function test_activation_without_signing_keys_does_not_put_the_licence_in_use(): void
     {
         config(['atglance.license_file.signing_key' => null]);
         $key = $this->newKey();
+        $instance = (string) Str::uuid();
 
-        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => self::CONSOLE_A, 'license_file' => true])
-            ->assertCreated()
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => $instance, 'license_file' => true])
+            ->assertStatus(503)
+            ->assertJsonPath('status', 'license_file_unavailable')
             ->assertJsonPath('license_file', null)
-            ->assertJsonStructure(['license_file_error']);
+            ->assertJsonPath('message', 'Licence files cannot be generated right now. Please try again later.');
+        $this->assertSame(0, LicenseActivation::count(), 'no file, so the licence must not be "In Use"');
+
+        // Once atglance.live has its signing keys, the same console activates the same key.
+        LicenseFixtures::configure();
+        $res = $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => $instance, 'license_file' => true])
+            ->assertCreated();
+        $this->assertNotFalse(base64_decode((string) $res->json('license_file'), true));
+        $this->assertSame(1, LicenseActivation::count());
+    }
+
+    public function test_activation_left_in_use_without_a_file_is_released_when_the_file_still_fails(): void
+    {
+        $key = $this->newKey();
+        $instance = (string) Str::uuid();
+        $licence = License::query()->latest('id')->firstOrFail();
+        // State left by earlier releases: activated, but no file was ever issued.
+        LicenseActivation::create(['token_id' => $licence->id, 'instance_id' => $instance, 'org_name' => 'Acme', 'activated_at' => now(), 'last_seen_at' => now()]);
+
+        config(['atglance.license_file.signing_key' => null]);
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => $instance, 'license_file' => true])
+            ->assertStatus(503)->assertJsonPath('status', 'license_file_unavailable');
+        $this->assertSame(0, LicenseActivation::count());
+
+        LicenseFixtures::configure();
+        $this->console($key)->postJson('/api/licenses/activate', ['org_name' => 'Acme', 'instance_id' => $instance, 'license_file' => true])
+            ->assertCreated()->assertJsonStructure(['license_file', 'license_file_id']);
     }
 
     public function test_after_a_licence_file_is_generated_the_key_no_longer_validates(): void

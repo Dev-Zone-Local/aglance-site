@@ -9,6 +9,7 @@ use App\Support\LicenseFile\Issuer;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 /**
@@ -65,21 +66,30 @@ class ConsoleLicenseController extends Controller
 
         if (! $activation) {
             try {
-                $activation = LicenseActivation::create([
-                    'token_id' => $token->id,
-                    'instance_id' => $data['instance_id'],
-                    'org_name' => $data['org_name'],
-                    'hostname' => $data['hostname'] ?? null,
-                    'console_version' => $data['version'] ?? null,
-                    'ip_address' => $request->ip(),
-                    'activated_at' => now(),
-                    'last_seen_at' => now(),
-                ]);
+                // A console that asks for the licence file only gets the licence "In Use" together
+                // with the file: when no file can be issued, the activation is rolled back and the
+                // key stays available, so the console can simply try again later.
+                [$activation, $payload] = DB::transaction(function () use ($request, $token, $data) {
+                    $activation = LicenseActivation::create([
+                        'token_id' => $token->id,
+                        'instance_id' => $data['instance_id'],
+                        'org_name' => $data['org_name'],
+                        'hostname' => $data['hostname'] ?? null,
+                        'console_version' => $data['version'] ?? null,
+                        'ip_address' => $request->ip(),
+                        'activated_at' => now(),
+                        'last_seen_at' => now(),
+                    ]);
 
-                return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)), 201);
+                    return [$activation, $this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation))];
+                });
+
+                return response()->json($payload, 201);
             } catch (UniqueConstraintViolationException) {
                 // Another console activated the same licence at the same moment.
                 $activation = $this->activation($token);
+            } catch (HttpExceptionInterface $e) {
+                return $this->licenseFileUnavailable($e);
             }
         }
 
@@ -89,13 +99,28 @@ class ConsoleLicenseController extends Controller
 
         $this->touch($request, $activation, $data);
 
-        return response()->json($this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation)));
+        try {
+            $payload = $this->withLicenseFile($request, $token, $activation, $this->payload($request, $token, $activation));
+        } catch (HttpExceptionInterface $e) {
+            // This console was bound by an earlier attempt that never got a file (before this
+            // fix, the activation was kept even when no file could be issued): release it, so
+            // the licence is not shown "In Use" without a working console.
+            if (! $token->files()->exists()) {
+                $activation->delete();
+            }
+
+            return $this->licenseFileUnavailable($e);
+        }
+
+        return response()->json($payload);
     }
 
     /**
      * Consoles from 2.3 ask for the licence file with "license_file": true. They get the same
      * signed .atgl a user downloads for an offline console (base64), bound to this console's
      * instance_id, so limits, features and expiry work the same with a key or a file.
+     *
+     * @throws HttpExceptionInterface when no file can be issued (signing keys missing, limits)
      */
     private function withLicenseFile(Request $request, License $token, LicenseActivation $activation, array $payload): array
     {
@@ -103,16 +128,23 @@ class ConsoleLicenseController extends Controller
             return $payload;
         }
 
-        try {
-            $issued = Issuer::fromConfig()->issue($token, $activation->instance_id, 'console');
-            $payload['license_file'] = base64_encode($issued['bytes']);
-            $payload['license_file_id'] = $issued['license']->license_id;
-        } catch (HttpExceptionInterface $e) {
-            $payload['license_file'] = null;
-            $payload['license_file_error'] = $e->getMessage();
-        }
+        $issued = Issuer::fromConfig()->issue($token, $activation->instance_id, 'console');
+        $payload['license_file'] = base64_encode($issued['bytes']);
+        $payload['license_file_id'] = $issued['license']->license_id;
 
         return $payload;
+    }
+
+    /** No licence file could be issued: nothing was activated, the key stays available. */
+    private function licenseFileUnavailable(HttpExceptionInterface $e): JsonResponse
+    {
+        return response()->json([
+            'valid' => false,
+            'status' => 'license_file_unavailable',
+            'message' => $e->getMessage() !== '' ? $e->getMessage() : 'Licence files cannot be generated right now. Please try again later.',
+            'license_file' => null,
+            'license_file_error' => $e->getMessage(),
+        ], $e->getStatusCode());
     }
 
     /**

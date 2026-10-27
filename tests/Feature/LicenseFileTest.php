@@ -123,6 +123,36 @@ class LicenseFileTest extends TestCase
         $this->actingAs($user)->deleteJson("/api/licenses/{$licence->id}", ['password' => 'password'])->assertOk();
     }
 
+    public function test_an_older_licence_replaced_on_the_same_installation_can_be_revoked(): void
+    {
+        $user = User::factory()->create();
+        $old = $this->licence($user, 'old-console');
+        $other = $this->licence($user, 'other-console');
+        $this->download($user, $old)->assertOk();
+        $this->download($user, $other, '3f2b8c1e-0000-4000-8000-000000000009')->assertOk();
+        // A file without an Installation ID never replaces anything.
+        $unbound = $this->licence($user, 'unbound');
+        $this->actingAs($user)->postJson("/api/licenses/{$unbound->id}/file")->assertOk();
+
+        $this->assertNull(\App\Support\LicenceManager::replacedBy($old->fresh()));
+        $this->actingAs($user)->deleteJson("/api/licenses/{$old->id}", ['password' => 'password'])->assertStatus(409);
+
+        // A newer licence file for the same Installation ID replaces the old one on that console.
+        $new = $this->licence($user, 'new-console');
+        $this->download($user, $new)->assertOk();
+
+        $this->assertTrue(\App\Support\LicenceManager::replacedBy($old->fresh())->is($new));
+        $this->assertNull(\App\Support\LicenceManager::replacedBy($new->fresh()), 'the newest licence stays locked');
+        $this->actingAs($user)->get('/dashboard/licences')->assertOk()->assertSee('Replaced by new-console');
+
+        $this->actingAs($user)->deleteJson("/api/licenses/{$new->id}", ['password' => 'password'])->assertStatus(409);
+        $this->actingAs($user)->deleteJson("/api/licenses/{$other->id}", ['password' => 'password'])->assertStatus(409);
+        $this->actingAs($user)->deleteJson("/api/licenses/{$old->id}", ['password' => 'password'])->assertOk();
+        $this->assertDatabaseMissing('personal_access_tokens', ['id' => $old->id]);
+        // The issued file stays in the history.
+        $this->assertSame(4, LicenseFile::count());
+    }
+
     public function test_one_licence_one_console(): void
     {
         $user = User::factory()->create();
