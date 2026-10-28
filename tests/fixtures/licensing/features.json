@@ -125,6 +125,15 @@
             "default": false,
             "v1_default": false,
             "min_console_version": "2.4.0"
+        },
+        {
+            "key": "azure_storage",
+            "name": "Azure Storage",
+            "description": "Backups, restore and migration to Azure Blob Storage (Azure public cloud, Government, China, private endpoints).",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "2.4.0"
         }
     ],
     "bundles": [

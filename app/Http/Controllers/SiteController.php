@@ -56,6 +56,10 @@ class SiteController extends Controller
         return view('site.pricing', [
             'plans' => PricingPlan::orderBy('order')->get(),
             'premiumFeatureNames' => array_map(fn ($n) => mb_strtolower((string) $n), array_values(\App\Models\FeatureCatalog::premiumOptions())),
+            'premiumFeatures' => \App\Models\FeatureCatalog::query()
+                ->where('tier', \App\Models\FeatureCatalog::TIER_PREMIUM)
+                ->whereIn('key', \App\Models\FeatureCatalog::premiumKeys())
+                ->orderBy('sort')->get(['key', 'name', 'description'])->toArray(),
         ]);
     }
 
