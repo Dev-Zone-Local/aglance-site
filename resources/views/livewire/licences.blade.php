@@ -46,6 +46,17 @@
                 @endforelse
                 @endif
                 <span class="block text-xs text-ag-muted mt-1">All other console features are free and always included.</span>
+                @php $tunnelSource = in_array(\App\Models\FeatureCatalog::BUNDLE_PREMIUM, $policy['bundles'], true) ? 'bundle' : (in_array('remote_tunnel', $policy['features'], true) ? 'individual' : null); @endphp
+                <span class="block text-xs mt-1" data-testid="remote-tunnel-source">
+                    <span class="text-ag-muted">Remote Tunnel:</span>
+                    @if ($tunnelSource === 'bundle')
+                        <span class="text-ag-ink">Included via Premium Features</span> · <a class="text-ag-teal-text underline" href="{{ route('dashboard.connector') }}">Download the connector</a>
+                    @elseif ($tunnelSource === 'individual')
+                        <span class="text-ag-ink">Included (granted individually)</span> · <a class="text-ag-teal-text underline" href="{{ route('dashboard.connector') }}">Download the connector</a>
+                    @else
+                        <span class="text-ag-subtle">Not included</span> · <a class="text-ag-teal-text underline" href="{{ route('features.remote-tunnel') }}">What is Remote Tunnel?</a>
+                    @endif
+                </span>
             </div>
         </div>
 

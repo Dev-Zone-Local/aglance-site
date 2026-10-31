@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\License;
 use App\Support\Downloads;
 use App\Support\InstallCatalog;
+use App\Support\LicensePolicy\PolicyResolver;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -87,5 +88,32 @@ class DashboardController extends Controller
         }
 
         return back()->with('status', "Verification email sent to {$user->email}.");
+    }
+    /**
+     * Remote Tunnel connector downloads: listed only for a licence that includes remote_tunnel
+     * (via Premium Features or individually); others see a locked page with an upgrade link.
+     */
+    public function connector(Request $request): View
+    {
+        $source = PolicyResolver::featureSource($request->user(), 'remote_tunnel');
+
+        return view('dashboard.connector', [
+            'source' => $source,
+            'releases' => $source ? (array) config('connector.releases') : [],
+            'compatibility' => (array) config('connector.compatibility'),
+            'image' => (string) config('connector.image'),
+            'gatewayImage' => (string) config('connector.gateway_image'),
+        ]);
+    }
+
+    /** A connector file, after the licence check on the server (never a public link). */
+    public function connectorFile(Request $request, string $version, string $file): RedirectResponse
+    {
+        abort_unless(PolicyResolver::includes($request->user(), 'remote_tunnel'), 403, 'Your licence does not include Remote Tunnel.');
+        $release = collect((array) config('connector.releases'))->firstWhere('version', $version);
+        $entry = $release['files'][$file] ?? null;
+        abort_if($entry === null, 404);
+
+        return redirect()->away(config('connector.base_url').'/'.rawurlencode($version).'/'.rawurlencode($entry['file']));
     }
 }

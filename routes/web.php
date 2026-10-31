@@ -23,6 +23,7 @@ Route::controller(SiteController::class)->group(function () {
     Route::get('/architecture', 'architecture')->name('architecture');
     Route::get('/use-cases', 'useCases')->name('use-cases');
     Route::get('/security', 'security')->name('security');
+    Route::get('/features/remote-tunnel', 'remoteTunnel')->name('features.remote-tunnel');
     Route::get('/pricing', 'pricing')->name('pricing');
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
@@ -72,6 +73,10 @@ Route::middleware('auth')->prefix('dashboard')->group(function () {
     Route::get('/', [DashboardController::class, 'overview'])->name('dashboard');
     Route::get('/install/{product?}/{target?}', [DashboardController::class, 'install'])->name('dashboard.install');
     Route::get('/licences', Licences::class)->name('dashboard.licences');
+    // Remote Tunnel connector (premium): only for licences that include remote_tunnel.
+    Route::get('/downloads/remote-tunnel-connector', [DashboardController::class, 'connector'])->name('dashboard.connector');
+    Route::get('/downloads/remote-tunnel-connector/{version}/{file}', [DashboardController::class, 'connectorFile'])
+        ->where(['version' => '[0-9A-Za-z._-]+', 'file' => '[a-z0-9-]+'])->middleware('throttle:30,1')->name('dashboard.connector.file');
     Route::post('/licences/{id}/file', [LicenseFileController::class, 'generate'])->whereNumber('id')
         ->middleware('throttle:5,1,web-license-file')->name('dashboard.licences.file');
     Route::get('/profile', Profile::class)->name('dashboard.profile');
