@@ -84,9 +84,9 @@ class LicensePolicyTest extends TestCase
         FeatureCatalogSync::sync();
 
         $this->assertSame(array_column(LicenseFixtures::features(), 'key'), FeatureCatalog::keys());
-        $this->assertSame(['nfs_storage', 'azure_storage'], FeatureCatalog::premiumKeys(), 'a bundle is not a feature');
+        $this->assertSame(['nfs_storage', 'azure_storage', 'remote_tunnel'], FeatureCatalog::premiumKeys(), 'a bundle is not a feature');
         $this->assertSame(['premium'], FeatureCatalog::bundleKeys());
-        $this->assertSame(['nfs_storage' => 'NFS Storage', 'azure_storage' => 'Azure Storage'], FeatureCatalog::bundleMembers('premium'));
+        $this->assertSame(['nfs_storage' => 'NFS Storage', 'azure_storage' => 'Azure Storage', 'remote_tunnel' => 'Remote Tunnel'], FeatureCatalog::bundleMembers('premium'));
     }
 
     public function test_policy_tabs_follow_the_pricing_plans_and_set_the_licence_limit(): void
@@ -340,7 +340,7 @@ class LicensePolicyTest extends TestCase
         $this->actingAs($this->admin());
         Livewire::test(LicensePolicyPage::class)
             ->assertSee('Premium Features')
-            ->assertSee('Includes all premium features: NFS Storage, Azure Storage, and any premium features added later.')
+            ->assertSee('Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later.')
             ->assertSee('Included with Premium Features')
             ->assertDontSee('Premium Features (all)')
             ->assertFormFieldExists('global.premium_bundle')

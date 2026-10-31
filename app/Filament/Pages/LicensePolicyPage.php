@@ -156,12 +156,14 @@ class LicensePolicyPage extends Page
         ];
     }
 
-    /** "Includes all premium features: NFS Storage, and any premium features added later." */
+    /** "Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later." */
     public static function bundleDescription(): string
     {
         $names = array_values(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM));
 
-        return 'Includes all premium features: '.($names === [] ? 'none yet' : implode(', ', $names)).', and any premium features added later.';
+        return $names === []
+            ? 'Includes every premium feature, including ones added later.'
+            : 'Includes '.implode(', ', $names).', and any premium features added later.';
     }
 
     /**

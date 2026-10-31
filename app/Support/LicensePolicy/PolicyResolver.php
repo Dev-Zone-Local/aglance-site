@@ -76,6 +76,25 @@ class PolicyResolver
         return ['bundles' => $bundles, 'features' => $bundles !== [] ? [] : FeatureCatalog::onlyPremium($features)];
     }
 
+    /**
+     * Where a user's licence gets a premium feature from: 'bundle' (Premium Features), 'individual'
+     * (granted on its own) or null (not included). Server-side only; never from the request.
+     */
+    public static function featureSource(User $user, string $feature): ?string
+    {
+        $policy = self::for($user);
+        if (in_array(FeatureCatalog::BUNDLE_PREMIUM, $policy['bundles'], true) && array_key_exists($feature, FeatureCatalog::premiumOptions())) {
+            return 'bundle';
+        }
+
+        return in_array($feature, $policy['features'], true) ? 'individual' : null;
+    }
+
+    public static function includes(User $user, string $feature): bool
+    {
+        return self::featureSource($user, $feature) !== null;
+    }
+
     /** Whole months from today until $date, at least 1 and at most 120 (informational). */
     public static function monthsUntil(\DateTimeInterface $date): int
     {

@@ -134,13 +134,22 @@
             "default": false,
             "v1_default": false,
             "min_console_version": "2.4.0"
+        },
+        {
+            "key": "remote_tunnel",
+            "name": "Remote Tunnel",
+            "description": "Connection profiles to remote networks: Agent Tunnel (an outbound connector with mTLS), Site-to-Site IPsec VPN (IKEv2, route-based) and Direct, with per-session audited terminal, port forwarding and file transfer.",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "3.0.0"
         }
     ],
     "bundles": [
         {
             "key": "premium",
             "name": "Premium Features",
-            "description": "Includes all premium features, and any premium features added later.",
+            "description": "Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later.",
             "members_tier": "premium",
             "default": false
         }

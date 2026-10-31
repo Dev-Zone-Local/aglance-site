@@ -65,13 +65,13 @@ class AzureStoragePremiumTest extends TestCase
         $this->assertSame('Azure Storage', $azure->name);
         $this->assertStringContainsString('Azure Blob Storage', (string) $azure->description);
         $this->assertSame('Azure Storage', FeatureCatalog::premiumOptions()['azure_storage']);
-        $this->assertSame(['nfs_storage', 'azure_storage'], array_keys(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM)));
+        $this->assertSame(['nfs_storage', 'azure_storage', 'remote_tunnel'], array_keys(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM)));
     }
 
     public function test_bundle_description_lists_both_premium_features(): void
     {
         $this->assertSame(
-            'Includes all premium features: NFS Storage, Azure Storage, and any premium features added later.',
+            'Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later.',
             LicensePolicyPage::bundleDescription(),
         );
     }
