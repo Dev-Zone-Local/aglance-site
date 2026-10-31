@@ -151,12 +151,13 @@ class RemoteTunnelPremiumTest extends TestCase
     public function test_feature_page_help_pages_and_sitemap(): void
     {
         $this->withHeader('Accept', 'text/html')->get(route('features.remote-tunnel'))->assertOk()
-            ->assertSee('Agent Tunnel')->assertSee('Site-to-Site IPsec VPN')->assertSee('Direct')->assertSee('Mutual TLS', false);
+            ->assertSee('Agent Tunnel')->assertSee('Site-to-Site IPsec VPN')->assertSee('Direct')->assertSee('Mutual TLS', false)
+            ->assertSee('Published gateway')->assertSee('Bastion and proxy hops');
         $this->get('/sitemap.xml')->assertOk()->assertSee('/features/remote-tunnel');
         $this->withHeader('Accept', 'text/html')->get(route('pricing'))->assertOk()->assertSee('data-testid="premium-feature-remote_tunnel"', false);
 
         $docs = collect(json_decode((string) file_get_contents(database_path('seeders/content/docs.json')), true));
-        foreach (['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting'] as $slug) {
+        foreach (['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting', 'published-gateway', 'tunnel-hops'] as $slug) {
             $page = $docs->firstWhere('slug', $slug);
             $this->assertNotNull($page, $slug);
             $this->assertSame('Remote Tunnel', $page['section']);

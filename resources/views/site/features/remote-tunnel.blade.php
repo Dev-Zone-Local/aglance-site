@@ -1,15 +1,18 @@
-<x-layouts.site title="Remote Tunnel" description="Reach servers in remote networks from the AtGlance Management Console: an outbound Agent Tunnel with mutual TLS, Site-to-Site IPsec VPN, or a direct route, with every session audited.">
+<x-layouts.site title="Remote Tunnel" description="Connect the AtGlance Management Console with servers on separate private networks, even without a public URL: an outbound Agent Tunnel with mutual TLS, a published gateway, Site-to-Site IPsec, Direct routes and bastion or proxy hops, with every session audited.">
     <div class="mx-auto max-w-7xl px-1 py-10 sm:px-4">
         <x-page-header eyebrow="Premium feature" title="Remote Tunnel" large>
-            Reach the servers of a remote site — a data centre, a branch, a customer network — from your Management Console, without opening inbound firewall ports. Every session is authorised and audited.
+            Connect your Management Console with servers and applications on separate private networks, such as a data centre with 10 servers and a branch with 50. It works even when the console has only a private address and no public URL. No inbound firewall ports are needed where avoidable, and every session is authorised and audited.
         </x-page-header>
 
         <section class="mt-14">
-            <x-section-heading eyebrow="Three ways to connect" title="Pick the one your network already allows." />
+            <x-section-heading eyebrow="Ways to connect" title="Pick the one your network already allows." />
             <div class="mt-8 grid gap-5 md:grid-cols-3">
                 <x-feature icon="network" title="Agent Tunnel (default)">A small connector inside the remote network dials <b>out</b> to the console over TLS 443 with mutual TLS. Sessions come back through that connection. No inbound rules, works through HTTP proxies.</x-feature>
                 <x-feature icon="shield-check" title="Site-to-Site IPsec VPN">An IKEv2, route-based tunnel between the console's strongSwan gateway and the remote firewall. Certificates by default, modern ciphers only, a ready-made config sheet for the firewall team.</x-feature>
                 <x-feature icon="globe" title="Direct">The networks are already linked (MPLS, ExpressRoute, Direct Connect, peering, your own VPN). No tunnel; the console reaches the hosts as they are.</x-feature>
+                <x-feature icon="server" title="Published gateway">The console stays private. Publish only its tunnel service on one HTTPS port (firewall or DMZ, TCP passthrough); every site's connectors dial that address.</x-feature>
+                <x-feature icon="workflow" title="Bastion and proxy hops">Reuse the jump hosts and proxies you already have: SSH bastions (ProxyJump), SOCKS5 or HTTP CONNECT, chained after any method.</x-feature>
+                <x-feature icon="layers" title="Sites and high availability">Group each remote network as a Site with its subnets. Run two connectors per Site; if one stops, the other takes over. Servers in the Site can reach the console through the connector.</x-feature>
             </div>
         </section>
 
