@@ -22,6 +22,7 @@ class Sitemap
         '/architecture' => ['monthly', '0.7'],
         '/use-cases' => ['monthly', '0.7'],
         '/security' => ['monthly', '0.7'],
+        '/features/remote-tunnel' => ['monthly', '0.8'],
         '/pricing' => ['monthly', '0.8'],
         '/faq' => ['monthly', '0.6'],
         '/contact' => ['yearly', '0.5'],

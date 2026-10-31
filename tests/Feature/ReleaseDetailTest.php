@@ -40,7 +40,7 @@ class ReleaseDetailTest extends TestCase
         $footer = substr($html, strpos($html, 'aria-label="Footer"'));
         $footer = substr($footer, 0, strpos($footer, '</nav>'));
         preg_match_all('#<a [^>]*>([^<]+)</a>#', $footer, $links);
-        $this->assertSame(['About', 'FAQ', 'Pricing', 'Security', 'Terms', 'Privacy', 'Contact'], array_map('trim', $links[1]));
+        $this->assertSame(['About', 'FAQ', 'Pricing', 'Security', 'Remote Tunnel', 'Terms', 'Privacy', 'Contact'], array_map('trim', $links[1]));
 
         // Highlighted on the list and on a release page.
         $this->assertMatchesRegularExpression(

@@ -51,6 +51,11 @@ class SiteController extends Controller
         return view('site.security');
     }
 
+    public function remoteTunnel(): View
+    {
+        return view('site.features.remote-tunnel');
+    }
+
     public function pricing(): View
     {
         return view('site.pricing', [

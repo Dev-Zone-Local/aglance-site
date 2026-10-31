@@ -1,6 +1,6 @@
 @php
     $links = [
-        'about' => 'About', 'faq' => 'FAQ', 'pricing' => 'Pricing', 'security' => 'Security',
+        'about' => 'About', 'faq' => 'FAQ', 'pricing' => 'Pricing', 'security' => 'Security', 'features.remote-tunnel' => 'Remote Tunnel',
         'terms' => 'Terms', 'privacy' => 'Privacy', 'contact' => 'Contact',
     ];
     $contact = once(fn () => \App\Models\Setting::get(\App\Models\Setting::CONTACT));
