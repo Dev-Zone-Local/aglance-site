@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Schema;
  */
 return new class extends Migration
 {
-    private const SLUGS = ['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting', 'published-gateway', 'tunnel-hops'];
+    private const SLUGS = ['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting', 'published-gateway', 'tunnel-hops', 'tunnel-relay', 'tunnel-multi-site'];
 
     public function up(): void
     {

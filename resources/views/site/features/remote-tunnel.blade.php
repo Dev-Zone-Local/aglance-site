@@ -12,6 +12,8 @@
                 <x-feature icon="globe" title="Direct">The networks are already linked (MPLS, ExpressRoute, Direct Connect, peering, your own VPN). No tunnel; the console reaches the hosts as they are.</x-feature>
                 <x-feature icon="server" title="Published gateway">The console stays private. Publish only its tunnel service on one HTTPS port (firewall or DMZ, TCP passthrough); every site's connectors dial that address.</x-feature>
                 <x-feature icon="workflow" title="Bastion and proxy hops">Reuse the jump hosts and proxies you already have: SSH bastions (ProxyJump), SOCKS5 or HTTP CONNECT, chained after any method.</x-feature>
+                <x-feature icon="cloud" title="Relay">When neither side can accept connections: everything dials out to a relay on a public VM. Mutual TLS end to end; the relay forwards ciphertext only.</x-feature>
+                <x-feature icon="network" title="Subnet router and policies">Route whole subnets (TCP, UDP, ICMP) for monitoring and discovery, under a default-deny policy matrix, with NAT for sites that use the same private range.</x-feature>
                 <x-feature icon="layers" title="Sites and high availability">Group each remote network as a Site with its subnets. Run two connectors per Site; if one stops, the other takes over. Servers in the Site can reach the console through the connector.</x-feature>
             </div>
         </section>

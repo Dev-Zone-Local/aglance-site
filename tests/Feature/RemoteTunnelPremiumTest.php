@@ -157,7 +157,7 @@ class RemoteTunnelPremiumTest extends TestCase
         $this->withHeader('Accept', 'text/html')->get(route('pricing'))->assertOk()->assertSee('data-testid="premium-feature-remote_tunnel"', false);
 
         $docs = collect(json_decode((string) file_get_contents(database_path('seeders/content/docs.json')), true));
-        foreach (['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting', 'published-gateway', 'tunnel-hops'] as $slug) {
+        foreach (['remote-tunnel', 'agent-tunnel', 'ipsec-vpn', 'direct-connection', 'tunnel-authentication', 'tunnel-troubleshooting', 'published-gateway', 'tunnel-hops', 'tunnel-relay', 'tunnel-multi-site'] as $slug) {
             $page = $docs->firstWhere('slug', $slug);
             $this->assertNotNull($page, $slug);
             $this->assertSame('Remote Tunnel', $page['section']);
@@ -167,6 +167,6 @@ class RemoteTunnelPremiumTest extends TestCase
                 $this->assertNotNull($docs->firstWhere('slug', $target), "$slug links to missing /docs/$target");
             }
         }
-        $this->assertStringContainsString('| Agent tunnel | ❌ | Enrollment token (once) | ✅ mTLS, required |', $docs->firstWhere('slug', 'tunnel-authentication')['content']);
+        $this->assertStringContainsString('| Agent tunnel / relay / published gateway | ❌ | Enrollment token (once) | ✅ mTLS, required |', $docs->firstWhere('slug', 'tunnel-authentication')['content']);
     }
 }
