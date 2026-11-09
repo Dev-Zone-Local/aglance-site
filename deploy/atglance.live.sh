@@ -133,6 +133,17 @@ artisan optimize:clear
 artisan optimize
 if [[ $MAINTENANCE == 1 ]]; then artisan up; MAINTENANCE=0; fi
 
+step "Licence file signing keys"
+# Without LICENSE_KEY_ID, LICENSE_SIGNING_PRIVATE_KEY and LICENSE_ENC_KEY in .env no licence file
+# can be issued: downloads fail and 2.3+ consoles cannot activate a licence key (503). Not fatal,
+# so the rest of the site still deploys; fix .env, then run: php artisan optimize
+if artisan tinker --execute='App\Support\LicenseFile\Issuer::fromConfig(); echo "ok";' 2>/dev/null | grep -qx ok; then
+    echo "Licence signing keys loaded"
+else
+    echo "⚠️  Licence signing keys missing or malformed in $APP_DIR/.env (LICENSE_KEY_ID, LICENSE_SIGNING_PRIVATE_KEY, LICENSE_ENC_KEY)."
+    echo "    Generate them with: php artisan license:generate-keys <key_id>   (docs: console repo docs/LICENSING.md)"
+fi
+
 step "Self-heal aaPanel config"
 NGINX_CHANGED=0
 if ! grep -q "include $PHP_INCLUDE;" "$VHOST"; then

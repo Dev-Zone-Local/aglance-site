@@ -638,5 +638,48 @@
         "app_version": "2.4.0",
         "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
         "expect": "E_VERSION"
+    },
+    {
+        "name": "v3 azure_storage only",
+        "file": "v3-azure-only.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "azure_storage"
+            ],
+            "bundles": []
+        }
+    },
+    {
+        "name": "v3 nfs_storage and azure_storage granted individually",
+        "file": "v3-nfs-and-azure.atgl",
+        "mode": "activation",
+        "now": "2026-01-01T01:00:00Z",
+        "app_version": "2.4.0",
+        "install_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+        "expect": "ok",
+        "decoded": {
+            "format_version": 3,
+            "max_nodes": 25,
+            "max_users": 10,
+            "policy_id": "global",
+            "policy_type": "default",
+            "validity_months": 12,
+            "features": [
+                "azure_storage",
+                "nfs_storage"
+            ],
+            "bundles": []
+        }
     }
 ]
