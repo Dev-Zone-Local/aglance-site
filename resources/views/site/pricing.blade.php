@@ -41,5 +41,24 @@
                 <p class="text-center text-ag-subtle md:col-span-2">Plans are not published yet. <a href="{{ route('contact') }}" class="ag-link">Contact us</a>.</p>
             @endforelse
         </div>
+
+        {{-- Premium features from the Feature Catalog: new premium features appear here without an edit. --}}
+        @if (! empty($premiumFeatures))
+            <div class="mx-auto mt-16 max-w-5xl" data-testid="premium-features">
+                <h2 class="mb-2 text-2xl font-medium tracking-heading text-ag-ink">Premium features</h2>
+                <p class="mb-6 text-sm text-ag-subtle">Included in Premium Features (all), including premium features added later, or granted one by one in a custom licence.</p>
+                <div class="grid gap-4 md:grid-cols-2">
+                    @foreach ($premiumFeatures as $premium)
+                        <div class="rounded-card bg-white p-5 shadow-ag" data-testid="premium-feature-{{ $premium['key'] }}">
+                            <div class="mb-1 flex items-center gap-2">
+                                <span class="font-medium text-ag-ink">{{ $premium['name'] }}</span>
+                                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-800">Premium</span>
+                            </div>
+                            <p class="text-sm leading-relaxed text-ag-subtle">{{ $premium['description'] }}</p>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
     </div>
 </x-layouts.site>

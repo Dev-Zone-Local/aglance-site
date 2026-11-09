@@ -2,7 +2,10 @@
 
 namespace App\Filament\Support;
 
+use App\Models\FeatureCatalog;
 use App\Models\License;
+use App\Models\User;
+use App\Support\LicensePolicy\PolicyResolver;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -65,6 +68,11 @@ class LicenseTable
                     ->dateTime()
                     ->description(fn (License $record) => $record->approver ? "by {$record->approver->email}" : null)
                     ->placeholder(fn (License $record) => $record->requiresApproval() ? 'Pending' : 'Not required'),
+                // Premium features of the owner's policy: the bundle, or each individual grant.
+                $withOwner ? TextColumn::make('premium')
+                    ->label('Premium')
+                    ->state(fn (License $record) => self::premiumLabel($record))
+                    ->wrap() : null,
                 TextColumn::make('created_at')
                     ->label('Requested')
                     ->dateTime()
@@ -76,7 +84,13 @@ class LicenseTable
                     ->color(fn (License $record) => $record->isExpired() ? 'danger' : null)
                     ->placeholder('Never'),
             ])))
-            ->filters([
+            ->filters(array_values(array_filter([
+                $withOwner ? SelectFilter::make('feature')
+                    ->label('Premium feature')
+                    ->options(fn () => FeatureCatalog::premiumOptions())
+                    ->query(fn (Builder $query, array $data) => ($data['value'] ?? null)
+                        ? $query->where('tokenable_type', User::class)->whereIn('tokenable_id', self::ownersWith((string) $data['value']))
+                        : $query) : null,
                 SelectFilter::make('verification')
                     ->label('Code')
                     ->options(['verified' => 'Code entered', 'unverified' => 'Pending'])
@@ -85,7 +99,7 @@ class LicenseTable
                         'unverified' => $query->whereNull('confirmed_at'),
                         default => $query,
                     }),
-            ])
+            ])))
             ->recordActions([
                 LicenseActions::approve(),
                 LicenseActions::decline(),
@@ -94,5 +108,31 @@ class LicenseTable
             ->toolbarActions([
                 LicenseActions::approveBulk(),
             ]);
+    }
+
+    /** "Premium Features (all)", "Remote Tunnel, NFS Storage" or "None", from the owner's policy. */
+    public static function premiumLabel(License $record): string
+    {
+        $owner = $record->tokenable;
+        if (! $owner instanceof User) {
+            return '—';
+        }
+        $policy = PolicyResolver::for($owner);
+        if (in_array(FeatureCatalog::BUNDLE_PREMIUM, $policy['bundles'], true)) {
+            return 'Premium Features (all)';
+        }
+        $names = array_values(array_intersect_key(FeatureCatalog::premiumOptions(), array_flip($policy['features'])));
+
+        return $names === [] ? 'None' : implode(', ', $names);
+    }
+
+    /** @return list<int> owners of licences whose policy includes $feature (bundle or individual) */
+    public static function ownersWith(string $feature): array
+    {
+        $ids = License::query()->licenses()->where('tokenable_type', User::class)->distinct()->pluck('tokenable_id');
+
+        return User::query()->whereIn('id', $ids)->get()
+            ->filter(fn (User $user) => PolicyResolver::includes($user, $feature))
+            ->pluck('id')->map(fn ($id) => (int) $id)->values()->all();
     }
 }

@@ -58,6 +58,11 @@ services:
       FRONTEND_URL: "${FRONTEND_URL:-http://localhost:8080}"
       CORS_ORIGINS: "${CORS_ORIGINS:-}"
       SANCTUM_STATEFUL_DOMAINS: "${SANCTUM_STATEFUL_DOMAINS:-localhost:8080}"
+      # Licence file signing keys (php artisan license:generate-keys). Without them no
+      # licence file can be issued: key activation from a 2.3+ console answers 503.
+      LICENSE_KEY_ID: "${LICENSE_KEY_ID:-}"
+      LICENSE_SIGNING_PRIVATE_KEY: "${LICENSE_SIGNING_PRIVATE_KEY:-}"
+      LICENSE_ENC_KEY: "${LICENSE_ENC_KEY:-}"
     ports:
       - "${APP_PORT:-8080}:8080"
     networks:
