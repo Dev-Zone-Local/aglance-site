@@ -143,13 +143,22 @@
             "default": false,
             "v1_default": false,
             "min_console_version": "3.0.0"
+        },
+        {
+            "key": "agent_monitoring",
+            "name": "Agent Monitoring",
+            "description": "Live fleet monitoring with atglance 3.0 agents over an outbound WebSocket (AACP v1): host facts, heartbeats, metrics, service status, application checks, events and alerts, configuration push and allowlisted remote operations.",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "3.0.0"
         }
     ],
     "bundles": [
         {
             "key": "premium",
             "name": "Premium Features",
-            "description": "Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later.",
+            "description": "Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, and any premium features added later.",
             "members_tier": "premium",
             "default": false
         }

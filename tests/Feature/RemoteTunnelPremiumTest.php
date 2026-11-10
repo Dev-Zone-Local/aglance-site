@@ -72,7 +72,7 @@ class RemoteTunnelPremiumTest extends TestCase
         $tunnel = FeatureCatalog::query()->where('key', 'remote_tunnel')->sole();
         $this->assertSame(['premium', 'Remote Tunnel'], [$tunnel->tier, $tunnel->name]);
         $this->assertArrayHasKey('remote_tunnel', FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM));
-        $this->assertSame('Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later.', LicensePolicyPage::bundleDescription());
+        $this->assertSame('Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, and any premium features added later.', LicensePolicyPage::bundleDescription());
         $this->assertSame('NFS Storage, Remote Tunnel', FeatureCatalog::premiumSummary([], ['remote_tunnel', 'nfs_storage']));
         $this->assertSame('Remote Tunnel only', FeatureCatalog::premiumSummary([], ['remote_tunnel']));
     }

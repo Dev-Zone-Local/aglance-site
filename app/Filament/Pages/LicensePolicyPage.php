@@ -156,7 +156,7 @@ class LicensePolicyPage extends Page
         ];
     }
 
-    /** "Includes NFS Storage, Azure Storage, Remote Tunnel, and any premium features added later." */
+    /** "Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, and any premium features added later." */
     public static function bundleDescription(): string
     {
         $names = array_values(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM));
