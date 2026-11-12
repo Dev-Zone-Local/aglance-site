@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CliReleaseController;
 use App\Http\Controllers\Api\CmsController;
 use App\Http\Controllers\Api\ConsoleLicenseController;
 use App\Http\Controllers\Api\GithubAuthController;
@@ -41,6 +42,9 @@ Route::prefix('cms')->controller(CmsController::class)->group(function () {
     Route::get('contact', 'contact');
     Route::get('pages/{slug}', 'page');
 });
+
+// Newest CLI release files, read by the Management Console (no auth)
+Route::get('releases/cli/latest', [CliReleaseController::class, 'latest'])->middleware('throttle:60,1,cli-release');
 
 // Logged-in users only
 Route::get('downloads', [CmsController::class, 'downloads'])->middleware('auth:sanctum');
