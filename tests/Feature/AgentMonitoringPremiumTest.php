@@ -47,7 +47,7 @@ class AgentMonitoringPremiumTest extends TestCase
         $feature = FeatureCatalog::query()->where('key', 'agent_monitoring')->sole();
         $this->assertSame(['premium', 'Agent Monitoring'], [$feature->tier, $feature->name]);
         $this->assertArrayHasKey('agent_monitoring', FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM));
-        $this->assertSame('Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, and any premium features added later.', LicensePolicyPage::bundleDescription());
+        $this->assertSame('Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, Add servers from the console, and any premium features added later.', LicensePolicyPage::bundleDescription());
         $this->assertSame('Agent Monitoring only', FeatureCatalog::premiumSummary([], ['agent_monitoring']));
     }
 

@@ -152,6 +152,15 @@
             "default": false,
             "v1_default": false,
             "min_console_version": "3.0.0"
+        },
+        {
+            "key": "remote_deploy",
+            "name": "Add servers from the console",
+            "description": "Add a Linux, Windows or macOS server from the console: it logs in over SSH or WinRM, installs the atglance CLI and registers the server.",
+            "tier": "premium",
+            "default": false,
+            "v1_default": false,
+            "min_console_version": "3.0.0"
         }
     ],
     "bundles": [
