@@ -34,13 +34,15 @@ class ProductShowcase
             'resilience' => 'Database outage flow',
             'rbac' => 'Roles matrix',
             'deploy' => 'Install commands',
+            'compare' => 'CLI or Console table',
         ],
         'cli' => [
-            'terminal' => 'Terminal demo',
-            'flags' => 'Command table',
+            'install' => 'Install commands',
+            'terminal' => 'Workflow demo',
+            'flags' => 'Command reference',
+            'together' => 'CLI and Console together',
             'architecture' => 'Architecture diagram',
-            'lifecycle' => 'Register / deregister flow',
-            'paths' => 'Where state lives',
+            'paths' => 'Files and exit codes',
         ],
     ];
 
@@ -60,9 +62,57 @@ class ProductShowcase
     /** Saved content merged over the defaults, ready for the page. */
     public static function get(string $product): array
     {
+        $defaults = self::defaults($product);
         $saved = Setting::get(self::settingKey($product));
-        $data = $saved ? array_replace(self::defaults($product), $saved) : self::defaults($product);
+        $data = $saved ? array_replace($defaults, $saved) : $defaults;
         $data['sections'] = ($saved['sections'] ?? []) + array_fill_keys(array_keys(self::SECTIONS[$product]), true);
+
+        return self::withBuiltInImages($data, $defaults);
+    }
+
+    /**
+     * The built-in screenshots (public/screenshots/...) fill every image an admin has not uploaded:
+     * the hero, features by their small heading, gallery items by their title. Gallery items with
+     * neither are left out.
+     */
+    private static function withBuiltInImages(array $data, array $defaults): array
+    {
+        if (blank($data['hero']['image'] ?? null)) {
+            $data['hero']['image'] = $defaults['hero']['image'] ?? null;
+        }
+        $featureImages = collect($defaults['features'] ?? [])->mapWithKeys(fn ($f) => [$f['eyebrow'] => $f])->all();
+        foreach ($data['features'] as &$f) {
+            if (blank($f['image'] ?? null) && isset($featureImages[$f['eyebrow'] ?? ''])) {
+                $f['image'] = $featureImages[$f['eyebrow']]['image'];
+                $f['caption'] = filled($f['caption'] ?? null) ? $f['caption'] : $featureImages[$f['eyebrow']]['caption'];
+            }
+        }
+        unset($f);
+        $galleryImages = collect($defaults['gallery'] ?? [])->mapWithKeys(fn ($g) => [$g['title'] => $g['image']])->all();
+        $data['gallery'] = array_values(array_filter(array_map(function ($g) use ($galleryImages) {
+            $g['image'] = filled($g['image'] ?? null) ? $g['image'] : ($galleryImages[$g['title'] ?? ''] ?? null);
+
+            return $g;
+        }, $data['gallery'] ?? []), fn ($g) => filled($g['image'])));
+
+        return $data;
+    }
+
+    /**
+     * Content for the Admin → Product pages form: built-in screenshots show as empty upload fields
+     * (they are not uploads). Leaving a field empty keeps the built-in screenshot.
+     */
+    public static function forEditor(string $product): array
+    {
+        $data = self::get($product);
+        $strip = fn ($path) => is_string($path) && str_starts_with($path, '/') ? null : $path;
+        $data['hero']['image'] = $strip($data['hero']['image'] ?? null);
+        foreach (['features', 'gallery'] as $list) {
+            foreach ($data[$list] as &$item) {
+                $item['image'] = $strip($item['image'] ?? null);
+            }
+            unset($item);
+        }
 
         return $data;
     }
@@ -86,9 +136,14 @@ class ProductShowcase
         self::save($product, self::defaults($product));
     }
 
+    /** Uploads are on the public disk; built-in defaults start with "/" (files in public/). */
     public static function imageUrl(?string $path): ?string
     {
-        return $path ? asset('storage/'.ltrim($path, '/')) : null;
+        if (! $path) {
+            return null;
+        }
+
+        return str_starts_with($path, '/') ? asset(ltrim($path, '/')) : asset('storage/'.ltrim($path, '/'));
     }
 
     /** Repeater state is keyed by item ids; store plain lists. */
@@ -128,18 +183,18 @@ class ProductShowcase
         return $lines;
     }
 
-    private static function feature(string $icon, string $eyebrow, string $title, string $text, array $bullets, string $path, string $hint): array
+    private static function feature(string $icon, string $eyebrow, string $title, string $text, array $bullets, string $path, string $hint, ?string $image = null): array
     {
         return [
             'icon' => $icon, 'eyebrow' => $eyebrow, 'title' => $title, 'text' => $text,
-            'bullets' => self::list($bullets), 'image' => null, 'caption' => null,
+            'bullets' => self::list($bullets), 'image' => $image, 'caption' => null,
             'capture_path' => $path, 'capture_hint' => $hint, 'visible' => true,
         ];
     }
 
     private static function consoleDefaults(): array
     {
-        return [
+        $data = [
             'hero' => [
                 'badge' => 'Self-hosted Management Console',
                 'title' => 'Every server config, every change, one console you host.',
@@ -179,6 +234,18 @@ class ProductShowcase
                     'A read-only MCP server ships with every install. Connect Claude Desktop, Claude Code or any MCP client and ask about systems, backups, reviews and vulnerabilities.',
                     ['Read-only by design, scoped to the user\'s workspaces', 'Copy-paste setup for popular AI clients', 'Runs behind the same gateway as the CLI API'],
                     '/connect-ai', 'MCP: connect AI tools page with the client setup snippets, or a Claude chat using AtGlance tools.'),
+                self::feature('activity', 'Agent Monitoring', 'Live service health from every server',
+                    'Servers running the AtGlance agent keep one outbound, encrypted connection to the console and report their services as they change. No inbound port is opened on the server.',
+                    ['Live service monitoring page per system', 'Linux, Windows Server and macOS agents', 'One switch turns monitoring and heartbeats on or off'],
+                    '/live-service-monitoring', 'Live Service Monitoring with two or three systems reporting.'),
+                self::feature('network', 'Remote Tunnel', 'Reach servers on private networks',
+                    'Connect sites behind NAT or firewalls through a connector, a relay, site-to-site IPsec or point-to-site access, and hop between sites. A premium feature.',
+                    ['Sites with a connector or published gateway', 'Site-to-site IPsec and point-to-site access', 'Relay and multi-site hops'],
+                    '/admin/settings?tab=plugins', 'Remote Tunnel Sites list with one connected site.'),
+                self::feature('key-round', 'Service accounts', 'Machine keys for automation',
+                    'Give scheduled CLI runs their own service account key (atgsa-) with only the scopes they need, instead of a person\'s key. Keys that expire soon trigger a notice.',
+                    ['Scopes such as systems.register, configs.write, configs.read', 'Expiry notices at 15, 7, 3, 2, 1 and 0 days', 'Rotate a key without registering the server again'],
+                    '/service-accounts', 'Service accounts list with one account open showing its scopes.'),
                 self::feature('layers', 'Workspaces and roles', 'Separate teams, clear permissions',
                     'Group servers into workspaces for each team or environment. Workspace admins manage members, tags, AI reviews, backups and notifications for their own workspace.',
                     ['Super admin, admin and user roles', 'Fine-grained access for workspace admins', 'Activity log for every workspace'],
@@ -188,8 +255,8 @@ class ProductShowcase
                     ['Email, Microsoft Teams, Slack, Telegram, n8n, webhooks and SMS', 'Groups per workspace, plus organization-wide groups', 'Each member picks the events they want'],
                     '/admin/notifications', 'Notifications page with two or three groups on different channels.'),
                 self::feature('database', 'Backup and restore', 'Scheduled backups, one-click restore',
-                    'Back up the console database and all stored configuration files on a schedule, locally or to S3, and restore them when you need to.',
-                    ['Database and configuration backups, separately', 'Per-workspace backup schedules with notes', 'Local disk or S3, with one-click migration between them'],
+                    'Back up the console database and all stored configuration files on a schedule, and restore them when you need to. Backups carry a manifest and checksums and can be encrypted.',
+                    ['Database and configuration backups, separately', 'Per-workspace backup schedules with notes', 'Local disk, S3, NFS, Azure Storage or your own Google Drive'],
                     '/admin/settings/backups', 'Backup & Restore tab with the schedule and the list of past backups.'),
                 self::feature('key-round', 'Single sign-on', 'Sign in with the identity provider you already use',
                     'Turn on the SSO plugin and add one or more providers. Users sign in with their company account instead of a separate password.',
@@ -211,57 +278,126 @@ class ProductShowcase
             ],
             'gallery' => [],
         ];
+
+        return self::withConsoleScreenshots($data);
+    }
+
+    /**
+     * Real screenshots of the console (public/screenshots/console, see its README.md), with a
+     * caption under each. Captured from a running console; e-mail addresses and LAN addresses
+     * were replaced with example values before capture.
+     */
+    private static function withConsoleScreenshots(array $data): array
+    {
+        $shot = fn (string $name) => "/screenshots/console/console-{$name}.jpg";
+
+        // Shown in the browser bar above each screenshot.
+        $paths = [
+            'dashboard' => '/admin/dashboard', 'systems' => '/systems-registered', 'config-backups' => '/configuration-backups',
+            'config-file' => '/configuration-backups/2257/view', 'mcp' => '/connect-ai', 'servers' => '/servers',
+            'remote-tunnel' => '/admin/tunnel', 'service-accounts' => '/admin/service-accounts', 'enterprise-console' => '/entrpirse_console',
+            'notifications' => '/admin/notifications', 'settings-backups' => '/admin/settings?tab=backup', 'settings-plugins' => '/admin/settings?tab=plugins',
+            'settings-info' => '/admin/settings',
+        ];
+        $data['hero']['image'] = $shot('dashboard');
+        $data['hero']['capture_path'] = '/admin/dashboard';
+
+        // Feature (by its eyebrow) => [screenshot, caption].
+        $byFeature = [
+            'Dashboard' => ['dashboard', 'Users, systems, services and config files at a glance, with shortcuts to every admin area and live server status.'],
+            'Systems' => ['systems', 'Every registered server with its status, OS, address, workspace, service and backup counts, searchable by name, IP, tags or system key.'],
+            'Configuration backups' => ['config-backups', 'All backed-up services, filtered by application or system type, with the AI check result and the version count of each.'],
+            'AI configuration review' => ['config-file', 'One stored version: the exact unit file, its details and the history of AI validation runs for it.'],
+            'MCP server' => ['mcp', 'Step-by-step setup for Claude Code, Claude Desktop, VS Code, GitHub Copilot, n8n and other MCP clients.'],
+            'Agent Monitoring' => ['servers', 'Live view from the agents: online, degraded, delayed and offline servers, the heartbeat timeline, availability and uptime by server.'],
+            'Remote Tunnel' => ['remote-tunnel', 'Sites, connection profiles, connectors, sessions, policies, point-to-site VPN, published gateway, relays and the internal CA.'],
+            'Service accounts' => ['service-accounts', 'Machine identities for the CLI, scoped to the organization or one workspace, so a server keeps working when its owner leaves.'],
+            'Workspaces and roles' => ['enterprise-console', 'Enterprise Console: every workspace with its admins, members, systems and last backup, plus organization-wide settings.'],
+            'Notifications' => ['notifications', 'Notification groups per organization or workspace: one destination each (email list, Slack or Teams channel, webhook).'],
+            'Backup and restore' => ['settings-backups', 'Separate database and config-file backups, each with its own schedule and destinations (this server, S3, NFS, Azure or Google Drive), encrypted with AES-256-GCM.'],
+            'Single sign-on' => ['settings-plugins', 'Plugins: turn on Custom Domain & HTTPS, SSO, AI Connect, S3, MCP, Agent Monitoring, Azure Storage and Google Drive.'],
+            'Your domain, your brand' => ['settings-info', 'Site settings: domain, organization name, storage URL, access URL, server IP and HTTPS status.'],
+        ];
+        foreach ($data['features'] as &$feature) {
+            if (isset($byFeature[$feature['eyebrow']])) {
+                [$name, $caption] = $byFeature[$feature['eyebrow']];
+                $feature['image'] = $shot($name);
+                $feature['caption'] = $caption;
+                $feature['capture_path'] = $paths[$name] ?? $feature['capture_path'];
+            }
+        }
+        unset($feature);
+
+        $data['gallery'] = [
+            ['image' => $shot('service-versions'), 'title' => 'Every version of a service', 'caption' => 'Service type, version count, file, system, upload time and hash, with view and download for each version.'],
+            ['image' => $shot('users'), 'title' => 'Users and roles', 'caption' => 'Administrators, workspace admins and users, with their systems, services, configs and last sign-in.'],
+            ['image' => $shot('settings-agents'), 'title' => 'Agent settings', 'caption' => 'Bidirectional or report-only agents, heartbeat and offline timings, and service heartbeat rules for every server.'],
+            ['image' => $shot('workspaces'), 'title' => 'Workspaces', 'caption' => 'Create a workspace and become its admin, then add users and admins to it.'],
+            ['image' => $shot('profile'), 'title' => 'Your profile', 'caption' => 'Your role, systems, configuration files, latest backup and active API keys.'],
+        ];
+
+        return $data;
     }
 
     private static function cliDefaults(): array
     {
+        $shot = fn (string $name) => "/screenshots/cli/cli-{$name}.svg";
+
         return [
             'hero' => [
                 'badge' => 'AtGlance CLI for Linux servers',
                 'title' => 'Server health and config backups, from one command.',
-                'subtitle' => 'A small agent for systemd hosts. See every service, its ports and log signals on one screen, back up its configuration, and sync it with your Management Console.',
-                'primary_label' => 'Install the CLI',
-                'primary_url' => '/dashboard/install/cli',
-                'secondary_label' => 'See the features',
-                'secondary_url' => '#features',
-                'ticks' => self::list(['Ubuntu and Debian (.deb)', 'No daemon required', 'Talks only to your console', 'Open command reference']),
-                'image' => null,
-                'capture_path' => 'atglance',
-                'capture_hint' => 'Terminal running `atglance` with the full service overview table.',
+                'subtitle' => 'One small binary for every systemd host. See each service, its ports and log errors on one screen, back up its unit files to your Management Console, and restore any version safely.',
+                'primary_label' => 'Download the CLI',
+                'primary_url' => '/downloads#cli',
+                'secondary_label' => 'Command reference',
+                'secondary_url' => '#commands',
+                'ticks' => self::list(['.deb, .rpm and .tar.gz', 'One static binary, about 3 MB', 'No daemon, no open ports', 'Agent for Windows and macOS in 3.0']),
+                'image' => $shot('status'),
+                'capture_path' => 'atglance status',
+                'capture_hint' => 'Terminal running atglance status.',
             ],
             'features_heading' => [
                 'eyebrow' => 'Features',
                 'title' => 'Everything about a server, in one terminal',
-                'sub' => 'Built for SREs who live in SSH sessions.',
+                'sub' => 'Health commands work on their own. Connect the console to keep every version of every unit file.',
             ],
             'features' => [
-                self::feature('monitor', 'Overview', 'Every service on one screen',
-                    'Run atglance and see every systemd service with its health, ports and recent log signals, classified the same way every time.',
-                    ['Service discovery from systemd', 'Deterministic health classification', 'Port mapping and error/warning log signals'],
-                    'atglance', 'Terminal with the overview table of all services.'),
-                self::feature('eye', 'Drill-down', 'Inspect one service in depth',
-                    'atglance --app nginx.service shows the unit, its status, ports, recent errors and its configuration files.',
-                    ['Status, ports and recent log lines', 'Configuration files of the service', 'Works on any systemd unit'],
-                    'atglance --app nginx.service', 'Terminal with the detail view of one service.'),
-                self::feature('git-branch', 'Configuration backups', 'Back up and restore config files',
-                    'Save a service\'s configuration to the Management Console, list stored versions, and import any version back onto the server.',
-                    ['--config-save uploads a new version', '--config-show lists stored versions', '--config-import restores a version by ID'],
-                    'sudo atglance --app nginx.service --config-save', 'Terminal showing config-save, then config-show with version IDs.'),
-                self::feature('server', 'Registration', 'Register a server in seconds',
-                    'Point the CLI at your console with a personal access token. The host gets a permanent validation hash and shows up in the console.',
-                    ['--configure and --validate the token', '--system-register, deregister and reactivate', 'Permanent hash in /etc/environment'],
-                    'atglance --system-register', 'Terminal showing a successful --system-register.'),
-                self::feature('activity', 'Watch mode', 'Live refresh while you work',
-                    'atglance watch keeps the overview on screen and refreshes it on an interval, so you see a service recover or fail as it happens.',
-                    ['Interval you choose', 'Same view as the overview', 'Export a snapshot as JSON any time'],
-                    'atglance watch --interval 5', 'Terminal in watch mode.'),
+                self::feature('monitor', 'Health', 'Every service on one screen',
+                    'atglance status lists running and failed services with state, uptime, listening ports and health. Application services come first, then the operating system\'s own.',
+                    ['--all adds stopped services; --type application or system shows one kind', 'Health: Working, Starting, Restarting, Done, Stopped, Failed, Error, Warning', 'Exit code 3 when a service is Failed or Restarting, for monitoring checks'],
+                    'atglance status', 'Terminal running atglance status.', $shot('status-sudo')),
+                self::feature('eye', 'Service detail', 'Inspect one service in depth',
+                    'atglance service nginx shows the unit file, main PID, restarts, ports and how many errors and warnings it logged in the last 24 hours.',
+                    ['Works with ssh or ssh.service', 'JSON with -o json', 'watch refreshes the overview every 5 seconds'],
+                    'atglance service ssh', 'Terminal with the detail view of one service.', $shot('service')),
+                self::feature('server', 'Registration', 'Connect a server in two commands',
+                    'Log in with your personal API key, then register. The server makes its own system key and keeps it readable only by root. Keys are never accepted as arguments.',
+                    ['login, whoami and logout', 'system register, status, deregister, reactivate, rotate-key', 'A service account key for scheduled runs'],
+                    'sudo atglance system register', 'Terminal showing a successful system register.', $shot('register')),
+                self::feature('git-branch', 'Config backups', 'Every change to every unit file, versioned',
+                    'sync backs up every service whose unit file changed and skips the rest. List versions, compare one with the live file, and restore it with an automatic rollback.',
+                    ['config backup, list, pull, diff and restore', 'Offline queue: backups wait until the console is back', 'restore refuses the SSH service over SSH, restarts and rolls back on failure'],
+                    'sudo atglance sync', 'Terminal showing sync with uploaded and unchanged services.', $shot('sync')),
+                self::feature('shield-check', 'Health check', 'One command checks the whole setup',
+                    'check tests settings, the console, the token, the clock, the system, systemd, the journal, the offline queue, both keys\' expiry and the schedule.',
+                    ['ok, warn or fail per line', 'Warns when a key has 15 days or fewer left', 'Alias: doctor'],
+                    'sudo atglance check', 'Terminal showing check with ok lines.', $shot('check')),
+                self::feature('calendar', 'Daily schedule', 'Check and sync every day, by itself',
+                    'schedule enable writes a cron job: a daily check around 06:00 and a daily sync at night, at random minutes so servers do not all call the console at once.',
+                    ['Runs with the service account key, never your personal key', 'Output in the system log: journalctl -t atglance', 'schedule status shows the times and last log lines'],
+                    'sudo atglance schedule enable', 'Terminal showing schedule enable.', $shot('schedule-enable')),
+                self::feature('lock', 'Security log', 'See who forced what, from the terminal',
+                    'Organisation admins read the security log: failed, successful and locked force actions, newest first, and the accounts that are locked.',
+                    ['security events with --type, --since, --until, --user', 'security lockouts', 'Table or JSON output'],
+                    'sudo atglance security events', 'Terminal showing security events.', $shot('security-events')),
             ],
             'extras_heading' => ['eyebrow' => 'And more', 'title' => 'Small, predictable, scriptable'],
             'extras' => [
-                ['icon' => 'download', 'title' => 'Debian package', 'text' => 'Install and update with a .deb; checksums are published for every release.'],
-                ['icon' => 'file-lock', 'title' => 'Local versioned backups', 'text' => 'Config backups are also kept locally, numbered so nothing is overwritten.'],
-                ['icon' => 'copy', 'title' => 'JSON export', 'text' => 'atglance export --format json for scripts and dashboards.'],
-                ['icon' => 'lock', 'title' => 'Token auth', 'text' => 'Personal access tokens, validated against your console before any upload.'],
+                ['icon' => 'download', 'title' => 'Packages for every distro', 'text' => '.deb for amd64, arm64 and armhf; .rpm for x86_64 and aarch64; .tar.gz for any systemd Linux.'],
+                ['icon' => 'cpu', 'title' => 'Fast on a Raspberry Pi', 'text' => 'status takes 0.14 s of CPU and under 8 MB of memory on an armv7 board, against 3.45 s for 1.x.'],
+                ['icon' => 'copy', 'title' => 'JSON for scripts', 'text' => 'export prints every service as JSON, with an optional log summary.'],
+                ['icon' => 'refresh', 'title' => 'Moves from 1.x by itself', 'text' => 'Install over 1.x: settings are imported, the system keeps its id and key, and the old flags still work.'],
             ],
             'gallery' => [],
         ];

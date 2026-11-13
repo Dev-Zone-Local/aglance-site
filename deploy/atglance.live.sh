@@ -6,7 +6,7 @@ set -Eeuo pipefail
 
 DOMAIN=atglance.live
 APP_DIR=/www/wwwroot/$DOMAIN
-BRANCH=Version2.0   # CHECK: the branch production should run
+BRANCH=feat/Version3.0-site-merge   # the release branch (site merge + 3.0); change when it is merged
 APP_USER=www
 PHP=/www/server/php/85/bin/php
 COMPOSER=/usr/bin/composer

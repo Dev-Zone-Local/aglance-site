@@ -7,6 +7,7 @@ use App\Models\LicensePolicy;
 use App\Models\PolicyAuditLog;
 use App\Models\PricingPlan;
 use App\Support\LicensePolicy\PolicyAudit;
+use App\Support\LicensePolicy\LicenseCategory;
 use App\Support\LicensePolicy\PolicyRules;
 use BackedEnum;
 use Filament\Forms\Components\Checkbox;
@@ -112,7 +113,10 @@ class LicensePolicyPage extends Page
                     ->live() : null,
                 Grid::make(2)
                     ->visible(fn (Get $get) => ! $isPlan || ! $get("{$key}.inherit_global"))
-                    ->schema(self::policyFields($key)),
+                    ->schema(self::policyFields($key, false, $policy->scope)),
+                // Features follow the plan's category, also when the plan uses the global limits.
+                $isPlan ? Text::make(fn () => LicenseCategory::describe(LicenseCategory::forPlan(substr($policy->scope, 5))))
+                    ->visible(fn (Get $get) => (bool) $get("{$key}.inherit_global")) : null,
             ]));
         }
 
@@ -125,7 +129,7 @@ class LicensePolicyPage extends Page
      *
      * @return array<int, mixed>
      */
-    public static function policyFields(string $key = '', bool $custom = false): array
+    public static function policyFields(string $key = '', bool $custom = false, ?string $scope = null): array
     {
         $p = $key === '' ? '' : $key.'.';
 
@@ -152,7 +156,7 @@ class LicensePolicyPage extends Page
                 ->formatStateUsing(fn () => array_keys(FeatureCatalog::freeOptions()))
                 ->disabled()->dehydrated(false)->columns(2)->columnSpanFull()
                 ->helperText('Always enabled in the console. They are never written into a licence and cannot be turned off.'),
-            ...($custom ? self::customPremiumFields($p) : self::defaultPremiumFields($p)),
+            ...($custom ? self::customPremiumFields($p) : self::defaultPremiumFields($p, $scope)),
         ];
     }
 
@@ -184,18 +188,32 @@ class LicensePolicyPage extends Page
             : 'Granted one by one: premium features added later are not included.';
     }
 
-    /** @return array<int, mixed> default policies: only the bundle */
-    private static function defaultPremiumFields(string $p): array
+    /**
+     * Default policies: no feature choice. The plan's category decides (LicenseCategory): Free
+     * plans get every free feature, Premium plans every premium and free feature, including
+     * ones added later. Single premium features are granted with a custom licence.
+     *
+     * @return array<int, mixed>
+     */
+    private static function defaultPremiumFields(string $p, ?string $scope): array
     {
+        if ($scope === null || $scope === LicensePolicy::GLOBAL) {
+            return [
+                Text::make('Premium features are not set here: they follow each plan\'s category. Free plans get every free feature; premium plans (Enterprise) get every premium feature, including ones added later. These limits apply to plans that use the global default.')
+                    ->columnSpanFull(),
+            ];
+        }
+
+        $category = LicenseCategory::forPlan(substr($scope, 5));
+
         return [
-            Toggle::make("{$p}premium_bundle")->label('Premium Features')
-                ->helperText(fn () => self::bundleDescription())
-                ->columnSpanFull(),
-            CheckboxList::make("{$p}premium_members")->label('Included with Premium Features')
+            Text::make(LicenseCategory::describe($category))->columnSpanFull(),
+            CheckboxList::make("{$p}premium_members")
+                ->label($category === LicenseCategory::PREMIUM ? 'Premium features (all included, also future ones)' : 'Premium features (not included)')
                 ->options(fn () => FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM))
-                ->formatStateUsing(fn () => array_keys(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM)))
+                ->formatStateUsing(fn () => $category === LicenseCategory::PREMIUM ? array_keys(FeatureCatalog::bundleMembers(FeatureCatalog::BUNDLE_PREMIUM)) : [])
                 ->disabled()->dehydrated(false)->columns(2)->columnSpanFull()
-                ->helperText('Single premium features are granted to one user with a custom license (Users › Create custom license).'),
+                ->helperText('To give one user single premium features, create a custom licence for them (Users › Create custom license).'),
         ];
     }
 
@@ -243,6 +261,11 @@ class LicensePolicyPage extends Page
             $values = $inherit
                 ? $policy->only(['max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'bundles', 'individual_features'])
                 : PolicyRules::validate(PolicyRules::fromForm($input), false, "data.{$key}.");
+            // Features are stored as the category gives them, so the record matches what licences get.
+            $grants = $policy->scope === LicensePolicy::GLOBAL
+                ? ['bundles' => [], 'features' => []]
+                : LicenseCategory::grants(LicenseCategory::forPlan(substr($policy->scope, 5)));
+            $values = ['bundles' => $grants['bundles'], 'individual_features' => []] + $values;
             $validated[$policy->scope] = ['inherit_global' => $inherit] + array_intersect_key($values, array_flip([
                 'max_licences', 'max_nodes', 'max_users', 'validity_value', 'validity_unit', 'activation_window_minutes', 'install_id_mode', 'bundles', 'individual_features',
             ]));

@@ -1,8 +1,12 @@
 @php
     $nav = [
-        'product' => 'Product', 'cli' => 'CLI', 'console' => 'Console', 'architecture' => 'Architecture',
-        'use-cases' => 'Use cases', 'security' => 'Security', 'releases' => 'Releases', 'docs' => 'Docs',
+        'cli' => 'CLI', 'console' => 'Console', 'downloads' => 'Downloads', 'releases' => 'Releases',
+        'roadmap' => 'Roadmap', 'docs' => 'Docs', 'pricing' => 'Pricing',
     ];
+    // Blog appears when it is on, "Show in navigation" is set and a post is published (Admin → Blog settings).
+    if (\App\Support\Blog::inNav()) {
+        $nav = array_slice($nav, 0, 6, true) + ['blog' => 'Blog'] + array_slice($nav, 6, null, true);
+    }
     $isActive = fn (string $route) => request()->routeIs($route) || request()->routeIs($route.'.*');
 @endphp
 <header class="relative z-40 mb-6" x-data="{ open: false }" x-on:resize.window="if (window.innerWidth > 900) open = false">
@@ -24,8 +28,7 @@
             @auth
                 <x-user-menu :show-dashboard="true" />
             @else
-                <a href="{{ route('login') }}" class="hidden rounded-full bg-ag-surface px-[18px] py-2.5 text-sm font-medium text-ag-ink transition-colors hover:bg-ag-line min-[901px]:inline-flex">Sign in</a>
-                <a href="{{ route('register') }}" class="inline-flex whitespace-nowrap rounded-full bg-ag-gradient px-[18px] py-2.5 text-sm font-medium text-ag-ink transition hover:bg-ag-gradient-hover hover:shadow-ag-glow">Sign up free</a>
+                <x-auth-panel />
             @endauth
             <button type="button" x-on:click="open = !open" :aria-expanded="open" aria-controls="mobile-nav"
                 class="inline-flex h-[42px] w-[42px] items-center justify-center rounded-[14px] bg-white text-ag-ink shadow-ag min-[901px]:hidden">
@@ -50,7 +53,7 @@
                 {{ auth()->user()->role === 'admin' ? 'Admin' : 'Dashboard' }}
             </a>
         @else
-            <a href="{{ route('login') }}" class="block rounded-[10px] px-3 py-2.5 text-sm font-medium text-ag-ink hover:bg-ag-surface">Sign in</a>
+            <button type="button" x-on:click="open = false; $dispatch('open-auth', 'login')" class="block w-full rounded-[10px] px-3 py-2.5 text-left text-sm font-medium text-ag-ink hover:bg-ag-surface">Sign in</button>
         @endauth
     </div>
 </header>

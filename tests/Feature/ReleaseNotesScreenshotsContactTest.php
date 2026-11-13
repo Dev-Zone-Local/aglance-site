@@ -162,11 +162,14 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
             ->assertSee('Every server config, every change')
             ->assertSee('id="ai-configuration-review"', false)
             ->assertDontSee('Screenshot needed');
-        $this->get('/cli')->assertOk()->assertSee('Server health and config backups')->assertSee('Flag catalog');
+        $this->get('/cli')->assertOk()->assertSee('Server health and config backups')->assertSee('Command reference');
 
+        // Built-in console screenshots: no "Screenshot needed" placeholder, even for admins.
         $this->actingAs($this->admin())->get('/console')->assertOk()
-            ->assertSee('Screenshot needed')
-            ->assertSee('Vulnerabilities Identified table');
+            ->assertDontSee('Screenshot needed')
+            ->assertSee('/screenshots/console/console-dashboard.jpg', false)
+            ->assertSee('/screenshots/console/console-servers.jpg', false)
+            ->assertSee('Every version of a service');
     }
 
     public function test_admin_edits_product_page_text_images_and_blocks(): void
@@ -227,7 +230,7 @@ class ReleaseNotesScreenshotsContactTest extends TestCase
             ->assertSee('id="console-proxy-problem"', false)
             ->assertSee('#proxy')
             ->assertSee('No styles on &lt;your-domain&gt;', false)
-            ->assertSee('<h3>Fix</h3>', false);
+            ->assertSee('<h3 id="fix">Fix', false);
         $this->get('/known-problems?product=cli')->assertOk()->assertSee('CLI token rejected')->assertDontSee('Console proxy problem');
         $this->get('/sitemap.xml')->assertSee('/known-problems');
     }

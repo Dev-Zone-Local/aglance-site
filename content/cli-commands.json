@@ -1,0 +1,84 @@
+{
+    "_help": "Searchable command reference on /cli. Taken from the CLI README and docs/commands.md (version 2.2.0, agent from 3.0). group order = display order. sudo: true when the command needs root.",
+    "version": "2.2.0",
+    "groups": [
+        {
+            "key": "health",
+            "title": "Health",
+            "note": "No console and no sudo needed.",
+            "commands": [
+                {"cmd": "atglance status", "args": "[--all] [--type all|system|application] [-o table|json]", "sudo": false, "text": "One line per running or failed service: state, uptime, listening ports, health. Application services first, then system services. Exit code 3 when a service is Failed or Restarting."},
+                {"cmd": "atglance service", "args": "<name> [-o table|json]", "sudo": false, "text": "One service in detail: type, state, health, uptime, restarts, main PID, unit file, ports, errors and warnings in the last 24 hours."},
+                {"cmd": "atglance watch", "args": "[--interval 5s] [--all] [--type T]", "sudo": false, "text": "Live status view, refreshed every 5 seconds. Ctrl+C to stop."},
+                {"cmd": "atglance export", "args": "[--logs] [--type T]", "sudo": false, "text": "Every loaded service as JSON, with the unit file path and category. --logs adds a log summary per service."},
+                {"cmd": "atglance version", "args": "[--json]", "sudo": false, "text": "Print the version. --json prints one line for the console: version, OS, architecture, server, system id, registration and service account (never a key)."},
+                {"cmd": "atglance help", "args": "", "sudo": false, "text": "Show every command. The man page: man atglance."}
+            ]
+        },
+        {
+            "key": "console",
+            "title": "Console connection",
+            "commands": [
+                {"cmd": "atglance login", "args": "[--server URL]", "sudo": true, "text": "Save the console URL and your personal API key (atgla-). The key comes from a hidden prompt, stdin or ATGLANCE_TOKEN, never from an argument."},
+                {"cmd": "atglance whoami", "args": "", "sudo": true, "text": "The console user, organisation, key name and expiry of the saved key."},
+                {"cmd": "atglance check", "args": "[--scheduled]", "sudo": true, "text": "Check the whole setup: settings, console, token, clock, system, systemd, journal, queue, key expiry and schedule. Alias: doctor."},
+                {"cmd": "atglance logout", "args": "", "sudo": true, "text": "Forget the saved key. The system identity stays."}
+            ]
+        },
+        {
+            "key": "system",
+            "title": "System registration",
+            "commands": [
+                {"cmd": "atglance system register", "args": "[--name N] [--tags a,b] [--workspace ID] [--ip ADDRESS] [--service-account] [--force-new]", "sudo": true, "text": "Register this server with the console. The server makes its own system key and keeps it in /var/lib/atglance/identity.json (0600)."},
+                {"cmd": "atglance system status", "args": "", "sudo": true, "text": "The system as the console sees it: id, name, status, workspace, registered at."},
+                {"cmd": "atglance system deregister", "args": "[--pin] [--force [--id ID]]", "sudo": true, "text": "Set the system inactive. Backups are refused until it is reactivated. --force uses an admin's email and password or PIN."},
+                {"cmd": "atglance system reactivate", "args": "[--pin] [--force [--id ID]]", "sudo": true, "text": "Set the system active again."},
+                {"cmd": "atglance system rotate-key", "args": "[--pin]", "sudo": true, "text": "Replace the system key."},
+                {"cmd": "atglance system service-account", "args": "set|remove", "sudo": true, "text": "Change the service account key (atgsa-) used for scheduled runs. The system keeps its id, key and history."},
+                {"cmd": "atglance system enroll", "args": "", "sudo": true, "text": "For consoles that install the CLI over SSH or WinRM: reads one JSON object on stdin with the console URL, system identity and service account key. Never prints a key."}
+            ]
+        },
+        {
+            "key": "backups",
+            "title": "Config backups",
+            "commands": [
+                {"cmd": "atglance sync", "args": "[--scheduled]", "sudo": true, "text": "Send queued backups, then back up every running or failed service whose unit file changed. Unchanged files are skipped."},
+                {"cmd": "atglance config backup", "args": "<service>|--all [--local] [--force]", "sudo": true, "text": "Upload the unit file of one service or of all services. Queued when the console cannot be reached."},
+                {"cmd": "atglance config list", "args": "<service>", "sudo": true, "text": "The versions the console holds: id, version, created, by."},
+                {"cmd": "atglance config pull", "args": "<id>", "sudo": true, "text": "Download a version to /var/lib/atglance/pulled/<service>/. Changes nothing else."},
+                {"cmd": "atglance config diff", "args": "<id>", "sudo": true, "text": "Unified diff of a version against the live unit file. Exit 0 identical, 3 different."},
+                {"cmd": "atglance config restore", "args": "<service> <id> [--yes] [--allow-ssh-restart]", "sudo": true, "text": "Show the diff, confirm, back up the live file, write, reload systemd, restart and wait until stable. Rolls back if the restart fails."}
+            ]
+        },
+        {
+            "key": "schedule",
+            "title": "Daily schedule",
+            "commands": [
+                {"cmd": "atglance schedule enable", "args": "", "sudo": true, "text": "Write /etc/cron.d/atglance: a daily check around 06:00 and a daily sync between 02:00 and 03:59, at random minutes."},
+                {"cmd": "atglance schedule disable", "args": "", "sudo": true, "text": "Remove the cron jobs."},
+                {"cmd": "atglance schedule status", "args": "", "sudo": true, "text": "The job times and the last log lines (journalctl -t atglance)."}
+            ]
+        },
+        {
+            "key": "security",
+            "title": "Security log",
+            "note": "Organisation admins.",
+            "commands": [
+                {"cmd": "atglance security events", "args": "[--type T] [--since TIME] [--until TIME] [--user ID] [--all] [-o json]", "sudo": true, "text": "The organisation's security log, newest first: failed, successful and locked force actions."},
+                {"cmd": "atglance security lockouts", "args": "[-o json]", "sudo": true, "text": "Accounts whose force actions are locked, with the time the lock ends."}
+            ]
+        },
+        {
+            "key": "agent",
+            "title": "Agent (3.0)",
+            "note": "Outbound encrypted connection to the console, no open ports. Linux, Windows Server and macOS.",
+            "commands": [
+                {"cmd": "atglance agent install", "args": "| uninstall [--purge]", "sudo": true, "text": "Install or remove the agent as a system service."},
+                {"cmd": "atglance agent start", "args": "| stop | restart", "sudo": true, "text": "Control the agent service."},
+                {"cmd": "atglance agent status", "args": "[-o json]", "sudo": false, "text": "Connection state of the agent."},
+                {"cmd": "atglance agent run", "args": "", "sudo": true, "text": "Run the agent in the foreground."},
+                {"cmd": "atglance agent logs", "args": "[-n 50] [-f]", "sudo": false, "text": "Show or follow the agent log."}
+            ]
+        }
+    ]
+}

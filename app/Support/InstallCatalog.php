@@ -15,7 +15,9 @@ class InstallCatalog
             'tagline' => 'Agent for your Linux / systemd hosts',
             'icon' => 'cpu',
             'targets' => [
-                'linux' => ['name' => 'Linux server', 'hint' => 'Ubuntu / Debian, systemd', 'icon' => 'terminal', 'status' => 'ready'],
+                'linux' => ['name' => 'Linux server', 'hint' => 'Any systemd Linux: .deb, .rpm or .tar.gz', 'icon' => 'terminal', 'status' => 'ready'],
+                'windows' => ['name' => 'Windows Server', 'hint' => 'The AtGlance agent as a Windows service', 'icon' => 'monitor', 'status' => 'ready'],
+                'macos' => ['name' => 'macOS', 'hint' => 'The AtGlance agent as a launchd job', 'icon' => 'cpu', 'status' => 'ready'],
                 'aws-vm' => ['name' => 'AWS EC2 extension', 'hint' => 'Self-deploy on cloud VMs', 'icon' => 'cloud', 'status' => 'soon'],
                 'azure-vm' => ['name' => 'Azure VM extension', 'hint' => 'Self-deploy on cloud VMs', 'icon' => 'cloud', 'status' => 'soon'],
             ],
@@ -46,16 +48,16 @@ class InstallCatalog
      */
     public static function steps(string $productId, string $targetId, string $mode = 'install'): array
     {
-        $product = Downloads::all()[$productId] ?? null;
+        $product = Downloads::resolved()[$productId] ?? null;
         if (! $product) {
             return [];
         }
 
         $latest = $product['releases'][0] ?? null;
-        $os = $productId === 'cli' ? 'linux' : $targetId;
+        $os = isset(Downloads::platformsFor($productId)[$targetId]) ? $targetId : 'linux';
         $p = $product['platforms'][$os] ?? [];
         $what = self::PRODUCTS[$productId]['name'];
-        $label = $os === 'windows' ? 'Windows' : 'Linux';
+        $label = Downloads::PLATFORMS[$os] ?? 'Linux';
         $steps = [];
 
         if ($mode === 'update') {
@@ -93,13 +95,23 @@ class InstallCatalog
             'action' => ! empty($p['url']) ? ['href' => $p['url'], 'label' => 'Download '.($file ?: 'installer')] : null,
         ];
 
-        if (Downloads::hasChecksum($productId) && $latest && ($cmd = Downloads::validateCommand($product, $latest))) {
+        // Checksum of the file for this platform (uploaded file), else the release checksum.
+        $sum = $p['sha256'] ?? ($os === 'linux' ? ($latest['checksum'] ?? null) : null);
+        if (Downloads::hasChecksum($productId) && $latest && $sum) {
+            $forFile = ['file_name' => $file ?: ($product['file_name'] ?? null)];
+            $release = [...$latest, 'checksum' => $sum];
             $steps[] = [
                 'key' => 'verify',
                 'title' => 'Verify the download',
-                'text' => 'Check the SHA-256 checksum. It prints "OK" when the file is genuine.',
-                'checksum' => $latest['checksum'],
-                'code' => $cmd,
+                'text' => $os === 'windows'
+                    ? 'Check the SHA-256 checksum in PowerShell. It prints "True" when the file is genuine.'
+                    : 'Check the SHA-256 checksum. It prints "OK" when the file is genuine.',
+                'checksum' => $sum,
+                'code' => match ($os) {
+                    'windows' => Downloads::validateCommandWindows($forFile, $release),
+                    'macos' => Downloads::validateCommandMac($forFile, $release),
+                    default => Downloads::validateCommand($forFile, $release),
+                },
             ];
         }
 

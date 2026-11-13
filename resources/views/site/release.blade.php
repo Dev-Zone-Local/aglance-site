@@ -76,7 +76,21 @@
             </aside>
         </div>
 
-        @if (! empty($r['checksum']))
+        @if ($files->isNotEmpty())
+            <section class="mt-6" aria-labelledby="files">
+                <h2 id="files" class="mb-3 flex items-center gap-2 text-lg font-medium text-ag-ink">
+                    <x-glyph name="download" :size="18" class="text-ag-teal" /> Files in this release
+                </h2>
+                <x-release-files :files="$files" :caption="'Files of '.$title" />
+                @if ($r['product'] === 'cli')
+                    <p class="mt-3 text-sm text-ag-subtle">All checksums in one file:
+                        <a class="font-mono text-ag-teal-text underline" href="{{ route('downloads.file', ['cli', $files->first()->folder, 'SHA256SUMS']) }}">SHA256SUMS</a>
+                        · check with <span class="font-mono">sha256sum -c SHA256SUMS --ignore-missing</span></p>
+                @endif
+            </section>
+        @endif
+
+        @if (! empty($r['checksum']) && $files->isEmpty())
             <section class="mt-6 rounded-card bg-white p-6 shadow-ag sm:p-8" aria-labelledby="verify">
                 <h2 id="verify" class="flex items-center gap-2 text-lg font-medium text-ag-ink">
                     <x-glyph name="shield-check" :size="18" class="text-ag-teal" /> Verify your download

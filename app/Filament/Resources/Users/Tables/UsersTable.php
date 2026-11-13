@@ -52,8 +52,11 @@ class UsersTable
                 TextColumn::make('license_policy')
                     ->label('Licence policy')
                     ->badge()
-                    ->state(fn (User $record) => CustomLicenseActions::active($record) ? 'Custom' : 'Standard')
-                    ->color(fn (string $state) => $state === 'Custom' ? 'info' : 'gray'),
+                    // Free, Premium (from the plan) or Custom (the user's own licence policy).
+                    ->state(fn (User $record) => CustomLicenseActions::active($record)
+                        ? 'Custom'
+                        : \App\Support\LicensePolicy\LicenseCategory::label(\App\Support\LicensePolicy\LicenseCategory::forPlan($record->plan)))
+                    ->color(fn (string $state) => match ($state) { 'Custom' => 'info', 'Premium' => 'success', default => 'gray' }),
                 TextColumn::make('auth_method')
                     ->badge(),
                 TextColumn::make('github_login')

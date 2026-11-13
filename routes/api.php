@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\BlogPostApiController;
 use App\Http\Controllers\Api\CliReleaseController;
 use App\Http\Controllers\Api\CmsController;
 use App\Http\Controllers\Api\ConsoleLicenseController;
 use App\Http\Controllers\Api\GithubAuthController;
 use App\Http\Controllers\Api\LicenseController;
 use App\Http\Controllers\Api\LicenseFileController;
+use App\Http\Middleware\BlogApiKeyAuth;
 use App\Support\GithubOAuth;
 use App\Support\GoogleOAuth;
 use Illuminate\Support\Facades\Route;
@@ -77,4 +79,18 @@ Route::middleware('auth:sanctum')->prefix('licenses')->controller(LicenseControl
     Route::get('{id}/key', 'showKey')->whereNumber('id')->middleware('throttle:20,1,license-key');
     Route::post('{id}/revoke-code', 'requestRevokeCode')->whereNumber('id')->middleware('throttle:3,1,license-revoke-code');
     Route::delete('{id}', 'destroy')->whereNumber('id')->middleware('throttle:10,1,license-revoke');
+});
+
+// Blog API for automation (n8n): Bearer key from Admin → Blog → API keys. Docs: docs/blog-api.md.
+Route::prefix('blog')->middleware([BlogApiKeyAuth::class, 'throttle:120,1,blog-api'])->controller(BlogPostApiController::class)->group(function () {
+    Route::get('posts', 'index');
+    Route::post('posts', 'store');
+    Route::get('posts/{post}', 'show');
+    Route::match(['put', 'patch'], 'posts/{post}', 'update');
+    // n8n and HTML forms cannot always send PATCH with a file: POST .../update works too.
+    Route::post('posts/{post}/update', 'update');
+    Route::post('posts/{post}/publish', 'publish');
+    Route::post('posts/{post}/unpublish', 'unpublish');
+    Route::delete('posts/{post}', 'destroy');
+    Route::post('images', 'uploadImage');
 });

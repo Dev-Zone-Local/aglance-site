@@ -14,15 +14,28 @@ return [
     'frontend_url' => env('FRONTEND_URL', env('APP_URL', 'http://localhost')),
 
     /*
+    | The old downloads site. Requests for this host are answered by the same app: download files
+    | keep their old URLs (e.g. /cli/atglance_2.2/<file>, /console/atglance-installer.sh) and the
+    | pages redirect to /downloads. Empty = no legacy host. Locally: app.atglance.localhost.
+    */
+    'legacy_download_host' => env('LEGACY_DOWNLOAD_HOST', 'app.atglance.live'),
+
+    // Largest release file an admin may upload under Admin → Downloads, in KB (PHP's
+    // upload_max_filesize and post_max_size must allow it too).
+    'download_upload_max_kb' => (int) env('DOWNLOAD_UPLOAD_MAX_KB', 204800),
+
+    /*
     | Subscription plans (labels). How many licences a user on a plan may hold is the
     | plan's "Licence limit" in Admin → License Policy. New users get `free`.
     */
     'default_plan' => 'free',
 
     'plans' => [
-        // Licence limits, validity and features come from Admin → License Policy (per plan).
-        'free' => ['label' => 'Free'],
-        'enterprise' => ['label' => 'Enterprise'],
+        // Licence limits and validity come from Admin → License Policy (per plan). Features follow
+        // the tier (App\Support\LicensePolicy\LicenseCategory): "free" = every free feature;
+        // "premium" = every premium and free feature, including ones added later.
+        'free' => ['label' => 'Free', 'tier' => 'free'],
+        'enterprise' => ['label' => 'Enterprise', 'tier' => 'premium'],
     ],
 
     /*

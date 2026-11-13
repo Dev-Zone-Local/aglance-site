@@ -116,6 +116,8 @@ class FeatureCatalog extends Model
     /** @return array<string, string> premium feature key => display name: the keys a licence can grant one by one */
     public static function premiumOptions(): array
     {
+        FeatureCatalogSync::ensureCurrent();
+
         return array_diff_key(
             static::query()->where('tier', self::TIER_PREMIUM)->orderBy('sort')->pluck('name', 'key')->all(),
             array_flip(self::bundleKeys()),
@@ -131,6 +133,8 @@ class FeatureCatalog extends Model
     /** @return array<string, string> free key => display name: always included */
     public static function freeOptions(): array
     {
+        FeatureCatalogSync::ensureCurrent();
+
         return static::query()->where('tier', self::TIER_FREE)->orderBy('sort')->pluck('name', 'key')->all();
     }
 

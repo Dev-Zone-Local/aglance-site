@@ -47,7 +47,7 @@ class ProductPages extends Page
     {
         $state = [];
         foreach (array_keys(ProductShowcase::PRODUCTS) as $p) {
-            $state[$p] = ProductShowcase::get($p);
+            $state[$p] = ProductShowcase::forEditor($p);
         }
         $this->form->fill($state);
     }
@@ -230,7 +230,8 @@ class ProductPages extends Page
                 ->defaultItems(0)
                 ->grid(2)
                 ->schema([
-                    self::image('image', 'Screenshot')->required(),
+                    self::image('image', 'Screenshot')
+                        ->helperText('Empty = the built-in screenshot with the same title, if there is one.'),
                     TextInput::make('title')->required()->maxLength(100)->live(onBlur: true),
                     TextInput::make('caption')->maxLength(200),
                 ]),

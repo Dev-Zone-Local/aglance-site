@@ -45,8 +45,10 @@ class LicenseFileResource extends Resource
                 TextColumn::make('org')->label('Customer')->searchable()->toggleable(),
                 TextColumn::make('plan')->badge()->color('gray'),
                 TextColumn::make('policy_type')->label('Policy')->badge()
-                    ->formatStateUsing(fn (?string $state) => $state === 'custom' ? 'Custom' : 'Standard')
-                    ->color(fn (?string $state) => $state === 'custom' ? 'info' : 'gray')
+                    ->formatStateUsing(fn (?string $state, LicenseFile $r) => $state === 'custom' ? 'Custom'
+                        : \App\Support\LicensePolicy\LicenseCategory::label(\App\Support\LicensePolicy\LicenseCategory::forPlan($r->plan)))
+                    ->color(fn (?string $state, LicenseFile $r) => $state === 'custom' ? 'info'
+                        : (\App\Support\LicensePolicy\LicenseCategory::forPlan($r->plan) === 'premium' ? 'success' : 'gray'))
                     ->description(fn (LicenseFile $r) => $r->policy_id),
                 TextColumn::make('max_nodes')->label('Nodes')
                     ->state(fn (LicenseFile $r) => $r->max_nodes === null ? '—' : ($r->max_nodes === 0 ? 'Unlimited' : $r->max_nodes)),
@@ -66,7 +68,7 @@ class LicenseFileResource extends Resource
             ])
             ->filters([
                 SelectFilter::make('user')->relationship('user', 'email')->searchable()->preload(),
-                SelectFilter::make('policy_type')->label('Policy')->options(['default' => 'Standard', 'custom' => 'Custom']),
+                SelectFilter::make('policy_type')->label('Policy')->options(['default' => 'Plan (Free or Premium)', 'custom' => 'Custom']),
                 SelectFilter::make('plan')->options(collect(config('atglance.plans'))->mapWithKeys(fn ($p, $code) => [$code => $p['label']])->all()),
                 TernaryFilter::make('expired')
                     ->label('Expiry')

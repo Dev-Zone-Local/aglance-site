@@ -37,19 +37,17 @@ class RecaptchaTest extends TestCase
 
     public function test_widget_is_hidden_while_keys_are_missing(): void
     {
-        foreach (['/login', '/register'] as $url) {
-            $this->get($url)->assertOk()->assertDontSee('g-recaptcha', false);
-        }
+        $this->get('/')->assertOk()->assertDontSee('g-recaptcha', false)->assertDontSee('data-recaptcha-action', false);
     }
 
     public function test_widget_is_shown_when_keys_are_set(): void
     {
         $this->enable();
 
-        $this->get('/login')->assertOk()
+        $this->get('/')->assertOk()
             ->assertSee('https://www.google.com/recaptcha/api.js?render=site-key-123', false)
             ->assertSee('data-recaptcha-action="login"', false);
-        $this->get('/register')->assertOk()->assertSee('data-recaptcha-action="register"', false);
+        $this->get('/')->assertOk()->assertSee('data-recaptcha-action="register"', false);
     }
 
     public function test_login_requires_a_valid_captcha(): void

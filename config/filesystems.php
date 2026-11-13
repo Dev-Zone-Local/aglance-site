@@ -38,6 +38,15 @@ return [
             'report' => false,
         ],
 
+        // CLI packages and console installer scripts, uploaded under Admin → Downloads.
+        // One folder for every release file; atglance.live and app.atglance.live both serve from it.
+        'downloads' => [
+            'driver' => 'local',
+            'root' => env('DOWNLOADS_PATH', storage_path('app/downloads')),
+            'throw' => true,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

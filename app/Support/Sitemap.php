@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\BlogPost;
 use App\Models\Doc;
 use App\Models\Page;
 use Illuminate\Support\Carbon;
@@ -27,7 +28,9 @@ class Sitemap
         '/faq' => ['monthly', '0.6'],
         '/contact' => ['yearly', '0.5'],
         '/docs' => ['weekly', '0.8'],
+        '/downloads' => ['weekly', '0.9'],
         '/releases' => ['weekly', '0.7'],
+        '/roadmap' => ['monthly', '0.6'],
         '/known-problems' => ['weekly', '0.6'],
         '/register' => ['yearly', '0.4'],
     ];
@@ -52,6 +55,13 @@ class Sitemap
             $urls[] = ['loc' => "{$base}/docs/".rawurlencode($doc->slug), 'changefreq' => 'monthly', 'priority' => '0.6', 'lastmod' => $doc->updated_at];
         }
 
+        if (Blog::enabled()) {
+            $urls[] = ['loc' => "{$base}/blog", 'changefreq' => 'weekly', 'priority' => '0.7', 'lastmod' => null];
+            foreach (BlogPost::published()->latest('published_at')->get(['slug', 'updated_at']) as $post) {
+                $urls[] = ['loc' => "{$base}/blog/".rawurlencode($post->slug), 'changefreq' => 'monthly', 'priority' => '0.6', 'lastmod' => $post->updated_at];
+            }
+        }
+
         foreach (Downloads::changelog() as $r) {
             $urls[] = [
                 'loc' => "{$base}/releases/{$r['product']}/".rawurlencode($r['version']),
@@ -60,6 +70,10 @@ class Sitemap
                 'lastmod' => $r['released_at'] ? Carbon::parse($r['released_at']) : null,
             ];
         }
+
+        // Pages marked "do not index" under Admin → SEO stay out of the sitemap.
+        $skip = array_map(fn ($p) => $base.($p === '/' ? '/' : $p), Seo::noindexPaths());
+        $urls = array_filter($urls, fn ($u) => ! in_array($u['loc'], $skip, true));
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>'."\n"
             .'<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'."\n";
@@ -77,13 +91,10 @@ class Sitemap
 
     public static function robots(): string
     {
+        // Fixed paths plus the admin's (Admin → SEO); "Disallow: /" when indexing is turned off.
         return implode("\n", [
             'User-agent: *',
-            'Disallow: /admin',
-            'Disallow: /api/',
-            'Disallow: /dashboard',
-            'Disallow: /reset-password',
-            'Disallow: /auth/',
+            ...array_map(fn ($p) => "Disallow: {$p}", Seo::disallowed()),
             '',
             'Sitemap: '.self::base().'/sitemap.xml',
             '',

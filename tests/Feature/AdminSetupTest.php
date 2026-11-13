@@ -85,7 +85,7 @@ class AdminSetupTest extends TestCase
 
         // The page now shows the CAPTCHA on the website forms.
         auth()->logout();
-        $this->get('/login')->assertSee('api.js?render=site-abc', false);
+        $this->get('/')->assertSee('api.js?render=site-abc', false);
 
         // Empty secret keeps the stored one; a score outside 0..1 is refused.
         $this->actingAs(User::factory()->admin()->create());
@@ -103,7 +103,7 @@ class AdminSetupTest extends TestCase
 
         $this->assertFalse(Captcha::enabled());
         $this->assertSame('site-key-123', Captcha::siteKey()); // keys kept for when it is turned back on
-        $this->get('/admin/login')->assertDontSee('recaptcha/api.js', false);
+        $this->get('/')->assertDontSee('recaptcha/api.js', false);
     }
 
     public function test_settings_pages_require_admin(): void

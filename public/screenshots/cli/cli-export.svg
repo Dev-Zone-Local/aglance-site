@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="724" height="494" viewBox="0 0 724 494" role="img" aria-label="atglance export">
+<rect width="724" height="494" rx="10" fill="#0f1419"/>
+<rect width="724" height="30" rx="10" fill="#1b222b"/><rect y="20" width="724" height="10" fill="#1b222b"/>
+<circle cx="18" cy="15" r="6" fill="#ff5f57"/><circle cx="38" cy="15" r="6" fill="#febc2e"/><circle cx="58" cy="15" r="6" fill="#28c840"/>
+<text x="362.0" y="20" fill="#7d8792" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle">atglance export</text>
+<g font-family="DejaVu Sans Mono,Menlo,Consolas,monospace" font-size="14" fill="#d6dde6" xml:space="preserve" style="white-space:pre">
+<text x="18" y="56"><tspan fill="#5fd38d">$</tspan><tspan fill="#ffffff"> atglance export</tspan></text>
+<text x="18" y="75">{</text>
+<text x="18" y="94">  "schema_version": 2,</text>
+<text x="18" y="113">  "hostname": "NiketChandra",</text>
+<text x="18" y="132">  "timestamp": "2026-10-17T18:42:03.864452284Z",</text>
+<text x="18" y="151">  "services": [</text>
+<text x="18" y="170">    {</text>
+<text x="18" y="189">      "name": "apparmor.service",</text>
+<text x="18" y="208">      "active_state": "inactive",</text>
+<text x="18" y="227">      "sub_state": "dead",</text>
+<text x="18" y="246">      "health": "stopped",</text>
+<text x="18" y="265">      "health_reason": "Not running",</text>
+<text x="18" y="284">      "uptime_seconds": null,</text>
+<text x="18" y="303">      "restarts": 0,</text>
+<text x="18" y="322">      "main_pid": 0,</text>
+<text x="18" y="341">      "unit_path": "/usr/lib/systemd/system/apparmor.service",</text>
+<text x="18" y="360">      "ports": []</text>
+<text x="18" y="379">    },</text>
+<text x="18" y="398">    {</text>
+<text x="18" y="417">      "name": "apport-autoreport.service",</text>
+<text x="18" y="436">      "active_state": "inactive",</text>
+<text x="18" y="455">      "sub_state": "dead",</text>
+<text x="18" y="474"><tspan fill="#7d8792">⋮ 1282 more lines</tspan></text>
+</g></svg>

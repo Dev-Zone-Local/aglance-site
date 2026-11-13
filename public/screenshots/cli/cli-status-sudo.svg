@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="862" height="494" viewBox="0 0 862 494" role="img" aria-label="atglance status">
+<rect width="862" height="494" rx="10" fill="#0f1419"/>
+<rect width="862" height="30" rx="10" fill="#1b222b"/><rect y="20" width="862" height="10" fill="#1b222b"/>
+<circle cx="18" cy="15" r="6" fill="#ff5f57"/><circle cx="38" cy="15" r="6" fill="#febc2e"/><circle cx="58" cy="15" r="6" fill="#28c840"/>
+<text x="431.0" y="20" fill="#7d8792" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle">atglance status</text>
+<g font-family="DejaVu Sans Mono,Menlo,Consolas,monospace" font-size="14" fill="#d6dde6" xml:space="preserve" style="white-space:pre">
+<text x="18" y="56"><tspan fill="#5fd38d">$</tspan><tspan fill="#ffffff"> sudo atglance status</tspan></text>
+<text x="18" y="75">SERVICE                                   STATE                    UPTIME  PORTS          HEALTH</text>
+<text x="18" y="94">atglance-demo.service                     active/running           0m      -              <tspan fill="#febc2e">Starting</tspan></text>
+<text x="18" y="113">console-getty.service                     active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="132">console-setup.service                     active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="151">cron.service                              active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="170">dbus.service                              active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="189">getty@tty1.service                        active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="208">keyboard-setup.service                    active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="227">kmod-static-nodes.service                 active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="246">packagekit.service                        active/running           1m      -              <tspan fill="#febc2e">Starting</tspan></text>
+<text x="18" y="265">polkit.service                            active/running           7m      -              <tspan fill="#febc2e">Starting</tspan></text>
+<text x="18" y="284">rsyslog.service                           active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="303">setvtrgb.service                          active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="322">snapd.seeded.service                      active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="341">systemd-binfmt.service                    active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="360">systemd-journal-flush.service             active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="379">systemd-journald.service                  active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="398">systemd-logind.service                    active/running           53m     -              <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="417">systemd-modules-load.service              active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="436">systemd-remount-fs.service                active/exited            53m     -              <tspan fill="#5fd38d">Done</tspan></text>
+<text x="18" y="455">systemd-resolved.service                  active/running           53m     tcp/53,udp/53  <tspan fill="#5fd38d">Working</tspan></text>
+<text x="18" y="474"><tspan fill="#7d8792">⋮ 15 more lines</tspan></text>
+</g></svg>

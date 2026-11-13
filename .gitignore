@@ -65,3 +65,6 @@ coverage/
 
 # Leftovers of the removed React app
 /frontend/
+
+# Local copy of the old app.atglance.live download files (import with php artisan downloads:import-legacy)
+/app.atglance.live/

@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Key/value settings store. Known keys: "captcha", "contact", "downloads", "github", "google", "mail".
+ * Key/value settings store. Known keys: "blog", "captcha", "contact", "downloads", "github", "google", "mail", "seo".
  */
 class Setting extends Model
 {
@@ -20,6 +20,12 @@ class Setting extends Model
     public const GOOGLE = 'google';
 
     public const MAIL = 'mail';
+
+    /** Admin → SEO: titles, descriptions, sharing image, indexing, per-page overrides. */
+    public const SEO = 'seo';
+
+    /** Admin → Blog → Blog settings. */
+    public const BLOG = 'blog';
 
     protected $fillable = ['key', 'value'];
 

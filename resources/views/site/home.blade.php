@@ -2,16 +2,27 @@
     <div class="space-y-16">
         <x-hero class="rise">
             <x-slot:eyebrow><span class="h-1.5 w-1.5 rounded-full bg-ag-mint"></span> Self-hosted · For SREs by SREs</x-slot:eyebrow>
+            @if ($latest)
+                <div class="mb-5 flex flex-wrap gap-2">
+                    @foreach ($latest as $p => $r)
+                        <a href="{{ \App\Support\Downloads::releaseUrl($p, $r['version']) }}" class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white transition-colors hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-ag-mint">
+                            <span class="rounded-full bg-ag-mint px-1.5 py-px text-[10px] font-semibold text-ag-ink">NEW</span>
+                            {{ $p === 'cli' ? 'CLI' : 'Console' }} v{{ $r['version'] }}{{ ! empty($r['title']) ? ' · '.\Illuminate\Support\Str::limit($r['title'], 40) : '' }}
+                            <x-glyph name="arrow-right" :size="12" />
+                        </a>
+                    @endforeach
+                </div>
+            @endif
             <x-slot:title>Operations at a glance,<br>inside your boundary.</x-slot:title>
             <p>A CLI-focused operations platform with a calm, auditable CLI and a self-hosted Management Console. No telemetry. No vendor lock-in.</p>
             <ul class="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-xs text-ag-ink-soft">
-                @foreach (['Ubuntu / systemd', 'REST API gateway', 'RBAC + PAT tokens', 'DB circuit breaker'] as $h)
+                @foreach (['Any systemd Linux', 'Windows and macOS agent (3.0)', 'Versioned config backups', 'Self-hosted console'] as $h)
                     <li class="flex items-center gap-1.5"><span class="h-1 w-1 rounded-full bg-ag-mint"></span> {{ $h }}</li>
                 @endforeach
             </ul>
             <x-slot:actions>
-                <x-button :href="route('register')" size="lg">Sign up free <x-glyph name="arrow-right" /></x-button>
-                <x-button :href="route('docs.show', 'quickstart')" size="lg" variant="white">Read the quickstart</x-button>
+                <x-button :href="route('cli')" size="lg">Get started with the CLI <x-glyph name="arrow-right" /></x-button>
+                <x-button :href="route('console')" size="lg" variant="white">Explore the Console</x-button>
             </x-slot:actions>
             <x-slot:aside>
                 {{-- Typing terminal (resources/js/app.js: heroTerminal) --}}
@@ -99,21 +110,19 @@
         <section class="ag-hero px-6 py-8 sm:px-10 sm:py-12">
             <div class="grid items-center gap-10 lg:grid-cols-2">
                 <div>
-                    <h2 class="mb-3 text-[26px] font-medium tracking-heading text-white sm:text-[30px]">One curl. systemd-friendly. Idempotent.</h2>
-                    <p class="max-w-lg text-base leading-[1.7] text-ag-ink-soft">The installer sets up the CLI package. The CLI writes its config to ~/.config/atglance and registers your host with the Console.</p>
+                    <h2 class="mb-3 text-[26px] font-medium tracking-heading text-white sm:text-[30px]">One package. Two commands to connect.</h2>
+                    <p class="max-w-lg text-base leading-[1.7] text-ag-ink-soft">Install the .deb, .rpm or .tar.gz, log in with your console API key and register the server. Health commands work before you connect anything.</p>
                     <div class="mt-8 flex flex-wrap gap-3">
-                        <x-button :href="route('register')">Get started free <x-glyph name="arrow-right" /></x-button>
-                        <x-button :href="route('docs.show', 'cli')" variant="white">CLI reference</x-button>
+                        <x-button :href="route('downloads')">Downloads <x-glyph name="arrow-right" /></x-button>
+                        <x-button :href="route('cli').'#commands'" variant="white">Command reference</x-button>
                     </div>
                 </div>
                 <x-terminal title="install" class="ring-1 ring-white/10" :lines="[
-                    '$ curl -fsSL https://app.atglance.live/cli/atglance-installer.sh | sudo bash',
-                    '→ Detected: Ubuntu 22.04 · systemd 249',
-                    '→ Installed atglance → /usr/local/bin/atglance',
-                    '$ atglance --configure',
-                    '✓ Wrote ~/.config/atglance/config.json',
-                    '$ atglance --system-register',
-                    '✓ Registered system_id=sys_8e1a in org=acme',
+                    '$ sudo apt-get install -y ./atglance_2.2.0_amd64.deb',
+                    'Setting up atglance (2.2.0) ...',
+                    '$ sudo atglance login --server https://console.example.com',
+                    '$ sudo atglance system register --workspace 3 --service-account',
+                    'registered as system 9878846096 (wsl-docs, status active)',
                 ]" />
             </div>
         </section>

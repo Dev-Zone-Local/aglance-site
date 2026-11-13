@@ -13,7 +13,7 @@ class AdminPanelTest extends TestCase
 
     public function test_guest_is_redirected_to_login(): void
     {
-        $this->withHeaders(['Accept' => 'text/html'])->get('/admin')->assertRedirect('/admin/login');
+        $this->withHeaders(['Accept' => 'text/html'])->get('/admin')->assertRedirect('/login');
     }
 
     public function test_non_admin_is_forbidden(): void

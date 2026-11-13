@@ -12,9 +12,51 @@ use App\Models\FeatureCatalog;
  */
 class FeatureCatalogSync
 {
+    /** Tests point this at another contract file. */
+    public static ?string $pathOverride = null;
+
+    private static bool $checked = false;
+
     public static function path(): string
     {
-        return resource_path('licensing/features.json');
+        return self::$pathOverride ?? resource_path('licensing/features.json');
+    }
+
+    /**
+     * Sync the catalog when the contract file changed since the last sync. A feature added to the
+     * contract is then part of the Premium Features bundle at once, without a migration or an admin
+     * opening the Feature Catalog. Checked once per request (one file hash and one cache read).
+     */
+    public static function ensureCurrent(): void
+    {
+        if (self::$checked) {
+            return;
+        }
+        self::$checked = true;
+
+        $hash = @md5_file(self::path());
+        if ($hash === false) {
+            return;
+        }
+
+        try {
+            if (\Illuminate\Support\Facades\Cache::get('feature_catalog.contract_hash') === $hash) {
+                return;
+            }
+            if (! \Illuminate\Support\Facades\Schema::hasTable('feature_catalog')) {
+                return; // during the first migrations
+            }
+            self::sync();
+            \Illuminate\Support\Facades\Cache::forever('feature_catalog.contract_hash', $hash);
+        } catch (\Throwable $e) {
+            report($e); // never break a page or the licence API over the catalog
+        }
+    }
+
+    /** Forget the per-request check (tests, long-running workers). */
+    public static function resetCheck(): void
+    {
+        self::$checked = false;
     }
 
     /**

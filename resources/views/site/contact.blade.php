@@ -35,8 +35,8 @@
                     <h2 class="text-[22px] font-medium tracking-heading text-ag-ink">{{ $contact['form_title'] ?? ContactSettings::DEFAULTS['form_title'] }}</h2>
                     <p class="mt-1 text-sm text-ag-subtle">Sign in to send us a message. We reply to the email on your account.</p>
                     <div class="mt-6 flex flex-wrap items-center gap-3">
-                        <x-button :href="route('login')">Sign in <x-glyph name="arrow-right" /></x-button>
-                        <x-button :href="route('register')" variant="ghost">Create an account</x-button>
+                        <x-button :href="route('login')" x-data x-on:click.prevent="$dispatch('open-auth', 'login')">Sign in <x-glyph name="arrow-right" /></x-button>
+                        <x-button :href="route('register')" variant="ghost" x-data x-on:click.prevent="$dispatch('open-auth', 'register')">Create an account</x-button>
                     </div>
                 </x-card>
                 @else

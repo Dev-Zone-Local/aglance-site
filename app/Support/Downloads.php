@@ -39,7 +39,7 @@ class Downloads
     public const CHECKSUM_RULE = '/^[a-f0-9]{64}$/';
 
     /** Platforms each product supports; each gets its own Install and Update instructions. */
-    public const PRODUCT_PLATFORMS = ['cli' => ['linux'], 'console' => ['linux', 'windows']];
+    public const PRODUCT_PLATFORMS = ['cli' => ['linux', 'windows', 'macos'], 'console' => ['linux', 'windows']];
 
     /** @return array<string, string> os key => label */
     public static function platformsFor(string $product): array
@@ -55,7 +55,7 @@ class Downloads
         return in_array($product, self::CHECKSUM_PRODUCTS, true);
     }
 
-    public const PLATFORMS = ['linux' => 'Linux', 'windows' => 'Windows'];
+    public const PLATFORMS = ['linux' => 'Linux', 'windows' => 'Windows', 'macos' => 'macOS'];
 
     public static function all(): array
     {
@@ -67,6 +67,53 @@ class Downloads
         }
 
         return $out;
+    }
+
+    /**
+     * all() with the uploaded files of the latest release filled in: each platform's download link,
+     * file name and update script, and the latest checksum. Saved values are used where no file
+     * was uploaded. Use this for public pages; the admin form edits all().
+     */
+    public static function resolved(): array
+    {
+        $all = self::all();
+
+        foreach ($all as $p => &$product) {
+            $latest = $product['releases'][0] ?? null;
+            $files = ReleaseFiles::forRelease($p, $latest['version'] ?? null);
+            if ($files->isEmpty()) {
+                continue;
+            }
+
+            foreach (array_keys(self::platformsFor($p)) as $os) {
+                $main = $p === 'console'
+                    ? ReleaseFiles::primary($files, $os, 'installer')
+                    : ReleaseFiles::primary($files, $os);
+                if ($main) {
+                    $product['platforms'][$os]['url'] = $p === 'console' ? self::latestUrl($p, $main->file_name) : $main->url();
+                    $product['platforms'][$os]['file_name'] = $main->file_name;
+                    $product['platforms'][$os]['sha256'] = $main->sha256;
+                }
+                if ($updater = ReleaseFiles::primary($files, $os, 'updater')) {
+                    $product['platforms'][$os]['script_url'] = self::latestUrl($p, $updater->file_name);
+                }
+            }
+
+            $product['url'] = $product['platforms']['linux']['url'] ?? $product['url'];
+            $product['file_name'] = $product['platforms']['linux']['file_name'] ?? $product['file_name'];
+            if (self::hasChecksum($p) && ! empty($product['platforms']['linux']['sha256'])) {
+                $product['releases'][0]['checksum'] = $product['platforms']['linux']['sha256'];
+            }
+        }
+        unset($product);
+
+        return $all;
+    }
+
+    /** Stable link to the newest file with this name, e.g. /downloads/latest/console/atglance-installer.sh. */
+    public static function latestUrl(string $product, string $fileName): string
+    {
+        return route('downloads.latest', [$product, $fileName]);
     }
 
     public static function save(array $products): void
@@ -228,6 +275,19 @@ class Downloads
         return "echo \"{$release['checksum']}  {$file}\" | sha256sum -c -";
     }
 
+    /** macOS: shasum ships with the system (sha256sum does not). Prints "OK". */
+    public static function validateCommandMac(array $product, ?array $release = null): ?string
+    {
+        $release ??= $product['releases'][0] ?? null;
+        if (! $release || ! $release['checksum']) {
+            return null;
+        }
+
+        $file = $product['file_name'] ?: 'FILE';
+
+        return "echo \"{$release['checksum']}  {$file}\" | shasum -a 256 -c -";
+    }
+
     /** PowerShell equivalent: prints True when the file matches. */
     public static function validateCommandWindows(array $product, ?array $release = null): ?string
     {
@@ -244,7 +304,7 @@ class Downloads
     /** JSON for the dashboard (/api/downloads), including the legacy flat keys. */
     public static function payload(): array
     {
-        $all = self::all();
+        $all = self::resolved();
         $out = [];
 
         foreach ($all as $p => $product) {
@@ -258,6 +318,10 @@ class Downloads
                 'has_checksum' => self::hasChecksum($p),
                 'latest' => $latest ? self::presentRelease($p, $product, $latest) : null,
                 'previous' => array_map(fn ($r) => self::presentRelease($p, $product, $r), array_slice($product['releases'], 1)),
+                'files' => ReleaseFiles::latest($p)->map(fn ($f) => [
+                    'file_name' => $f->file_name, 'platform' => $f->platform, 'arch' => $f->arch, 'kind' => $f->kind,
+                    'size' => $f->size, 'sha256' => $f->sha256, 'url' => $f->url(),
+                ])->all(),
             ];
             if (isset($product['platforms'])) {
                 $out[$p]['platforms'] = $product['platforms'];

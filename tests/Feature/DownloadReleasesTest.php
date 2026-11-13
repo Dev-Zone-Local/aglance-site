@@ -164,8 +164,8 @@ class DownloadReleasesTest extends TestCase
         $this->assertSame('old steps', $console['platforms']['linux']['install_steps']);
         $this->assertSame('https://x/install.sh', $console['platforms']['linux']['url']);
         $this->assertNull($console['platforms']['windows']['url']);
-        // The CLI has Linux only; the console has Linux + Windows.
-        $this->assertSame(['linux'], array_keys(Downloads::all()['cli']['platforms']));
+        // The CLI has Linux, Windows and macOS (the agent); the console has Linux and Windows.
+        $this->assertSame(['linux', 'windows', 'macos'], array_keys(Downloads::all()['cli']['platforms']));
         $this->assertSame(['linux', 'windows'], array_keys($console['platforms']));
 
         $this->page()
@@ -202,7 +202,7 @@ sudo ./update-console.sh
             ->assertJsonPath('console.latest.validate_command', null)
             ->assertJsonPath('console_url', 'https://x/linux/install.sh')
             ->assertJsonPath('cli.has_checksum', true)
-            ->assertJsonMissingPath('cli.platforms.windows');
+            ->assertJsonPath('cli.platforms.windows.url', null);
     }
 
     public function test_cli_has_separate_linux_update_section(): void

@@ -33,9 +33,16 @@
                             </li>
                         @endforeach
                     </ul>
-                    <x-button :href="$plan->highlighted ? route('register') : route('contact')" :variant="$plan->highlighted ? 'primary' : 'ghost'" class="mt-auto w-full">
-                        {{ $plan->cta }} <x-glyph name="arrow-right" :size="14" />
-                    </x-button>
+                    @if ($plan->highlighted && auth()->guest())
+                        {{-- Opens the header sign-up panel; the link is the no-JavaScript fallback. --}}
+                        <x-button :href="route('register')" class="mt-auto w-full" x-data x-on:click.prevent="$dispatch('open-auth', 'register')">
+                            {{ $plan->cta }} <x-glyph name="arrow-right" :size="14" />
+                        </x-button>
+                    @else
+                        <x-button :href="$plan->highlighted ? route('register') : route('contact')" :variant="$plan->highlighted ? 'primary' : 'ghost'" class="mt-auto w-full">
+                            {{ $plan->cta }} <x-glyph name="arrow-right" :size="14" />
+                        </x-button>
+                    @endif
                 </div>
             @empty
                 <p class="text-center text-ag-subtle md:col-span-2">Plans are not published yet. <a href="{{ route('contact') }}" class="ag-link">Contact us</a>.</p>

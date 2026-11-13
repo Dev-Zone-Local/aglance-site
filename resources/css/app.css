@@ -165,6 +165,16 @@
 .prose-atg hr { @apply border-ag-line my-6; }
 .prose-atg strong { @apply text-ag-ink font-medium; }
 .prose-atg > :first-child { margin-top: 0; }
+/* Wide tables scroll sideways inside the page instead of widening it. */
+.prose-atg table { @apply block max-w-full overflow-x-auto; }
+.prose-atg td code, .prose-atg th code { @apply whitespace-nowrap; }
+/* Heading ids and "#" links (App\Support\Markdown), visible on hover or focus. */
+.prose-atg h2, .prose-atg h3 { @apply scroll-mt-24; }
+.prose-atg .heading-anchor { @apply ml-2 text-ag-muted no-underline opacity-0 transition-opacity; }
+.prose-atg h2:hover .heading-anchor, .prose-atg h3:hover .heading-anchor { @apply opacity-100; }
+/* Contents list from a [TOC] line. */
+.prose-atg ul.doc-toc { @apply my-6 grid list-none gap-x-6 gap-y-1 rounded-card bg-ag-surface p-5 pl-5 sm:grid-cols-2; }
+.prose-atg ul.doc-toc a { @apply text-[14px] font-medium; }
 
 /* ---- Motion: fade + 6px rise, max 0.3s ---- */
 @keyframes ag-fade {

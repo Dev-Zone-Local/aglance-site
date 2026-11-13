@@ -92,8 +92,8 @@ class RemoteTunnelPremiumTest extends TestCase
 
     public function test_bundle_holders_get_it_through_the_bundle(): void
     {
-        $user = User::factory()->create();
-        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        // Premium (Enterprise) plan: the Premium Features bundle, whatever the policy form says.
+        $user = User::factory()->create(['plan' => 'enterprise']);
 
         $p = $this->generate($user);
         $this->assertSame(['premium'], $p['bundles']);
@@ -109,8 +109,7 @@ class RemoteTunnelPremiumTest extends TestCase
         $this->withTunnel($user);
         $this->actingAs($user)->get(route('dashboard.licences'))->assertOk()->assertSee('Included (granted individually)');
 
-        $bundled = User::factory()->create();
-        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        $bundled = User::factory()->create(['plan' => 'enterprise']);
         $this->actingAs($bundled)->get(route('dashboard.licences'))->assertOk()->assertSee('Included via Premium Features');
     }
 

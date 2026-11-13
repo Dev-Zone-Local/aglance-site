@@ -2,19 +2,17 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\Auth\Login;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
-use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
 use Filament\Support\Icons\Heroicon;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -31,8 +29,8 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
-            // Custom page: says why a sign-in failed instead of showing the form again (see the class).
-            ->login(Login::class)
+            // No sign-in page of its own: admins use the site's /login (one sign-in page for everyone).
+            // Guests who open /admin are sent there and come back to the page they asked for.
             // Profile page (name, email, password) + links back to the site in the user menu.
             ->profile(isSimple: false)
             ->userMenuItems([
@@ -52,6 +50,10 @@ class AdminPanelProvider extends PanelProvider
             ->favicon('/branding/favicon.ico')
             ->font('Inter')
             ->darkMode(false)
+            // Every admin page uses the full window width: wide tables and forms need no sideways scrolling.
+            ->maxContentWidth(Width::Full)
+            // The sidebar can be folded to icons for even more room (button at its top).
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::hex('#2CB7D9'),
                 'success' => Color::hex('#1FA874'),
@@ -62,21 +64,15 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->renderHook(PanelsRenderHook::HEAD_END, fn (): View => view('filament.theme-styles'))
             ->renderHook(PanelsRenderHook::SIDEBAR_FOOTER, fn (): View => view('filament.site-version'))
-            ->renderHook(
-                PanelsRenderHook::AUTH_LOGIN_FORM_BEFORE,
-                fn (): View => view('filament.auth.login-problem'),
-            )
             // Sidebar group order: inbox first, settings last.
-            ->navigationGroups(['Support', 'Access', 'Content', 'Settings'])
+            ->navigationGroups(['Support', 'Access', 'Content', 'Blog', 'SEO', 'Settings'])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([
-                Dashboard::class,
+                \App\Filament\Pages\Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
-            ->widgets([
-                AccountWidget::class,
-            ])
+            ->widgets([])
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,

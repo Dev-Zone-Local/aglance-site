@@ -26,17 +26,6 @@ class GithubSettingsTest extends TestCase
     {
         $this->getJson('/api/auth/providers')->assertJson(['github' => false]);
         $this->getJson('/api/auth/github/start')->assertStatus(503);
-        $this->withHeaders(['Accept' => 'text/html'])->get('/admin/login')->assertDontSee('Sign in with GitHub');
-    }
-
-    public function test_admin_login_page_has_no_github_button(): void
-    {
-        // Admins sign in with email + password (and CAPTCHA) only.
-        $this->withHeaders(['Accept' => 'text/html'])
-            ->get('/admin/login')
-            ->assertOk()
-            ->assertDontSee('Sign in with GitHub')
-            ->assertDontSee(route('admin.auth.github'), false);
     }
 
     public function test_admin_github_route_redirects_to_github(): void

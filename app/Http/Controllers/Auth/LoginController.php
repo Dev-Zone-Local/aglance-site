@@ -14,13 +14,39 @@ use Illuminate\Validation\ValidationException;
 
 class LoginController extends Controller
 {
-    public function show(): View
+    /** No sign-in page: back to the page the visitor came from, with the sign-in panel open. */
+    public function show(Request $request): RedirectResponse
     {
-        return view('auth.login');
+        return self::openPanel($request, 'login');
+    }
+
+    /**
+     * Send a guest back to a public page with the header sign-in / sign-up panel open.
+     * Messages flashed for /login (e.g. "Google sign-in was cancelled") are kept.
+     */
+    public static function openPanel(Request $request, string $mode): RedirectResponse
+    {
+        $request->session()->reflash();
+
+        return redirect()->to(self::publicReferer($request))->with('auth_panel', $mode);
+    }
+
+    /** The previous page on this site, unless it needs a sign-in (that would loop back here). */
+    public static function publicReferer(Request $request): string
+    {
+        $previous = (string) $request->headers->get('referer');
+        $path = trim((string) parse_url($previous, PHP_URL_PATH), '/');
+        $sameHost = parse_url($previous, PHP_URL_HOST) === $request->getHost();
+        $private = preg_match('#^(login|register|logout|dashboard|admin|email|reset-password|forgot-password|auth)(/|$)#', $path);
+
+        return $previous && $sameHost && ! $private ? $previous : route('home');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // A failed sign-in returns to the same page with the panel open on "Sign in".
+        $request->session()->flash('auth_panel', 'login');
+
         $data = $request->validate([
             'email' => ['required', 'email'],
             'password' => ['required', 'string'],
@@ -33,6 +59,7 @@ class LoginController extends Controller
             throw ValidationException::withMessages(['email' => 'Invalid email or password']);
         }
 
+        $request->session()->forget('auth_panel');
         $request->session()->regenerate();
 
         return self::home($request->user(), intended: true);
@@ -51,7 +78,11 @@ class LoginController extends Controller
     public static function home(User $user, bool $intended = false): RedirectResponse
     {
         if ($user->role === 'admin') {
-            return redirect('/admin');
+            // Back to the admin page they opened before signing in; other intended pages are ignored.
+            $intendedUrl = $intended ? session()->pull('url.intended') : null;
+            $path = $intendedUrl ? '/'.ltrim((string) parse_url($intendedUrl, PHP_URL_PATH), '/') : null;
+
+            return redirect($path && ($path === '/admin' || str_starts_with($path, '/admin/')) ? $intendedUrl : '/admin');
         }
 
         return $intended ? redirect()->intended(route('dashboard')) : redirect()->route('dashboard');

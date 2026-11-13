@@ -6,13 +6,35 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\BlogController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DownloadController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SitemapController;
 use App\Livewire\Licences;
 use App\Livewire\Profile;
 use Illuminate\Support\Facades\Route;
+
+// The old downloads site (app.atglance.live) is served by this app: files keep their old URLs,
+// pages redirect to /downloads. Registered first so its catch-all wins on that host only.
+if ($legacyHost = config('atglance.legacy_download_host')) {
+    Route::domain($legacyHost)->group(function () {
+        Route::get('/{path?}', [DownloadController::class, 'legacy'])->where('path', '.*')->name('downloads.legacy');
+    });
+}
+
+// Release files, stored once and linked from every page that offers a download.
+Route::get('/downloads', [DownloadController::class, 'index'])->name('downloads');
+Route::get('/downloads/files/{product}/{folder}/{file}', [DownloadController::class, 'file'])
+    ->where(['product' => 'cli|console', 'folder' => '[A-Za-z0-9._+-]+', 'file' => '[A-Za-z0-9._+-]+'])->name('downloads.file');
+Route::get('/downloads/latest/{product}/{file}', [DownloadController::class, 'latest'])
+    ->where(['product' => 'cli|console', 'file' => '[A-Za-z0-9._+-]+'])->name('downloads.latest');
+
+// Blog (Admin → Blog). The feed is registered before {slug} so "rss.xml" is not taken as a post.
+Route::get('/blog', [BlogController::class, 'index'])->name('blog');
+Route::get('/blog/rss.xml', [BlogController::class, 'feed'])->name('blog.feed');
+Route::get('/blog/{slug}', [BlogController::class, 'show'])->where('slug', '[A-Za-z0-9-]+')->name('blog.show');
 
 // Public site (Blade views in resources/views/site).
 Route::controller(SiteController::class)->group(function () {
@@ -28,6 +50,8 @@ Route::controller(SiteController::class)->group(function () {
     Route::get('/faq', 'faq')->name('faq');
     Route::get('/contact', 'contact')->name('contact');
     Route::get('/releases', 'releases')->name('releases');
+    Route::get('/releases/rss.xml', 'releasesFeed')->name('releases.feed');
+    Route::get('/roadmap', 'roadmap')->name('roadmap');
     Route::get('/releases/{product}/{version}', 'release')->where('version', '[A-Za-z0-9._+-]+')->name('releases.show');
     Route::get('/known-problems', 'knownProblems')->name('known-problems');
     Route::get('/about', 'page')->defaults('slug', 'about')->name('about');
@@ -44,6 +68,9 @@ Route::post('/contact', [ContactController::class, 'store'])
 // Search engines: generated from the database (docs, CMS pages).
 Route::get('/sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
 Route::get('/robots.txt', [SitemapController::class, 'robots'])->name('robots');
+
+// The admin panel has no sign-in page of its own; old /admin/login links go to the site's.
+Route::redirect('/admin/login', '/login', 301);
 
 // Sign in / sign up. Every throttle has its own prefix so routes do not share one counter.
 Route::middleware('guest')->group(function () {

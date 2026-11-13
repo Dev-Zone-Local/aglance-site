@@ -23,11 +23,26 @@ class WebAuthTest extends TestCase
         $this->withoutVite();
     }
 
-    public function test_auth_pages_render_for_guests(): void
+    public function test_sign_in_and_sign_up_are_a_header_panel_not_pages(): void
     {
-        foreach (['/login', '/register', '/forgot-password'] as $url) {
-            $this->get($url)->assertOk();
-        }
+        // Every public page carries both forms in the header panel.
+        $this->get('/pricing')->assertOk()
+            ->assertSee('id="auth-panel"', false)
+            ->assertSee('action="'.route('login').'"', false)
+            ->assertSee('action="'.route('register').'"', false);
+
+        // The old addresses go back to the previous page with the panel open.
+        $this->get('/login', ['referer' => url('/pricing')])->assertRedirect(url('/pricing'))->assertSessionHas('auth_panel', 'login');
+        $this->get('/register', ['referer' => url('/cli')])->assertRedirect(url('/cli'))->assertSessionHas('auth_panel', 'register');
+        // No previous page, another site, or a page that needs a sign-in: the home page.
+        $this->get('/login')->assertRedirect(route('home'));
+        $this->get('/login', ['referer' => 'https://evil.example/x'])->assertRedirect(route('home'));
+        $this->get('/login', ['referer' => url('/dashboard/licences')])->assertRedirect(route('home'));
+
+        // The panel opens by itself on that page.
+        $this->withSession(['auth_panel' => 'register'])->get('/cli')->assertSee("authPanel('register')", false);
+
+        $this->get('/forgot-password')->assertOk();
         $this->get('/reset-password')->assertOk()->assertSee('Reset link incomplete');
         $this->get('/reset-password?token=abc&email=a@b.co')->assertOk()->assertSee('For a@b.co');
     }
@@ -72,8 +87,9 @@ class WebAuthTest extends TestCase
     {
         $user = User::factory()->create(['email' => 'ops@example.com', 'password' => 'secret123']);
 
-        $this->from('/login')->post('/login', ['email' => 'ops@example.com', 'password' => 'wrong'])
-            ->assertRedirect('/login')->assertSessionHasErrors('email');
+        // A wrong password returns to the page the panel was on, with the panel open and the error.
+        $this->from('/pricing')->post('/login', ['email' => 'ops@example.com', 'password' => 'wrong'])
+            ->assertRedirect('/pricing')->assertSessionHasErrors('email')->assertSessionHas('auth_panel', 'login');
         $this->assertGuest();
 
         $this->post('/login', ['email' => 'OPS@example.com', 'password' => 'secret123'])->assertRedirect('/dashboard');

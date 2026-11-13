@@ -27,7 +27,7 @@ class ReleaseDetailTest extends TestCase
         Downloads::publish('cli', '2.2.0', null, null, ['released_at' => '2026-10-01']);
     }
 
-    public function test_navbar_has_releases_and_footer_has_pricing(): void
+    public function test_navbar_has_downloads_releases_roadmap_and_pricing(): void
     {
         $html = $this->get('/')->assertOk()->getContent();
 
@@ -35,12 +35,14 @@ class ReleaseDetailTest extends TestCase
         $nav = substr($nav, 0, strpos($nav, '</nav>'));
         $this->assertStringContainsString(route('releases'), $nav);
         $this->assertStringContainsString('>Releases<', $nav);
-        $this->assertStringNotContainsString(route('pricing'), $nav);
+        $this->assertStringContainsString(route('downloads'), $nav);
+        $this->assertStringContainsString(route('roadmap'), $nav);
+        $this->assertStringContainsString(route('pricing'), $nav);
 
         $footer = substr($html, strpos($html, 'aria-label="Footer"'));
         $footer = substr($footer, 0, strpos($footer, '</nav>'));
         preg_match_all('#<a [^>]*>([^<]+)</a>#', $footer, $links);
-        $this->assertSame(['About', 'FAQ', 'Pricing', 'Security', 'Remote Tunnel', 'Terms', 'Privacy', 'Contact'], array_map('trim', $links[1]));
+        $this->assertSame(['Product', 'Architecture', 'Use cases', 'Security', 'Remote Tunnel', 'About', 'FAQ', 'Known problems', 'Terms', 'Privacy', 'Contact', 'RSS'], array_map('trim', $links[1]));
 
         // Highlighted on the list and on a release page.
         $this->assertMatchesRegularExpression(

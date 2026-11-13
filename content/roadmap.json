@@ -1,0 +1,86 @@
+{
+    "_help": "Public roadmap at /roadmap. Edit this file to add or move an item; no code change needed. status: planned | in_progress | released. product: cli | console | both. release (optional): version whose notes describe it.",
+    "updated": "2026-11-14",
+    "items": [
+        {
+            "title": "AtGlance agent for Linux, Windows Server and macOS",
+            "product": "cli",
+            "status": "in_progress",
+            "target": "CLI 3.0",
+            "summary": "A small agent that keeps one outbound, encrypted connection to your console. No open ports. Runs as a systemd service, a Windows service or a launchd job."
+        },
+        {
+            "title": "Agent Monitoring",
+            "product": "console",
+            "status": "in_progress",
+            "target": "Console 3.0",
+            "summary": "Live health, heartbeats and service state from every agent in the console, with one switch to turn monitoring on or off per workspace."
+        },
+        {
+            "title": "Remote Tunnel: Sites, relay and multi-site networking",
+            "product": "console",
+            "status": "in_progress",
+            "target": "Console 3.0",
+            "summary": "Reach servers on private networks through a connector, a relay, site-to-site IPsec or point-to-site access, with hops between sites."
+        },
+        {
+            "title": "Google Drive backup storage",
+            "product": "console",
+            "status": "released",
+            "summary": "Keep console backups (database and configuration files) in your own Google Drive and restore from them. Free, part of Backup & Restore.",
+            "target": "Console 3.0"
+        },
+        {
+            "title": "Production web server in the console image",
+            "product": "console",
+            "status": "planned",
+            "summary": "Replace the PHP development server inside the console image with a production web server."
+        },
+        {
+            "title": "Cloud-native access for Remote Tunnel",
+            "product": "console",
+            "status": "planned",
+            "summary": "Reach servers in AWS, Azure and Google Cloud through the provider's own access service. No connector, no IPsec, no inbound port."
+        },
+        {
+            "title": "One-click console deploy to AWS and Azure",
+            "product": "console",
+            "status": "planned",
+            "summary": "Deploy the Management Console into your own cloud account from the AtGlance dashboard."
+        },
+        {
+            "title": "CLI as a cloud VM extension (AWS EC2, Azure VM)",
+            "product": "cli",
+            "status": "planned",
+            "summary": "Install and register the CLI on new cloud VMs as a VM extension."
+        },
+        {
+            "title": "Application and system services shown separately",
+            "product": "cli",
+            "status": "released",
+            "release": "2.2.0",
+            "summary": "status, watch and export split services into what the host runs and the operating system's own, with --type to show one kind."
+        },
+        {
+            "title": "Daily check and sync with a service account",
+            "product": "cli",
+            "status": "released",
+            "release": "2.2.0",
+            "summary": "schedule enable writes a cron job that checks keys and backs up changed services every day, with a service account key."
+        },
+        {
+            "title": "Patched runtime and request limits (PHP2Shell fix)",
+            "product": "console",
+            "status": "released",
+            "release": "2.3.0",
+            "summary": "The console runs PHP 8.2.35, refuses request bodies over 12 MB at the edge and no longer exposes the PHP server."
+        },
+        {
+            "title": "NFS and Azure Storage targets, encrypted backups",
+            "product": "console",
+            "status": "released",
+            "release": "2.3.0",
+            "summary": "Store backups on NFS or Azure Storage, with a manifest, checksums and client-side encryption."
+        }
+    ]
+}

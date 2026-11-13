@@ -39,12 +39,12 @@ class GoogleAuthTest extends TestCase
 
     public function test_button_and_routes_are_off_until_configured(): void
     {
-        $this->get('/login')->assertOk()->assertDontSee('Continue with Google');
+        $this->get('/')->assertOk()->assertDontSee('Continue with Google');
         $this->get('/auth/google')->assertNotFound();
 
         $this->enableGoogleLogin();
-        $this->get('/login')->assertOk()->assertSee('Continue with Google')->assertSee(route('auth.google'), false);
-        $this->get('/register')->assertOk()->assertSee('Sign up with Google');
+        $this->get('/')->assertOk()->assertSee('Continue with Google')->assertSee(route('auth.google'), false);
+        $this->get('/')->assertOk()->assertSee('Sign up with Google');
         $this->getJson('/api/auth/providers')->assertJson(['google' => true]);
     }
 

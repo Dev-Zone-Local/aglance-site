@@ -72,8 +72,8 @@ class AgentMonitoringPremiumTest extends TestCase
 
     public function test_bundle_holders_get_it_through_the_bundle(): void
     {
-        $user = User::factory()->create();
-        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        // Premium (Enterprise) plan: the Premium Features bundle, whatever the policy form says.
+        $user = User::factory()->create(['plan' => 'enterprise']);
 
         $p = $this->generate($user);
         $this->assertSame(['premium'], $p['bundles']);

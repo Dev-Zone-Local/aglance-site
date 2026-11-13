@@ -31,6 +31,12 @@ class AppServiceProvider extends ServiceProvider
         // The SPA expects bare JSON objects, not {"data": ...}.
         JsonResource::withoutWrapping();
 
+        // Admin → Downloads uploads release files (CLI packages, MSI, ZIP) larger than Livewire's 12 MB default.
+        config([
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.(int) config('atglance.download_upload_max_kb', 204800)],
+            'livewire.temporary_file_upload.max_upload_time' => 15,
+        ]);
+
         // Licence keys are Sanctum tokens; resolve them as License models (status, approval, activation).
         Sanctum::usePersonalAccessTokenModel(License::class);
 

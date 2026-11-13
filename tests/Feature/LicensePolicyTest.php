@@ -284,7 +284,7 @@ class LicensePolicyTest extends TestCase
         $this->actingAs($user)->get(route('dashboard.licences'))
             ->assertOk()
             ->assertSee('Policy:')
-            ->assertSee('Standard')
+            ->assertSee('Free')
             ->assertSee('Node limit')
             ->assertSee('Premium features in your licence')
             ->assertSee('None')
@@ -339,24 +339,25 @@ class LicensePolicyTest extends TestCase
 
         $this->actingAs($this->admin());
         Livewire::test(LicensePolicyPage::class)
-            ->assertSee('Premium Features')
-            ->assertSee('Includes NFS Storage, Azure Storage, Remote Tunnel, Agent Monitoring, Add servers from the console, and any premium features added later.')
-            ->assertSee('Included with Premium Features')
+            ->assertSee('they follow each plan')
             ->assertDontSee('Premium Features (all)')
-            ->assertFormFieldExists('global.premium_bundle')
+            ->assertFormFieldDoesNotExist('global.premium_bundle')
             ->assertFormFieldDoesNotExist('global.individual_features');
     }
 
     public function test_nfs_storage_through_the_bundle_by_default_and_one_by_one_in_custom_policies(): void
     {
+        // Enterprise (premium plan): the bundle, even when its policy record says otherwise.
         $user = User::factory()->create(['plan' => 'enterprise']);
-        $this->assertSame(['bundles' => [], 'features' => []], array_intersect_key(PolicyResolver::for($user), array_flip(['bundles', 'features'])));
-
-        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        $this->assertSame(['bundles' => ['premium'], 'features' => []], array_intersect_key(PolicyResolver::for($user), array_flip(['bundles', 'features'])));
+        LicensePolicy::forPlan('enterprise')->update(['inherit_global' => false, 'bundles' => []]);
         $this->assertSame(['premium'], PolicyResolver::for($user)['bundles']);
 
-        LicensePolicy::forPlan('enterprise')->update(['inherit_global' => false, 'bundles' => []]);
-        $this->assertSame([], PolicyResolver::for($user)['bundles']);
+        // Free plan: no premium feature, even with the bundle on the global policy.
+        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        $this->assertSame([], PolicyResolver::for(User::factory()->create(['plan' => 'free']))['bundles']);
+
+        // A custom licence decides on its own.
 
         CustomLicensePolicy::create(['user_id' => $user->id] + $this->policy(['individual_features' => ['nfs_storage']]));
         $this->assertSame([], PolicyResolver::for($user)['bundles']);
@@ -367,15 +368,15 @@ class LicensePolicyTest extends TestCase
     {
         $this->actingAs($this->admin());
 
+        // Saving stores the category's features: the bundle for Enterprise, none for Free and global.
+        LicensePolicy::global()->update(['bundles' => ['premium']]);
         Livewire::test(LicensePolicyPage::class)
-            ->set('data.global.premium_bundle', true)
             ->call('save')
             ->assertHasNoErrors();
 
-        $this->assertSame(['premium'], LicensePolicy::global()->fresh()->bundles);
+        $this->assertSame([], LicensePolicy::global()->fresh()->bundles);
         $this->assertSame([], LicensePolicy::global()->fresh()->individual_features);
-        $this->assertDatabaseHas('policy_audit_log', ['subject_type' => 'license_policy', 'field' => 'bundles', 'new_value' => 'premium']);
-        $this->assertDatabaseMissing('policy_audit_log', ['subject_type' => 'license_policy', 'field' => 'individual_features']);
+        $this->assertDatabaseHas('policy_audit_log', ['subject_type' => 'license_policy', 'field' => 'bundles', 'old_value' => 'premium']);
     }
 
     public function test_custom_licence_with_single_premium_features(): void
@@ -499,8 +500,7 @@ class LicensePolicyTest extends TestCase
 
     public function test_dashboard_shows_premium_features_all_for_the_bundle(): void
     {
-        $user = User::factory()->create();
-        LicensePolicy::global()->update(['bundles' => ['premium']]);
+        $user = User::factory()->create(['plan' => 'enterprise']);
 
         $this->actingAs($user)->get(route('dashboard.licences'))
             ->assertOk()

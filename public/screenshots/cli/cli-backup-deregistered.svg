@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="963" height="95" viewBox="0 0 963 95" role="img" aria-label="atglance config backup atglance-demo --force">
+<rect width="963" height="95" rx="10" fill="#0f1419"/>
+<rect width="963" height="30" rx="10" fill="#1b222b"/><rect y="20" width="963" height="10" fill="#1b222b"/>
+<circle cx="18" cy="15" r="6" fill="#ff5f57"/><circle cx="38" cy="15" r="6" fill="#febc2e"/><circle cx="58" cy="15" r="6" fill="#28c840"/>
+<text x="481.5" y="20" fill="#7d8792" font-family="Segoe UI,Helvetica,Arial,sans-serif" font-size="12" text-anchor="middle">atglance config backup atglance-demo --force</text>
+<g font-family="DejaVu Sans Mono,Menlo,Consolas,monospace" font-size="14" fill="#d6dde6" xml:space="preserve" style="white-space:pre">
+<text x="18" y="56"><tspan fill="#5fd38d">$</tspan><tspan fill="#ffffff"> sudo atglance config backup atglance-demo --force</tspan></text>
+<text x="18" y="75"><tspan fill="#ff6b6b">atglance: the console says this system is deregistered; nothing was queued. reactivate it with 'sudo atglance…</tspan></text>
+</g></svg>

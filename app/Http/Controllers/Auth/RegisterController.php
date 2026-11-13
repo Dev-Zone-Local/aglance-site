@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Rules\Recaptcha;
-use Illuminate\Contracts\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -13,13 +12,16 @@ use Illuminate\Support\Str;
 
 class RegisterController extends Controller
 {
-    public function show(): View
+    /** No sign-up page: back to the page the visitor came from, with the sign-up panel open. */
+    public function show(Request $request): RedirectResponse
     {
-        return view('auth.register');
+        return LoginController::openPanel($request, 'register');
     }
 
     public function store(Request $request): RedirectResponse
     {
+        // Validation errors return to the same page with the panel open on "Sign up".
+        $request->session()->flash('auth_panel', 'register');
         $request->merge(['email' => Str::lower(trim((string) $request->input('email')))]);
 
         $data = $request->validate([
@@ -44,6 +46,7 @@ class RegisterController extends Controller
         $user->sendVerificationSafely();
 
         Auth::login($user);
+        $request->session()->forget('auth_panel');
         $request->session()->regenerate();
 
         return redirect()->route('dashboard')

@@ -12,6 +12,10 @@ use Illuminate\Support\Carbon;
  * The policy a user's next licence file is issued with, in this order:
  * the user's custom policy, then their plan's default, then the global default.
  * Only stored policies are used; nothing comes from the request.
+ *
+ * Features: a custom licence uses its own choice; otherwise they follow the plan's category
+ * (LicenseCategory): Free = free features only, Premium = the Premium Features bundle, so new
+ * free and premium features are included without changing any policy.
  */
 class PolicyResolver
 {
@@ -27,6 +31,7 @@ class PolicyResolver
             return [
                 'policy_id' => $custom->policyId(),
                 'policy_type' => 'custom',
+                'category' => LicenseCategory::CUSTOM,
                 'label' => 'Custom',
                 'max_licences' => max(1, (int) $custom->max_licences),
                 'install_id_mode' => $custom->install_id_mode === 'required' ? 'required' : 'optional',
@@ -45,11 +50,13 @@ class PolicyResolver
 
         $plan = LicensePolicy::forPlan((string) $user->plan);
         $policy = $plan && ! $plan->inherit_global ? $plan : LicensePolicy::global();
+        $category = LicenseCategory::forPlan((string) $user->plan);
 
         return [
             'policy_id' => $policy->scope,
             'policy_type' => 'default',
-            'label' => 'Standard',
+            'category' => $category,
+            'label' => LicenseCategory::label($category),
             'max_licences' => max(1, (int) $policy->max_licences),
             'install_id_mode' => $policy->install_id_mode === 'required' ? 'required' : 'optional',
             'max_nodes' => $policy->max_nodes,
@@ -57,7 +64,7 @@ class PolicyResolver
             'validity_months' => $policy->validityMonths(),
             'expires_on' => null,
             'activation_window_minutes' => $policy->activation_window_minutes,
-            ...self::premium((array) $policy->bundles, (array) $policy->individual_features),
+            ...self::premium(LicenseCategory::grants($category)['bundles'], []),
             'install_id' => null,
             'custom' => null,
         ];
