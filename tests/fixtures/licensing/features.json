@@ -93,7 +93,7 @@
         {
             "key": "backup_restore",
             "name": "Backup & Restore",
-            "description": "Scheduled backups and restore of the console.",
+            "description": "Scheduled backups and restore of the console: on the console server, S3, or your own Google Drive (NFS and Azure Storage are premium).",
             "tier": "free",
             "default": false,
             "v1_default": false,
