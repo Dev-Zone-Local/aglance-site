@@ -27,6 +27,8 @@ class CliReleaseManifest
             ['linux', 'rpm', "/^atglance-.+\.($a)\.rpm$/"],
             ['linux', 'tar.gz', "/^atglance_.+_linux_($a)\.tar\.gz$/"],
             ['windows', 'zip', "/^atglance_.+_windows_($a)\.zip$/"],
+            ['linux', 'binary', "/^atglance_.+_linux_($a)$/"],
+            ['windows', 'binary', "/^atglance_.+_windows_($a)\.exe$/"],
             ['darwin', 'binary', "/^atglance_.+_darwin_($a)$/"],
         ];
 

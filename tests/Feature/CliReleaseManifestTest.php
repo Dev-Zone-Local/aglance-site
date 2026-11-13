@@ -30,6 +30,11 @@ class CliReleaseManifestTest extends TestCase
         $this->assertSame(['os' => 'windows', 'arch' => 'arm64', 'format' => 'zip'], CliReleaseManifest::classify('atglance_3.0.1_windows_arm64.zip'));
         $this->assertSame(['os' => 'darwin', 'arch' => 'arm64', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.1_darwin_arm64'));
         $this->assertSame(['os' => 'linux', 'arch' => 'amd64', 'format' => 'deb'], CliReleaseManifest::classify('atglance_3.0.0-rc.1_amd64.deb'));
+        $this->assertSame(['os' => 'linux', 'arch' => 'amd64', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.1_linux_x86_64'));
+        $this->assertSame(['os' => 'linux', 'arch' => 'arm64', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.1_linux_arm64'));
+        $this->assertSame(['os' => 'linux', 'arch' => 'armhf', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.0-rc.1_linux_armhf'));
+        $this->assertSame(['os' => 'windows', 'arch' => 'amd64', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.1_windows_amd64.exe'));
+        $this->assertSame(['os' => 'windows', 'arch' => 'arm64', 'format' => 'binary'], CliReleaseManifest::classify('atglance_3.0.0-rc.1_windows_arm64.exe'));
         $this->assertNull(CliReleaseManifest::classify('SHA256SUMS'));
         $this->assertNull(CliReleaseManifest::classify('atglance-installer.sh'));
     }
